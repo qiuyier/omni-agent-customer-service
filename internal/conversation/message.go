@@ -29,10 +29,12 @@ func (s Sender) Valid() bool {
 
 // MessageParams contains the data required to create an immutable text
 // message. ExternalMessageID is optional for messages produced internally.
+// ReplyToMessageID links a bot reply to the customer message that triggered it.
 type MessageParams struct {
 	ID                string
 	ConversationID    string
 	ExternalMessageID string
+	ReplyToMessageID  string
 	Sender            Sender
 	SenderID          string
 	Content           string
@@ -44,6 +46,7 @@ type Message struct {
 	id                string
 	conversationID    string
 	externalMessageID string
+	replyToMessageID  string
 	sender            Sender
 	senderID          string
 	content           string
@@ -70,6 +73,18 @@ func NewMessage(params MessageParams) (Message, error) {
 	if strings.TrimSpace(params.Content) == "" {
 		return Message{}, invalidArgument("content", "is required")
 	}
+	replyToMessageID := strings.TrimSpace(params.ReplyToMessageID)
+	if params.ReplyToMessageID != "" && replyToMessageID == "" {
+		return Message{}, invalidArgument("reply_to_message_id", "must not be blank")
+	}
+	if replyToMessageID != "" {
+		if params.Sender != SenderBot {
+			return Message{}, invalidArgument("reply_to_message_id", "is only allowed for bot messages")
+		}
+		if replyToMessageID == id {
+			return Message{}, invalidArgument("reply_to_message_id", "must not reference the message itself")
+		}
+	}
 	createdAt, err := requiredTime("created_at", params.CreatedAt)
 	if err != nil {
 		return Message{}, err
@@ -79,6 +94,7 @@ func NewMessage(params MessageParams) (Message, error) {
 		id:                id,
 		conversationID:    conversationID,
 		externalMessageID: strings.TrimSpace(params.ExternalMessageID),
+		replyToMessageID:  replyToMessageID,
 		sender:            params.Sender,
 		senderID:          senderID,
 		content:           params.Content,
@@ -94,6 +110,9 @@ func (m Message) ConversationID() string { return m.conversationID }
 
 // ExternalMessageID returns the source-channel identifier used for idempotency.
 func (m Message) ExternalMessageID() string { return m.externalMessageID }
+
+// ReplyToMessageID returns the customer message that triggered this bot reply.
+func (m Message) ReplyToMessageID() string { return m.replyToMessageID }
 
 // Sender returns the actor type.
 func (m Message) Sender() Sender { return m.sender }

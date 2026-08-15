@@ -22,6 +22,17 @@ var (
 	// ErrIdempotencyConflict indicates that an external message ID was reused
 	// with different message data.
 	ErrIdempotencyConflict = errors.New("customer service: idempotency conflict")
+
+	// ErrInvalidReplyTrigger indicates that the selected trigger is not a
+	// customer message in the requested conversation.
+	ErrInvalidReplyTrigger = errors.New("customer service: invalid reply trigger")
+
+	// ErrReplySuperseded indicates that the conversation changed while a reply
+	// was being generated, so the generated content must be discarded.
+	ErrReplySuperseded = errors.New("customer service: reply superseded")
+
+	// ErrEmptyReply indicates that the model returned no usable text.
+	ErrEmptyReply = errors.New("customer service: empty reply")
 )
 
 func invalidInput(field, reason string) error {

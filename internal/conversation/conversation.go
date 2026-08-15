@@ -42,6 +42,7 @@ type Conversation struct {
 	channel    string
 	status     Status
 	agentID    string
+	revision   uint64
 	createdAt  time.Time
 	updatedAt  time.Time
 }
@@ -70,6 +71,7 @@ func New(params CreateParams) (*Conversation, error) {
 		customerID: customerID,
 		channel:    channel,
 		status:     StatusBotActive,
+		revision:   1,
 		createdAt:  createdAt,
 		updatedAt:  createdAt,
 	}, nil
@@ -90,6 +92,7 @@ func (c *Conversation) RequestHandoff(now time.Time) error {
 
 	c.status = StatusWaitingHuman
 	c.agentID = ""
+	c.revision++
 	c.updatedAt = updatedAt
 	return nil
 }
@@ -109,6 +112,7 @@ func (c *Conversation) CancelHandoff(now time.Time) error {
 
 	c.status = StatusBotActive
 	c.agentID = ""
+	c.revision++
 	c.updatedAt = updatedAt
 	return nil
 }
@@ -132,6 +136,7 @@ func (c *Conversation) AssignAgent(agentID string, now time.Time) error {
 
 	c.status = StatusHumanActive
 	c.agentID = agentID
+	c.revision++
 	c.updatedAt = updatedAt
 	return nil
 }
@@ -147,6 +152,7 @@ func (c *Conversation) Close(now time.Time) error {
 	}
 
 	c.status = StatusClosed
+	c.revision++
 	c.updatedAt = updatedAt
 	return nil
 }
@@ -196,6 +202,10 @@ func (c *Conversation) Status() Status { return c.status }
 
 // AgentID returns the assigned human agent identifier, if any.
 func (c *Conversation) AgentID() string { return c.agentID }
+
+// Revision returns the monotonic aggregate version. It changes on every state
+// transition, even when a later transition returns to the same status.
+func (c *Conversation) Revision() uint64 { return c.revision }
 
 // CreatedAt returns the creation time in UTC.
 func (c *Conversation) CreatedAt() time.Time { return c.createdAt }

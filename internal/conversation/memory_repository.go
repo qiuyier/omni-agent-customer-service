@@ -16,19 +16,21 @@ type externalMessageKey struct {
 type MemoryRepository struct {
 	mu sync.RWMutex
 
-	conversations       map[string]*Conversation
-	messages            map[string]Message
-	messageIDsByConv    map[string][]string
-	messageIDByExternal map[externalMessageKey]string
+	conversations           map[string]*Conversation
+	messages                map[string]Message
+	messageIDsByConv        map[string][]string
+	messageIDByExternal     map[externalMessageKey]string
+	replyMessageIDByTrigger map[string]string
 }
 
 // NewMemoryRepository creates an empty in-memory repository.
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		conversations:       make(map[string]*Conversation),
-		messages:            make(map[string]Message),
-		messageIDsByConv:    make(map[string][]string),
-		messageIDByExternal: make(map[externalMessageKey]string),
+		conversations:           make(map[string]*Conversation),
+		messages:                make(map[string]Message),
+		messageIDsByConv:        make(map[string][]string),
+		messageIDByExternal:     make(map[externalMessageKey]string),
+		replyMessageIDByTrigger: make(map[string]string),
 	}
 }
 
@@ -66,6 +68,29 @@ func (r *MemoryRepository) FindMessageByExternalID(
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return findMessageByExternalID(r.messages, r.messageIDByExternal, key)
+}
+
+// FindReplyByTriggerMessageID returns the unique bot reply linked to a customer
+// message.
+func (r *MemoryRepository) FindReplyByTriggerMessageID(
+	ctx context.Context,
+	triggerMessageID string,
+) (Message, error) {
+	if err := contextError(ctx); err != nil {
+		return Message{}, err
+	}
+	triggerMessageID, err := requiredString("trigger_message_id", triggerMessageID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return findReplyByTriggerMessageID(
+		r.messages,
+		r.replyMessageIDByTrigger,
+		triggerMessageID,
+	)
 }
 
 // ListMessages returns a detached slice in append order.
@@ -131,6 +156,7 @@ type memoryTransaction struct {
 	insertedMessages      map[string]Message
 	insertedMessageOrder  []stagedMessage
 	insertedExternalIDs   map[externalMessageKey]string
+	insertedReplyIDs      map[string]string
 }
 
 func newMemoryTransaction(repository *MemoryRepository) *memoryTransaction {
@@ -140,6 +166,7 @@ func newMemoryTransaction(repository *MemoryRepository) *memoryTransaction {
 		updatedConversations:  make(map[string]*Conversation),
 		insertedMessages:      make(map[string]Message),
 		insertedExternalIDs:   make(map[externalMessageKey]string),
+		insertedReplyIDs:      make(map[string]string),
 	}
 }
 
@@ -204,6 +231,43 @@ func (tx *memoryTransaction) FindMessageByExternalID(
 	)
 }
 
+func (tx *memoryTransaction) FindReplyByTriggerMessageID(triggerMessageID string) (Message, error) {
+	triggerMessageID, err := requiredString("trigger_message_id", triggerMessageID)
+	if err != nil {
+		return Message{}, err
+	}
+	if messageID, exists := tx.insertedReplyIDs[triggerMessageID]; exists {
+		return tx.insertedMessages[messageID], nil
+	}
+	return findReplyByTriggerMessageID(
+		tx.repository.messages,
+		tx.repository.replyMessageIDByTrigger,
+		triggerMessageID,
+	)
+}
+
+func (tx *memoryTransaction) ListMessages(conversationID string) ([]Message, error) {
+	conversationID, err := requiredString("conversation_id", conversationID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.FindConversation(conversationID); err != nil {
+		return nil, err
+	}
+
+	committedIDs := tx.repository.messageIDsByConv[conversationID]
+	messages := make([]Message, 0, len(committedIDs)+len(tx.insertedMessageOrder))
+	for _, id := range committedIDs {
+		messages = append(messages, tx.repository.messages[id])
+	}
+	for _, staged := range tx.insertedMessageOrder {
+		if staged.message.ConversationID() == conversationID {
+			messages = append(messages, staged.message)
+		}
+	}
+	return messages, nil
+}
+
 func (tx *memoryTransaction) InsertMessage(channel string, message Message) error {
 	channel, err := requiredString("channel", channel)
 	if err != nil {
@@ -227,6 +291,7 @@ func (tx *memoryTransaction) InsertMessage(channel string, message Message) erro
 	if _, exists := tx.repository.messages[validated.ID()]; exists {
 		return fmt.Errorf("%w: %q", ErrMessageAlreadyExists, validated.ID())
 	}
+	var pendingExternalKey *externalMessageKey
 	if validated.ExternalMessageID() != "" {
 		key := externalMessageKey{channel: channel, id: validated.ExternalMessageID()}
 		if _, exists := tx.insertedExternalIDs[key]; exists {
@@ -235,15 +300,51 @@ func (tx *memoryTransaction) InsertMessage(channel string, message Message) erro
 		if _, exists := tx.repository.messageIDByExternal[key]; exists {
 			return duplicateExternalMessageError(key)
 		}
-		tx.insertedExternalIDs[key] = validated.ID()
+		pendingExternalKey = &key
+	}
+	pendingTriggerMessageID := validated.ReplyToMessageID()
+	if pendingTriggerMessageID != "" {
+		trigger, findErr := tx.findMessageByID(pendingTriggerMessageID)
+		if findErr != nil {
+			return fmt.Errorf("reply target %q: %w", pendingTriggerMessageID, findErr)
+		}
+		if trigger.ConversationID() != validated.ConversationID() {
+			return invalidArgument("reply_to_message_id", "belongs to another conversation")
+		}
+		if trigger.Sender() != SenderCustomer {
+			return invalidArgument("reply_to_message_id", "must reference a customer message")
+		}
+		if _, exists := tx.insertedReplyIDs[pendingTriggerMessageID]; exists {
+			return replyAlreadyExistsError(pendingTriggerMessageID)
+		}
+		if _, exists := tx.repository.replyMessageIDByTrigger[pendingTriggerMessageID]; exists {
+			return replyAlreadyExistsError(pendingTriggerMessageID)
+		}
 	}
 
+	if pendingExternalKey != nil {
+		tx.insertedExternalIDs[*pendingExternalKey] = validated.ID()
+	}
+	if pendingTriggerMessageID != "" {
+		tx.insertedReplyIDs[pendingTriggerMessageID] = validated.ID()
+	}
 	tx.insertedMessages[validated.ID()] = validated
 	tx.insertedMessageOrder = append(tx.insertedMessageOrder, stagedMessage{
 		channel: channel,
 		message: validated,
 	})
 	return nil
+}
+
+func (tx *memoryTransaction) findMessageByID(id string) (Message, error) {
+	if message, exists := tx.insertedMessages[id]; exists {
+		return message, nil
+	}
+	message, exists := tx.repository.messages[id]
+	if !exists {
+		return Message{}, fmt.Errorf("%w: %q", ErrMessageNotFound, id)
+	}
+	return message, nil
 }
 
 func (tx *memoryTransaction) commit() {
@@ -264,6 +365,9 @@ func (tx *memoryTransaction) commit() {
 			key := externalMessageKey{channel: staged.channel, id: message.ExternalMessageID()}
 			tx.repository.messageIDByExternal[key] = message.ID()
 		}
+		if message.ReplyToMessageID() != "" {
+			tx.repository.replyMessageIDByTrigger[message.ReplyToMessageID()] = message.ID()
+		}
 	}
 }
 
@@ -279,6 +383,9 @@ func (r *MemoryRepository) initializeLocked() {
 	}
 	if r.messageIDByExternal == nil {
 		r.messageIDByExternal = make(map[externalMessageKey]string)
+	}
+	if r.replyMessageIDByTrigger == nil {
+		r.replyMessageIDByTrigger = make(map[string]string)
 	}
 }
 
@@ -307,6 +414,18 @@ func findMessageByExternalID(
 	return messages[messageID], nil
 }
 
+func findReplyByTriggerMessageID(
+	messages map[string]Message,
+	replyMessageIDByTrigger map[string]string,
+	triggerMessageID string,
+) (Message, error) {
+	messageID, exists := replyMessageIDByTrigger[triggerMessageID]
+	if !exists {
+		return Message{}, fmt.Errorf("%w: trigger message %q", ErrReplyNotFound, triggerMessageID)
+	}
+	return messages[messageID], nil
+}
+
 func newExternalMessageKey(channel, externalMessageID string) (externalMessageKey, error) {
 	channel, err := requiredString("channel", channel)
 	if err != nil {
@@ -328,11 +447,16 @@ func duplicateExternalMessageError(key externalMessageKey) error {
 	)
 }
 
+func replyAlreadyExistsError(triggerMessageID string) error {
+	return fmt.Errorf("%w: trigger message %q", ErrReplyAlreadyExists, triggerMessageID)
+}
+
 func validateMessage(message Message) (Message, error) {
 	return NewMessage(MessageParams{
 		ID:                message.ID(),
 		ConversationID:    message.ConversationID(),
 		ExternalMessageID: message.ExternalMessageID(),
+		ReplyToMessageID:  message.ReplyToMessageID(),
 		Sender:            message.Sender(),
 		SenderID:          message.SenderID(),
 		Content:           message.Content(),
@@ -372,6 +496,9 @@ func validateConversation(current *Conversation) error {
 	}
 	if current.updatedAt.Before(current.createdAt) {
 		return invalidArgument("updated_at", "must not be before created_at")
+	}
+	if current.revision == 0 {
+		return invalidArgument("revision", "must be greater than zero")
 	}
 	if current.status == StatusHumanActive && current.agentID == "" {
 		return invalidArgument("agent_id", "is required while status is human_active")

@@ -50,6 +50,7 @@ type Service struct {
 	repository conversation.Repository
 	ids        MessageIDGenerator
 	clock      Clock
+	replies    ReplyGenerator
 }
 
 // New creates a customer-service application service.
@@ -57,6 +58,7 @@ func New(
 	repository conversation.Repository,
 	ids MessageIDGenerator,
 	clock Clock,
+	options ...Option,
 ) (*Service, error) {
 	if repository == nil {
 		return nil, fmt.Errorf("%w: repository is nil", ErrInvalidDependency)
@@ -67,7 +69,16 @@ func New(
 	if clock == nil {
 		return nil, fmt.Errorf("%w: clock is nil", ErrInvalidDependency)
 	}
-	return &Service{repository: repository, ids: ids, clock: clock}, nil
+	service := &Service{repository: repository, ids: ids, clock: clock}
+	for index, option := range options {
+		if option == nil {
+			return nil, fmt.Errorf("%w: option %d is nil", ErrInvalidDependency, index)
+		}
+		if err := option(service); err != nil {
+			return nil, err
+		}
+	}
+	return service, nil
 }
 
 // ReceiveMessageCommand contains one inbound customer message. Sender is not a

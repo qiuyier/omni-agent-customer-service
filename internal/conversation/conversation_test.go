@@ -91,6 +91,34 @@ func TestHandoffLifecycle(t *testing.T) {
 	}
 }
 
+func TestConversationRevisionChangesOnEveryTransition(t *testing.T) {
+	current, err := conversation.New(conversation.CreateParams{
+		ID:         "conversation-1",
+		CustomerID: "customer-1",
+		Channel:    "web",
+		CreatedAt:  baseTime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Revision() != 1 {
+		t.Fatalf("initial Revision() = %d, want 1", current.Revision())
+	}
+
+	if err := current.RequestHandoff(baseTime.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := current.CancelHandoff(baseTime.Add(2 * time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := current.Close(baseTime.Add(3 * time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if current.Revision() != 4 {
+		t.Fatalf("Revision() = %d after three transitions, want 4", current.Revision())
+	}
+}
+
 func TestInvalidTransitions(t *testing.T) {
 	t.Run("assign before queueing", func(t *testing.T) {
 		current := newConversation(t)

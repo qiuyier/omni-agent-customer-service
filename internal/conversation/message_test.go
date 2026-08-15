@@ -91,3 +91,71 @@ func TestInternalMessageDoesNotRequireSenderID(t *testing.T) {
 		})
 	}
 }
+
+func TestBotMessageCanReferenceCustomerTrigger(t *testing.T) {
+	message, err := conversation.NewMessage(conversation.MessageParams{
+		ID:               "reply-1",
+		ConversationID:   "conversation-1",
+		ReplyToMessageID: "customer-message-1",
+		Sender:           conversation.SenderBot,
+		Content:          "How can I help?",
+		CreatedAt:        baseTime,
+	})
+	if err != nil {
+		t.Fatalf("NewMessage() error = %v", err)
+	}
+	if message.ReplyToMessageID() != "customer-message-1" {
+		t.Fatalf("ReplyToMessageID() = %q", message.ReplyToMessageID())
+	}
+}
+
+func TestReplyToMessageIDValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		params conversation.MessageParams
+	}{
+		{
+			name: "blank reference",
+			params: conversation.MessageParams{
+				ID:               "reply-1",
+				ConversationID:   "conversation-1",
+				ReplyToMessageID: "   ",
+				Sender:           conversation.SenderBot,
+				Content:          "reply",
+				CreatedAt:        baseTime,
+			},
+		},
+		{
+			name: "customer cannot reply",
+			params: conversation.MessageParams{
+				ID:               "message-2",
+				ConversationID:   "conversation-1",
+				ReplyToMessageID: "message-1",
+				Sender:           conversation.SenderCustomer,
+				SenderID:         "customer-1",
+				Content:          "reply",
+				CreatedAt:        baseTime,
+			},
+		},
+		{
+			name: "self reference",
+			params: conversation.MessageParams{
+				ID:               "reply-1",
+				ConversationID:   "conversation-1",
+				ReplyToMessageID: "reply-1",
+				Sender:           conversation.SenderBot,
+				Content:          "reply",
+				CreatedAt:        baseTime,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := conversation.NewMessage(test.params)
+			if !errors.Is(err, conversation.ErrInvalidArgument) {
+				t.Fatalf("NewMessage() error = %v, want ErrInvalidArgument", err)
+			}
+		})
+	}
+}
