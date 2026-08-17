@@ -1,12 +1,21 @@
 # omni-agent-customer-service
 
-面向企业系统的渠道无关智能客服服务，当前使用 Go 和 Eino 构建；模型层可在
-OpenAI、DeepSeek、GLM、Kimi、Qwen、OpenRouter、硅基流动及其他
-OpenAI-compatible 端点之间切换。后续阶段计划接入 Hertz 和 omni-agent-kit。
+面向企业系统的渠道无关智能客服服务，使用 Go、Eino、Hertz 和 Thrift 构建；
+模型层可在 OpenAI、DeepSeek、GLM、Kimi、Qwen、OpenRouter、硅基流动及
+其他 OpenAI-compatible 端点之间切换。
 
 ## 当前进度
 
-第三阶段已经实现“非流式 AI 自动回复闭环”：
+第四阶段第一小步已经实现“HTTP 接收消息闭环”：
+
+- 使用产品自己的 Thrift IDL 定义跨语言 HTTP 契约；
+- 使用 `hz model` 只生成轻量 DTO，Router 与 Handler 保持手写和依赖注入；
+- 通过 Hertz 暴露存活检查和接收客户消息 API；
+- 使用 omni-agent-kit `fault/problem` 输出安全一致的 Problem Details；
+- 单进程生命周期内首次投递返回 201，完全相同的渠道重试返回 200 且不会重复入库；
+- 提供不启动端口的 Router、Handler 和真实幂等链路测试。
+
+第三阶段的“非流式 AI 自动回复闭环”继续保留：
 
 - 接收并幂等保存客户消息；
 - 根据完整会话历史生成机器人回复；
@@ -24,16 +33,23 @@ OpenAI-compatible 端点之间切换。后续阶段计划接入 Hertz 和 omni-a
 ## 分层结构
 
 ~~~text
-cmd/console                         组合入口：读取环境配置、组装依赖
+外部渠道 / 企业系统
+       │ HTTP + JSON
+       ▼
+cmd/server                         Hertz 服务组合入口
        │
        ▼
-internal/ai/eino                   Eino / 模型供应商出站适配器
-       │ 实现 ReplyGenerator
+internal/transport/hertz           Thrift DTO、Router、Handler、错误映射
+       │ ReceiveMessageCommand
        ▼
 internal/customerservice           应用用例与流程编排
-       │ 依赖 Repository 接口
-       ▼
-internal/conversation              领域模型、仓储端口与内存实现
+       │                 ▲
+       │                 │ ReplyGenerator
+       ▼                 │
+internal/conversation    internal/ai/eino
+领域模型与仓储端口        Eino / 模型供应商出站适配器
+
+cmd/console                         单轮 AI 链路组合入口
 ~~~
 
 业务层只认识 `ReplyGenerator`：
@@ -147,7 +163,117 @@ Chat Completions”理解成“也兼容 Responses”；只有确认目标端点
 [OpenRouter](https://openrouter.ai/docs/quickstart)、
 [硅基流动](https://docs.siliconflow.cn/cn/userguide/quickstart)。
 
+## HTTP 接入层
+
+Thrift IDL 是 HTTP DTO/schema 的唯一真源，生成类型和手写代码彼此隔离：
+
+~~~text
+idl/customer_service.thrift
+       │ hz model
+       ▼
+internal/transport/hertz/model/customer_service.go  生成 DTO，不手改
+       │
+       ▼
+internal/transport/hertz/handler.go                  DTO ↔ Command/Result
+       │
+       ├── error.go                                  业务错误 ↔ fault
+       └── router.go                                 URL ↔ Handler
+~~~
+
+没有使用 `hz new` 生成整套项目骨架，因为现有应用已经有明确的 Service、
+Repository 和构造函数注入边界。`hz model` 只生成 HTTP 所需类型，避免把全局
+Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Router，
+因此 `router.go` 手工镜像 IDL 的 URL；路由和状态码行为由传输层测试锁定。
+
+当前端点：
+
+| Method | Path | 用途 |
+| --- | --- | --- |
+| `GET` | `/healthz` | 进程存活检查，不访问数据库或模型 |
+| `POST` | `/v1/conversations/:conversation_id/messages` | 幂等接收一条客户消息 |
+
+Handler 只按 `application/json` 解码，不允许 Query 或 Form 覆盖消息字段。
+Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来自 `api.vd`；
+纯空格等业务无效值仍由 `customerservice.Service` 完成最终校验。URL 中的
+`conversation_id` 是权威值，不接受请求体覆盖。
+
+成功响应语义：
+
+- 新消息：`201 Created`，`duplicate=false`，返回当前 `next_action`；
+- 完全相同的渠道重试：`200 OK`，`duplicate=true`，并返回原 Message ID；
+- 同一个外部 Message ID 携带不同数据：`409 Conflict`；
+- 参数错误：`400 Bad Request`；
+- 未分类内部错误：`500 Internal Server Error`，响应不会包含 cause 或密钥。
+
+错误统一使用 `application/problem+json`，例如：
+
+~~~json
+{
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "code": "invalid_argument",
+  "detail": "invalid request"
+}
+~~~
+
 ## 本地运行
+
+### HTTP 服务（不需要 AI Key）
+
+`cmd/server` 当前只负责接收消息，不会同步调用模型；因此启动和测试这个入口
+不需要任何 AI API Key：
+
+~~~bash
+go run ./cmd/server -address 127.0.0.1:8080
+~~~
+
+也可以在 `.env.local` 设置 `HTTP_ADDRESS`，再把文件加载进当前 shell；程序不会
+自行读取 dotenv 文件，命令行参数优先：
+
+~~~bash
+set -a
+source .env.local
+set +a
+
+go run ./cmd/server
+~~~
+
+发送消息：
+
+~~~bash
+curl --request POST \
+  --url http://127.0.0.1:8080/v1/conversations/conversation-001/messages \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "customer_id": "customer-001",
+    "channel": "web",
+    "external_message_id": "web-message-001",
+    "content": "我的订单还没到，应该怎么办？"
+  }'
+~~~
+
+首次请求会返回类似：
+
+~~~json
+{
+  "conversation_id": "conversation-001",
+  "message_id": "44be5db0-3be0-440f-b938-989a89bd0155",
+  "status": "bot_active",
+  "next_action": "generate_bot_reply",
+  "duplicate": false
+}
+~~~
+
+`next_action=generate_bot_reply` 表示消息接收成功后应进入自动回复流程，不表示
+当前 HTTP 请求已经调用 AI。这样渠道 webhook 不会被模型延迟或供应商故障拖住。
+
+当前 `cmd/server` 默认只监听本机回环地址，并使用 `MemoryRepository`：进程重启
+后消息会丢失，多实例之间也不共享幂等键，所以它是本地开发入口，不是可直接
+暴露到公网的生产服务。对外接入前还需要渠道签名/HMAC、认证、限流、消息大小
+限制，以及带数据库唯一约束的持久化 Repository。
+
+### 模型控制台（需要对应供应商凭据）
 
 `.env.example` 只描述变量名；真实密钥保存在被 Git 忽略的 `.env.local`。
 推荐统一使用以下五个配置：
@@ -205,11 +331,30 @@ go vet ./...
 ~~~
 
 测试覆盖领域状态、ReplyTo 约束、事务回滚、模型输入映射、两种 HTTP 协议、
-模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA 和新增消息等
-情况。协议测试使用本地 `httptest` 服务，不需要真实 API Key，也不产生费用。
+模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA、新增消息、
+Hertz 路由、Thrift 绑定、Problem 错误响应和 HTTP 幂等链路等情况。协议测试
+使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，也不产生费用。
+
+修改 IDL 后，固定生成器版本并重新生成 DTO：
+
+~~~bash
+go install github.com/cloudwego/hertz/cmd/hz@v0.9.7
+go install github.com/cloudwego/thriftgo@v0.4.3
+go generate ./internal/transport/hertz
+~~~
+
+`omni-agent-kit` 当前是私有 Go module。新电脑或 CI 在下载依赖前需要配置可读取
+该仓库的 GitHub 凭据，并将模块声明为私有，例如：
+
+~~~bash
+GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
+~~~
+
+如果以后将 kit 公开，这组私有模块配置就不再需要。
 
 ## 下一阶段
 
-第四阶段将使用 Hertz 暴露 HTTP API，并通过 SSE 返回流式回复。届时会使用
-omni-agent-kit 的流适配能力处理 Eino stream、客户端断开和 `Close()` 生命周期，
-而不会把流式传输细节放进当前的非流式业务用例。
+第四阶段下一小步会把已接收消息的 `next_action` 接到自动回复执行流程，并通过
+SSE 返回流式回复。届时会使用 omni-agent-kit 的流适配能力处理 Eino stream、
+客户端断开和 `Close()` 生命周期，同时继续保留 `TriggerMessageID` 的过期回复
+保护，不会把流式传输细节塞进当前的接收消息用例。
