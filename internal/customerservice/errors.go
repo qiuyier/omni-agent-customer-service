@@ -33,6 +33,14 @@ var (
 
 	// ErrEmptyReply indicates that the model returned no usable text.
 	ErrEmptyReply = errors.New("customer service: empty reply")
+
+	// ErrReplyUnavailable indicates that this service instance has no usable
+	// reply-generation capability configured.
+	ErrReplyUnavailable = errors.New("customer service: reply unavailable")
+
+	// ErrReplyGenerationFailed classifies a provider or model invocation
+	// failure while preserving the original cause for errors.Is/errors.As.
+	ErrReplyGenerationFailed = errors.New("customer service: reply generation failed")
 )
 
 func invalidInput(field, reason string) error {

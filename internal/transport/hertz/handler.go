@@ -27,17 +27,32 @@ type MessageReceiver interface {
 	) (customerservice.ReceiveMessageResult, error)
 }
 
+// BotReplyGenerator is the application port required by the reply endpoint.
+type BotReplyGenerator interface {
+	GenerateBotReply(
+		ctx context.Context,
+		command customerservice.GenerateBotReplyCommand,
+	) (customerservice.GenerateBotReplyResult, error)
+}
+
+// Application contains exactly the customer-service use cases exposed over
+// HTTP. *customerservice.Service satisfies both embedded ports.
+type Application interface {
+	MessageReceiver
+	BotReplyGenerator
+}
+
 // Handler translates Hertz requests and responses at the HTTP boundary.
 type Handler struct {
-	receiver MessageReceiver
+	application Application
 }
 
 // NewHandler creates a handler with its application dependency.
-func NewHandler(receiver MessageReceiver) (*Handler, error) {
-	if receiver == nil {
-		return nil, invalidDependency("message receiver is nil")
+func NewHandler(application Application) (*Handler, error) {
+	if application == nil {
+		return nil, invalidDependency("application is nil")
 	}
-	return &Handler{receiver: receiver}, nil
+	return &Handler{application: application}, nil
 }
 
 // Health reports whether the HTTP process is running. It intentionally does
@@ -60,7 +75,7 @@ func (h *Handler) ReceiveMessage(ctx context.Context, requestContext *app.Reques
 		return
 	}
 
-	result, err := h.receiver.ReceiveMessage(ctx, customerservice.ReceiveMessageCommand{
+	result, err := h.application.ReceiveMessage(ctx, customerservice.ReceiveMessageCommand{
 		ConversationID:    request.ConversationID,
 		CustomerID:        request.CustomerID,
 		Channel:           request.Channel,
@@ -82,6 +97,44 @@ func (h *Handler) ReceiveMessage(ctx context.Context, requestContext *app.Reques
 		Status:         string(result.Status),
 		NextAction:     string(result.NextAction),
 		Duplicate:      result.Duplicate,
+	})
+}
+
+// GenerateBotReply creates or returns the persisted bot reply linked to one
+// explicit customer trigger message.
+func (h *Handler) GenerateBotReply(ctx context.Context, requestContext *app.RequestContext) {
+	request := model.GenerateBotReplyRequest{
+		ConversationID:   requestContext.Param("conversation_id"),
+		TriggerMessageID: requestContext.Param("trigger_message_id"),
+	}
+	if err := requestContext.Validate(&request); err != nil {
+		writeProblem(requestContext, fault.Wrap(
+			fault.CodeInvalidArgument,
+			"invalid request",
+			err,
+		))
+		return
+	}
+
+	result, err := h.application.GenerateBotReply(ctx, customerservice.GenerateBotReplyCommand{
+		ConversationID:   request.ConversationID,
+		TriggerMessageID: request.TriggerMessageID,
+	})
+	if err != nil {
+		writeProblem(requestContext, classifyError(err))
+		return
+	}
+
+	statusCode := http.StatusCreated
+	if result.Duplicate {
+		statusCode = http.StatusOK
+	}
+	requestContext.JSON(statusCode, &model.GenerateBotReplyResponse{
+		ConversationID:   result.ConversationID,
+		TriggerMessageID: result.TriggerMessageID,
+		MessageID:        result.MessageID,
+		Content:          result.Content,
+		Duplicate:        result.Duplicate,
 	})
 }
 

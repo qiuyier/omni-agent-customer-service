@@ -6,14 +6,16 @@
 
 ## 当前进度
 
-第四阶段第一小步已经实现“HTTP 接收消息闭环”：
+第四阶段第二小步已经实现“HTTP 非流式自动回复闭环”：
 
 - 使用产品自己的 Thrift IDL 定义跨语言 HTTP 契约；
 - 使用 `hz model` 只生成轻量 DTO，Router 与 Handler 保持手写和依赖注入；
-- 通过 Hertz 暴露存活检查和接收客户消息 API；
+- 通过 Hertz 暴露存活检查、接收客户消息和生成机器人回复 API；
 - 使用 omni-agent-kit `fault/problem` 输出安全一致的 Problem Details；
-- 单进程生命周期内首次投递返回 201，完全相同的渠道重试返回 200 且不会重复入库；
-- 提供不启动端口的 Router、Handler 和真实幂等链路测试。
+- 将 AI 环境配置集中在 `internal/bootstrap`，供 console 与 server 复用；
+- 回复接口使用 `TriggerMessageID` 防止重复回复和过期回复写入；
+- 首次生成返回 201，重复请求返回 200、同一个 Message ID 和已保存内容；
+- 提供不启动端口的 Router、Handler、错误语义和真实业务链路测试。
 
 第三阶段的“非流式 AI 自动回复闭环”继续保留：
 
@@ -33,23 +35,19 @@
 ## 分层结构
 
 ~~~text
-外部渠道 / 企业系统
-       │ HTTP + JSON
-       ▼
-cmd/server                         Hertz 服务组合入口
-       │
-       ▼
-internal/transport/hertz           Thrift DTO、Router、Handler、错误映射
-       │ ReceiveMessageCommand
-       ▼
-internal/customerservice           应用用例与流程编排
-       │                 ▲
-       │                 │ ReplyGenerator
-       ▼                 │
-internal/conversation    internal/ai/eino
-领域模型与仓储端口        Eino / 模型供应商出站适配器
+请求流：
+外部渠道 → internal/transport/hertz → internal/customerservice
+                                           ├──→ internal/conversation
+                                           └──→ ReplyGenerator
+                                                     │
+                                                     ▼
+                                             internal/ai/eino → 模型供应商
 
-cmd/console                         单轮 AI 链路组合入口
+组装流：
+cmd/server → internal/bootstrap → 创建 ReplyGenerator
+     └──→ 创建 Service 并注入 ReplyGenerator → 创建 Handler → 注册路由
+
+cmd/console → internal/bootstrap → 单轮 AI 链路
 ~~~
 
 业务层只认识 `ReplyGenerator`：
@@ -191,19 +189,32 @@ Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Route
 | --- | --- | --- |
 | `GET` | `/healthz` | 进程存活检查，不访问数据库或模型 |
 | `POST` | `/v1/conversations/:conversation_id/messages` | 幂等接收一条客户消息 |
+| `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply` | 为指定客户消息生成或读取机器人回复 |
 
 Handler 只按 `application/json` 解码，不允许 Query 或 Form 覆盖消息字段。
 Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来自 `api.vd`；
 纯空格等业务无效值仍由 `customerservice.Service` 完成最终校验。URL 中的
 `conversation_id` 是权威值，不接受请求体覆盖。
 
-成功响应语义：
+接收消息的响应语义：
 
 - 新消息：`201 Created`，`duplicate=false`，返回当前 `next_action`；
 - 完全相同的渠道重试：`200 OK`，`duplicate=true`，并返回原 Message ID；
 - 同一个外部 Message ID 携带不同数据：`409 Conflict`；
 - 参数错误：`400 Bad Request`；
 - 未分类内部错误：`500 Internal Server Error`，响应不会包含 cause 或密钥。
+
+生成回复的响应语义：
+
+- 第一次生成并保存：`201 Created`，`duplicate=false`；
+- 已存在同一 Trigger 的回复：`200 OK`，`duplicate=true`，返回数据库中原来的
+  Message ID 和内容，不会再次调用模型；
+- Trigger 已不是最新客户消息，或生成期间会话发生变化：`409 Conflict`，临时生成
+  内容不会保存；
+- AI 未配置、供应商调用失败或模型返回空内容：`503 Service Unavailable`；
+- 客户端取消和请求超时分别保持 `408 Request Timeout` 与
+  `504 Gateway Timeout`；
+- Provider 的原始错误、响应正文和 API Key 都不会进入公开 Problem 响应。
 
 错误统一使用 `application/problem+json`，例如：
 
@@ -219,25 +230,25 @@ Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来�
 
 ## 本地运行
 
-### HTTP 服务（不需要 AI Key）
+### HTTP 服务（需要对应供应商配置）
 
-`cmd/server` 当前只负责接收消息，不会同步调用模型；因此启动和测试这个入口
-不需要任何 AI API Key：
+`cmd/server` 同时暴露接收消息和生成回复接口，因此启动时会校验 AI 配置并创建
+`ReplyGenerator`。公网供应商需要对应 API Key；`custom` 指向无鉴权的本地
+OpenAI-compatible 端点时可以不配置 Key。缺少必要配置会直接启动失败，不会等到
+第一次回复请求才暴露问题。
 
-~~~bash
-go run ./cmd/server -address 127.0.0.1:8080
-~~~
-
-也可以在 `.env.local` 设置 `HTTP_ADDRESS`，再把文件加载进当前 shell；程序不会
-自行读取 dotenv 文件，命令行参数优先：
+先把 `.env.example` 复制为被 Git 忽略的 `.env.local`，填入供应商配置，再加载到
+当前 shell。程序不会自行读取 dotenv 文件：
 
 ~~~bash
 set -a
 source .env.local
 set +a
 
-go run ./cmd/server
+go run ./cmd/server -address 127.0.0.1:8080
 ~~~
+
+`-address` 优先于 `HTTP_ADDRESS`；两者都不设置时默认监听 `127.0.0.1:8080`。
 
 发送消息：
 
@@ -268,15 +279,42 @@ curl --request POST \
 `next_action=generate_bot_reply` 表示消息接收成功后应进入自动回复流程，不表示
 当前 HTTP 请求已经调用 AI。这样渠道 webhook 不会被模型延迟或供应商故障拖住。
 
+把接收响应中的 `message_id` 作为 `trigger_message_id`，再显式请求生成回复。这个
+接口不需要请求体：
+
+~~~bash
+curl --request POST \
+  --url http://127.0.0.1:8080/v1/conversations/conversation-001/messages/44be5db0-3be0-440f-b938-989a89bd0155/reply
+~~~
+
+首次成功会返回 `201 Created`：
+
+~~~json
+{
+  "conversation_id": "conversation-001",
+  "trigger_message_id": "44be5db0-3be0-440f-b938-989a89bd0155",
+  "message_id": "41074f6f-c798-4f89-bde0-386ff6bca194",
+  "content": "很抱歉订单还没到。请提供订单号，我可以根据现有信息继续协助你核对。",
+  "duplicate": false
+}
+~~~
+
+回复接口会等待本次模型调用完成；应用层为整次模型生成设置 75 秒 deadline，
+这个总预算包含供应商 SDK 内部重试，而不只是某一次 HTTP 尝试。对同一个
+Trigger 重试时会直接读取已经保存的机器人消息，返回 `200 OK` 和
+`duplicate=true`。当前拆成两个端点，是为了让渠道消息接收与较慢、可能失败的
+模型调用具有独立的重试和超时边界。
+
 当前 `cmd/server` 默认只监听本机回环地址，并使用 `MemoryRepository`：进程重启
 后消息会丢失，多实例之间也不共享幂等键，所以它是本地开发入口，不是可直接
 暴露到公网的生产服务。对外接入前还需要渠道签名/HMAC、认证、限流、消息大小
 限制，以及带数据库唯一约束的持久化 Repository。
 
-### 模型控制台（需要对应供应商凭据）
+### AI 配置与模型控制台
 
 `.env.example` 只描述变量名；真实密钥保存在被 Git 忽略的 `.env.local`。
-推荐统一使用以下五个配置：
+`cmd/server` 与 `cmd/console` 共用 `internal/bootstrap` 的同一套解析规则，推荐统一
+使用以下配置：
 
 ~~~dotenv
 AI_PROVIDER=deepseek
@@ -284,13 +322,23 @@ AI_PROTOCOL=
 AI_API_KEY=
 AI_MODEL=
 AI_BASE_URL=
+AI_ALLOW_INSECURE_HTTP=false
+AI_SYSTEM_PROMPT=
 ~~~
 
 - `AI_PROVIDER` 默认是 `openai`；
 - `AI_PROTOCOL` 留空时使用上表中的厂商默认协议；
 - `AI_API_KEY` 是推荐的统一密钥变量；
 - `AI_MODEL` 对 OpenAI 可留空使用项目默认值，其他厂商必填；
-- `AI_BASE_URL` 通常留空，使用 `custom` 时必填。
+- `AI_BASE_URL` 通常留空，使用 `custom` 时必填；
+- `AI_ALLOW_INSECURE_HTTP` 默认 `false`，只用于明确接受风险的可信内网；
+- `AI_SYSTEM_PROMPT` 可选，留空时使用项目内置的客服提示词。
+
+模型请求会把 System Prompt 和完整客户会话发送到最终解析出的 Base URL，配置
+凭据时还会发送 API Key。为避免误配置造成客户数据明文泄露，所有非回环端点
+默认必须使用 HTTPS；HTTP 只直接允许 `localhost`、`127.0.0.0/8`、`::1` 等
+本机开发地址。只有在网络本身可信且明确接受窃听、篡改风险时，才设置
+`AI_ALLOW_INSECURE_HTTP=true` 放行非回环 HTTP。
 
 为了兼容已有本地配置，OpenAI 仍支持 `OPENAI_API_KEY`、`OPENAI_MODEL` 和
 `OPENAI_BASE_URL`。统一的 `AI_*` 值优先。其他厂商也可用表中的专属密钥变量
@@ -332,8 +380,9 @@ go vet ./...
 
 测试覆盖领域状态、ReplyTo 约束、事务回滚、模型输入映射、两种 HTTP 协议、
 模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA、新增消息、
-Hertz 路由、Thrift 绑定、Problem 错误响应和 HTTP 幂等链路等情况。协议测试
-使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，也不产生费用。
+Hertz 路由、Thrift 绑定、Problem 错误响应、HTTP 回复幂等和过期 Trigger 等
+情况。协议测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，
+也不产生费用。
 
 修改 IDL 后，固定生成器版本并重新生成 DTO：
 
@@ -354,7 +403,7 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 ## 下一阶段
 
-第四阶段下一小步会把已接收消息的 `next_action` 接到自动回复执行流程，并通过
-SSE 返回流式回复。届时会使用 omni-agent-kit 的流适配能力处理 Eino stream、
-客户端断开和 `Close()` 生命周期，同时继续保留 `TriggerMessageID` 的过期回复
-保护，不会把流式传输细节塞进当前的接收消息用例。
+第四阶段下一小步会在保留当前非流式回复端点的基础上增加 SSE 流式回复。届时会
+使用 omni-agent-kit 的流适配能力处理 Eino stream、客户端断开和 `Close()`
+生命周期，并设计“流已经开始后如何表达错误和过期”的事件协议；
+`TriggerMessageID` 的幂等与过期回复保护仍留在应用层，不会被 SSE 细节替代。

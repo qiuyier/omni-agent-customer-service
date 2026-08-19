@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -48,17 +49,20 @@ var (
 // fully custom OpenAI-compatible endpoint. Empty Protocol and BaseURL fields
 // inherit the provider preset. Model only defaults for OpenAI. ExtraFields
 // must not contain secrets, and nested map or slice values must be treated as
-// immutable after construction.
+// immutable after construction. AllowInsecureHTTP is a dangerous explicit
+// opt-in for non-loopback endpoints because prompts and conversations are sent
+// in plaintext.
 type ProviderConfig struct {
-	Provider     Provider
-	Protocol     Protocol
-	APIKey       string
-	Model        string
-	BaseURL      string
-	Timeout      time.Duration
-	SystemPrompt string
-	Headers      map[string]string
-	ExtraFields  map[string]any
+	Provider          Provider
+	Protocol          Protocol
+	APIKey            string
+	Model             string
+	BaseURL           string
+	Timeout           time.Duration
+	SystemPrompt      string
+	Headers           map[string]string
+	ExtraFields       map[string]any
+	AllowInsecureHTTP bool
 }
 
 type providerPreset struct {
@@ -249,7 +253,7 @@ func resolveProviderConfig(ctx context.Context, config ProviderConfig) (Provider
 	if baseURL == "" {
 		baseURL = preset.baseURL
 	}
-	if err := validateProviderBaseURL(baseURL); err != nil {
+	if err := validateProviderBaseURL(baseURL, config.AllowInsecureHTTP); err != nil {
 		return ProviderConfig{}, err
 	}
 	if config.Timeout < 0 {
@@ -275,19 +279,20 @@ func resolveProviderConfig(ctx context.Context, config ProviderConfig) (Provider
 	}
 
 	return ProviderConfig{
-		Provider:     provider,
-		Protocol:     protocol,
-		APIKey:       apiKey,
-		Model:        modelName,
-		BaseURL:      baseURL,
-		Timeout:      config.Timeout,
-		SystemPrompt: config.SystemPrompt,
-		Headers:      cloneStringMap(config.Headers),
-		ExtraFields:  cloneAnyMap(config.ExtraFields),
+		Provider:          provider,
+		Protocol:          protocol,
+		APIKey:            apiKey,
+		Model:             modelName,
+		BaseURL:           baseURL,
+		Timeout:           config.Timeout,
+		SystemPrompt:      config.SystemPrompt,
+		Headers:           cloneStringMap(config.Headers),
+		ExtraFields:       cloneAnyMap(config.ExtraFields),
+		AllowInsecureHTTP: config.AllowInsecureHTTP,
 	}, nil
 }
 
-func validateProviderBaseURL(value string) error {
+func validateProviderBaseURL(value string, allowInsecureHTTP bool) error {
 	if value == "" {
 		return fmt.Errorf("%w: base URL is required", ErrInvalidConfiguration)
 	}
@@ -297,6 +302,12 @@ func validateProviderBaseURL(value string) error {
 	}
 	if parsed.User != nil {
 		return fmt.Errorf("%w: base URL must not contain user information", ErrInvalidConfiguration)
+	}
+	if parsed.Scheme != "https" && !isLoopbackHost(parsed.Hostname()) && !allowInsecureHTTP {
+		return fmt.Errorf(
+			"%w: base URL must use HTTPS outside loopback unless insecure HTTP is explicitly allowed",
+			ErrInvalidConfiguration,
+		)
 	}
 	if parsed.ForceQuery || parsed.RawQuery != "" || strings.Contains(value, "#") {
 		return fmt.Errorf("%w: base URL must not contain a query or fragment", ErrInvalidConfiguration)
@@ -309,6 +320,14 @@ func validateProviderBaseURL(value string) error {
 		)
 	}
 	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(strings.TrimSpace(host), "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func validateExtraFields(protocol Protocol, fields map[string]any) error {

@@ -5,6 +5,7 @@ import "github.com/cloudwego/hertz/pkg/route"
 const (
 	healthPath         = "/healthz"
 	receiveMessagePath = "/v1/conversations/:conversation_id/messages"
+	generateReplyPath  = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply"
 )
 
 // RegisterRoutes connects the hand-written dependency-injected handler to the
@@ -19,5 +20,6 @@ func RegisterRoutes(engine *route.Engine, handler *Handler) error {
 
 	engine.GET(healthPath, handler.Health)
 	engine.POST(receiveMessagePath, handler.ReceiveMessage)
+	engine.POST(generateReplyPath, handler.GenerateBotReply)
 	return nil
 }

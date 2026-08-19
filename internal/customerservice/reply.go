@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 )
@@ -62,6 +63,22 @@ func WithReplyGenerator(generator ReplyGenerator) Option {
 			return fmt.Errorf("%w: reply generator is nil", ErrInvalidDependency)
 		}
 		service.replies = generator
+		return nil
+	}
+}
+
+// WithReplyGenerationTimeout bounds the complete model-generation attempt,
+// including retries performed inside a provider SDK. A caller's earlier
+// context deadline still takes precedence.
+func WithReplyGenerationTimeout(timeout time.Duration) Option {
+	return func(service *Service) error {
+		if timeout <= 0 {
+			return fmt.Errorf(
+				"%w: reply generation timeout must be positive",
+				ErrInvalidDependency,
+			)
+		}
+		service.replyGenerationTimeout = timeout
 		return nil
 	}
 }
@@ -158,12 +175,29 @@ func (s *Service) GenerateBotReply(
 		return result, nil
 	}
 	if s.replies == nil {
-		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrInvalidDependency)
+		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrReplyUnavailable)
 	}
 
-	generated, err := s.replies.Generate(ctx, snapshot.request)
+	generationContext := ctx
+	cancelGeneration := func() {}
+	if s.replyGenerationTimeout > 0 {
+		generationContext, cancelGeneration = context.WithTimeout(
+			ctx,
+			s.replyGenerationTimeout,
+		)
+	}
+	generated, err := s.replies.Generate(generationContext, snapshot.request)
+	generationContextErr := generationContext.Err()
+	cancelGeneration()
+	if generationContextErr != nil {
+		err = generationContextErr
+	}
 	if err != nil {
-		return GenerateBotReplyResult{}, fmt.Errorf("generate bot reply: %w", err)
+		return GenerateBotReplyResult{}, fmt.Errorf(
+			"%w: generate bot reply: %w",
+			ErrReplyGenerationFailed,
+			err,
+		)
 	}
 	if err := ctx.Err(); err != nil {
 		return GenerateBotReplyResult{}, err

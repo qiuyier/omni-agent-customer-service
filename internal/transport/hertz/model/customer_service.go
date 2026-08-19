@@ -130,8 +130,79 @@ func (p *ReceiveMessageResponse) String() string {
 	return fmt.Sprintf("ReceiveMessageResponse(%+v)", *p)
 }
 
+type GenerateBotReplyRequest struct {
+	ConversationID   string `thrift:"ConversationID,1,required" json:"ConversationID,required" path:"conversation_id,required" vd:"$!=''"`
+	TriggerMessageID string `thrift:"TriggerMessageID,2,required" json:"TriggerMessageID,required" path:"trigger_message_id,required" vd:"$!=''"`
+}
+
+func NewGenerateBotReplyRequest() *GenerateBotReplyRequest {
+	return &GenerateBotReplyRequest{}
+}
+
+func (p *GenerateBotReplyRequest) InitDefault() {
+}
+
+func (p *GenerateBotReplyRequest) GetConversationID() (v string) {
+	return p.ConversationID
+}
+
+func (p *GenerateBotReplyRequest) GetTriggerMessageID() (v string) {
+	return p.TriggerMessageID
+}
+
+func (p *GenerateBotReplyRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GenerateBotReplyRequest(%+v)", *p)
+}
+
+type GenerateBotReplyResponse struct {
+	ConversationID   string `thrift:"ConversationID,1,required" form:"conversation_id,required" json:"conversation_id,required"`
+	TriggerMessageID string `thrift:"TriggerMessageID,2,required" form:"trigger_message_id,required" json:"trigger_message_id,required"`
+	MessageID        string `thrift:"MessageID,3,required" form:"message_id,required" json:"message_id,required"`
+	Content          string `thrift:"Content,4,required" form:"content,required" json:"content,required"`
+	Duplicate        bool   `thrift:"Duplicate,5,required" form:"duplicate,required" json:"duplicate,required"`
+}
+
+func NewGenerateBotReplyResponse() *GenerateBotReplyResponse {
+	return &GenerateBotReplyResponse{}
+}
+
+func (p *GenerateBotReplyResponse) InitDefault() {
+}
+
+func (p *GenerateBotReplyResponse) GetConversationID() (v string) {
+	return p.ConversationID
+}
+
+func (p *GenerateBotReplyResponse) GetTriggerMessageID() (v string) {
+	return p.TriggerMessageID
+}
+
+func (p *GenerateBotReplyResponse) GetMessageID() (v string) {
+	return p.MessageID
+}
+
+func (p *GenerateBotReplyResponse) GetContent() (v string) {
+	return p.Content
+}
+
+func (p *GenerateBotReplyResponse) GetDuplicate() (v bool) {
+	return p.Duplicate
+}
+
+func (p *GenerateBotReplyResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GenerateBotReplyResponse(%+v)", *p)
+}
+
 type CustomerServiceAPI interface {
 	Health(ctx context.Context, request *HealthRequest) (r *HealthResponse, err error)
 
 	ReceiveMessage(ctx context.Context, request *ReceiveMessageRequest) (r *ReceiveMessageResponse, err error)
+
+	GenerateBotReply(ctx context.Context, request *GenerateBotReplyRequest) (r *GenerateBotReplyResponse, err error)
 }

@@ -114,8 +114,80 @@ func TestGenerateBotReplyRequiresGeneratorOnlyForNewReply(t *testing.T) {
 		ConversationID:   received.ConversationID,
 		TriggerMessageID: received.MessageID,
 	})
-	if !errors.Is(err, customerservice.ErrInvalidDependency) {
-		t.Fatalf("GenerateBotReply() error = %v, want ErrInvalidDependency", err)
+	if !errors.Is(err, customerservice.ErrReplyUnavailable) {
+		t.Fatalf("GenerateBotReply() error = %v, want ErrReplyUnavailable", err)
+	}
+}
+
+func TestGenerateBotReplyBoundsAllProviderAttemptsWithOneDeadline(t *testing.T) {
+	const timeout = 50 * time.Millisecond
+	repository := conversation.NewMemoryRepository()
+	ids := &sequenceIDGenerator{}
+	deadlineObserved := false
+	generator := customerservice.ReplyGeneratorFunc(func(
+		ctx context.Context,
+		_ customerservice.ReplyRequest,
+	) (customerservice.Reply, error) {
+		deadline, found := ctx.Deadline()
+		if !found {
+			t.Fatal("reply generator context has no deadline")
+		}
+		deadlineObserved = true
+		if remaining := time.Until(deadline); remaining > timeout {
+			t.Fatalf("reply generator deadline remaining = %v, want at most %v", remaining, timeout)
+		}
+		<-ctx.Done()
+		return customerservice.Reply{}, ctx.Err()
+	})
+	service, err := customerservice.New(
+		repository,
+		ids,
+		customerservice.ClockFunc(func() time.Time { return serviceBaseTime }),
+		customerservice.WithReplyGenerator(generator),
+		customerservice.WithReplyGenerationTimeout(timeout),
+	)
+	if err != nil {
+		t.Fatalf("customerservice.New() error = %v", err)
+	}
+	received, err := service.ReceiveMessage(context.Background(), validCommand())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	startedAt := time.Now()
+	_, err = service.GenerateBotReply(context.Background(), customerservice.GenerateBotReplyCommand{
+		ConversationID:   received.ConversationID,
+		TriggerMessageID: received.MessageID,
+	})
+	if !errors.Is(err, context.DeadlineExceeded) ||
+		!errors.Is(err, customerservice.ErrReplyGenerationFailed) {
+		t.Fatalf("GenerateBotReply() error = %v, want deadline and generation failure", err)
+	}
+	if !deadlineObserved {
+		t.Fatal("reply generator did not observe the application deadline")
+	}
+	if elapsed := time.Since(startedAt); elapsed > 2*time.Second {
+		t.Fatalf("GenerateBotReply() elapsed = %v, want bounded by one deadline", elapsed)
+	}
+	if messages := listMessages(t, repository, received.ConversationID); len(messages) != 1 {
+		t.Fatalf("stored messages = %d, want only customer trigger", len(messages))
+	}
+}
+
+func TestWithReplyGenerationTimeoutRejectsNonPositiveDuration(t *testing.T) {
+	for _, timeout := range []time.Duration{0, -time.Second} {
+		service, err := customerservice.New(
+			conversation.NewMemoryRepository(),
+			&sequenceIDGenerator{},
+			customerservice.ClockFunc(func() time.Time { return serviceBaseTime }),
+			customerservice.WithReplyGenerationTimeout(timeout),
+		)
+		if !errors.Is(err, customerservice.ErrInvalidDependency) {
+			t.Fatalf("timeout %v: error = %v, want ErrInvalidDependency", timeout, err)
+		}
+		if service != nil {
+			t.Fatalf("timeout %v: service = %#v, want nil", timeout, service)
+		}
 	}
 }
 
@@ -170,6 +242,7 @@ func TestGenerateBotReplyDoesNotPersistModelFailures(t *testing.T) {
 		name      string
 		generator customerservice.ReplyGenerator
 		wantErr   error
+		wantClass error
 	}{
 		{
 			name: "model error",
@@ -179,7 +252,8 @@ func TestGenerateBotReplyDoesNotPersistModelFailures(t *testing.T) {
 			) (customerservice.Reply, error) {
 				return customerservice.Reply{}, modelErr
 			}),
-			wantErr: modelErr,
+			wantErr:   modelErr,
+			wantClass: customerservice.ErrReplyGenerationFailed,
 		},
 		{
 			name: "blank model response",
@@ -189,7 +263,8 @@ func TestGenerateBotReplyDoesNotPersistModelFailures(t *testing.T) {
 			) (customerservice.Reply, error) {
 				return customerservice.Reply{Content: "   "}, nil
 			}),
-			wantErr: customerservice.ErrEmptyReply,
+			wantErr:   customerservice.ErrEmptyReply,
+			wantClass: customerservice.ErrEmptyReply,
 		},
 	}
 
@@ -206,6 +281,9 @@ func TestGenerateBotReplyDoesNotPersistModelFailures(t *testing.T) {
 			})
 			if !errors.Is(err, test.wantErr) {
 				t.Fatalf("GenerateBotReply() error = %v, want %v", err, test.wantErr)
+			}
+			if !errors.Is(err, test.wantClass) {
+				t.Fatalf("GenerateBotReply() error = %v, want class %v", err, test.wantClass)
 			}
 			if messages := listMessages(t, repository, received.ConversationID); len(messages) != 1 {
 				t.Fatalf("stored messages = %d, want only customer trigger", len(messages))

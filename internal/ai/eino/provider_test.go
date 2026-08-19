@@ -126,6 +126,16 @@ func TestProviderPresetsBuildWithoutNetwork(t *testing.T) {
 	if err != nil || generator == nil {
 		t.Fatalf("custom provider without API key = %v, error %v", generator, err)
 	}
+
+	generator, err = einoadapter.NewProviderGenerator(context.Background(), einoadapter.ProviderConfig{
+		Provider:          einoadapter.ProviderCustom,
+		Model:             "internal-model",
+		BaseURL:           "http://models.internal/v1",
+		AllowInsecureHTTP: true,
+	})
+	if err != nil || generator == nil {
+		t.Fatalf("explicit insecure internal HTTP provider = %v, error %v", generator, err)
+	}
 }
 
 func TestProviderGeneratorUsesChatCompletionsCompatibilityProtocol(t *testing.T) {
@@ -382,6 +392,27 @@ func TestNewProviderGeneratorRejectsInvalidConfiguration(t *testing.T) {
 			wantErr: einoadapter.ErrInvalidConfiguration,
 		},
 		{
+			name: "keyless non loopback HTTP without opt in",
+			ctx:  context.Background(),
+			config: einoadapter.ProviderConfig{
+				Provider: einoadapter.ProviderCustom,
+				Model:    "model",
+				BaseURL:  "http://models.internal/v1",
+			},
+			wantErr: einoadapter.ErrInvalidConfiguration,
+		},
+		{
+			name: "custom Authorization over non loopback HTTP",
+			ctx:  context.Background(),
+			config: einoadapter.ProviderConfig{
+				Provider: einoadapter.ProviderCustom,
+				Model:    "model",
+				BaseURL:  "http://models.internal/v1",
+				Headers:  map[string]string{"Authorization": "Basic secret"},
+			},
+			wantErr: einoadapter.ErrInvalidConfiguration,
+		},
+		{
 			name: "blank header name",
 			ctx:  context.Background(),
 			config: einoadapter.ProviderConfig{
@@ -428,6 +459,7 @@ func TestNewProviderGeneratorRejectsUnsafeBaseURLsWithoutLeakingAPIKey(t *testin
 	urls := []string{
 		"relative/v1",
 		"ftp://example.com/v1",
+		"http://example.com/v1",
 		"https://user:password@example.com/v1",
 		"https://example.com/v1?",
 		"https://example.com/v1#",

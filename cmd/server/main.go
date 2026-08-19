@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/google/uuid"
 
+	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 	hertztransport "github.com/qiuyier/omni-agent-customer-service/internal/transport/hertz"
@@ -36,6 +38,14 @@ func run() error {
 	if strings.TrimSpace(*address) == "" {
 		return errors.New("HTTP address must not be blank")
 	}
+	aiConfig, err := bootstrap.ResolveAIConfig(os.LookupEnv, bootstrap.AIOverrides{})
+	if err != nil {
+		return fmt.Errorf("resolve AI configuration: %w", err)
+	}
+	replyGenerator, err := bootstrap.NewAIReplyGenerator(context.Background(), aiConfig)
+	if err != nil {
+		return err
+	}
 
 	service, err := customerservice.New(
 		conversation.NewMemoryRepository(),
@@ -43,6 +53,8 @@ func run() error {
 			return uuid.NewString(), nil
 		}),
 		customerservice.ClockFunc(time.Now),
+		customerservice.WithReplyGenerator(replyGenerator),
+		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
 	)
 	if err != nil {
 		return fmt.Errorf("create customer-service application: %w", err)

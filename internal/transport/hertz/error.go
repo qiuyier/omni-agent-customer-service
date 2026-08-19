@@ -1,6 +1,7 @@
 package hertz
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -23,12 +24,13 @@ func classifyError(err error) error {
 		return nil
 	}
 
-	var classified *fault.Error
-	if errors.As(err, &classified) {
-		return err
-	}
-
 	switch {
+	case errors.Is(err, context.Canceled):
+		return fault.Wrap(fault.CodeCancelled, "request cancelled", err)
+
+	case errors.Is(err, context.DeadlineExceeded):
+		return fault.Wrap(fault.CodeDeadlineExceeded, "deadline exceeded", err)
+
 	case errors.Is(err, customerservice.ErrInvalidInput),
 		errors.Is(err, customerservice.ErrInvalidReplyTrigger),
 		errors.Is(err, conversation.ErrInvalidArgument):
@@ -53,14 +55,21 @@ func classifyError(err error) error {
 		errors.Is(err, conversation.ErrSenderNotAllowed):
 		return fault.Wrap(fault.CodeFailedPrecondition, "failed precondition", err)
 
-	case errors.Is(err, customerservice.ErrInvalidDependency),
-		errors.Is(err, customerservice.ErrEmptyReply):
+	case errors.Is(err, customerservice.ErrInvalidDependency):
 		return fault.Wrap(fault.CodeInternal, "internal error", err)
 
-	default:
-		// problem.Write safely turns unclassified errors into an internal fault
-		// without exposing err.Error() to the client. Context cancellation and
-		// deadlines are also recognized by omni-agent-kit here.
+	case errors.Is(err, customerservice.ErrReplyUnavailable),
+		errors.Is(err, customerservice.ErrReplyGenerationFailed),
+		errors.Is(err, customerservice.ErrEmptyReply):
+		return fault.Wrap(fault.CodeUnavailable, "reply service unavailable", err)
+	}
+
+	var classified *fault.Error
+	if errors.As(err, &classified) {
 		return err
 	}
+
+	// problem.Write safely turns unclassified errors into an internal fault
+	// without exposing err.Error() to the client.
+	return err
 }

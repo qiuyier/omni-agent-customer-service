@@ -33,6 +33,12 @@ func TestClassifyError(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
+			name:       "invalid reply trigger",
+			err:        customerservice.ErrInvalidReplyTrigger,
+			wantCode:   fault.CodeInvalidArgument,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
 			name:       "conversation mismatch",
 			err:        customerservice.ErrConversationMismatch,
 			wantCode:   fault.CodeConflict,
@@ -57,10 +63,76 @@ func TestClassifyError(t *testing.T) {
 			wantStatus: http.StatusPreconditionFailed,
 		},
 		{
+			name:       "reply superseded",
+			err:        customerservice.ErrReplySuperseded,
+			wantCode:   fault.CodeConflict,
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name:       "reply unavailable",
+			err:        customerservice.ErrReplyUnavailable,
+			wantCode:   fault.CodeUnavailable,
+			wantStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name:       "reply generation failed",
+			err:        customerservice.ErrReplyGenerationFailed,
+			wantCode:   fault.CodeUnavailable,
+			wantStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name: "preclassified provider error remains unavailable",
+			err: fmt.Errorf(
+				"%w: %w",
+				customerservice.ErrReplyGenerationFailed,
+				fault.New(fault.CodeInvalidArgument, "provider detail must not win"),
+			),
+			wantCode:   fault.CodeUnavailable,
+			wantStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name:       "empty reply",
+			err:        customerservice.ErrEmptyReply,
+			wantCode:   fault.CodeUnavailable,
+			wantStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name:       "cancelled",
+			err:        context.Canceled,
+			wantCode:   fault.CodeCancelled,
+			wantStatus: http.StatusRequestTimeout,
+		},
+		{
 			name:       "deadline",
 			err:        context.DeadlineExceeded,
 			wantCode:   fault.CodeDeadlineExceeded,
 			wantStatus: http.StatusGatewayTimeout,
+		},
+		{
+			name: "generation deadline keeps deadline semantics",
+			err: fmt.Errorf(
+				"%w: %w",
+				customerservice.ErrReplyGenerationFailed,
+				context.DeadlineExceeded,
+			),
+			wantCode:   fault.CodeDeadlineExceeded,
+			wantStatus: http.StatusGatewayTimeout,
+		},
+		{
+			name: "deadline overrides nested fault",
+			err: fault.Wrap(
+				fault.CodeUnavailable,
+				"provider detail must not win",
+				context.DeadlineExceeded,
+			),
+			wantCode:   fault.CodeDeadlineExceeded,
+			wantStatus: http.StatusGatewayTimeout,
+		},
+		{
+			name:       "invalid dependency is internal",
+			err:        customerservice.ErrInvalidDependency,
+			wantCode:   fault.CodeInternal,
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:       "unknown internal error",

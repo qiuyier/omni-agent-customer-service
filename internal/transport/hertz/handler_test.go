@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -346,6 +347,324 @@ func TestReceiveMessageHTTPIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestGenerateBotReplyCreated(t *testing.T) {
+	application := &receiverStub{replyResult: customerservice.GenerateBotReplyResult{
+		ConversationID:   "conversation-from-service",
+		TriggerMessageID: "trigger-from-service",
+		MessageID:        "message-2",
+		Content:          "Your order is on the way.",
+	}}
+	engine := newTestEngine(t, application)
+	target := "/v1/conversations/conversation-from-path/messages/trigger-from-path/reply" +
+		"?conversation_id=query-must-not-win&trigger_message_id=query-must-not-win"
+
+	response := ut.PerformRequest(engine, http.MethodPost, target, nil).Result()
+
+	assertStatus(t, response, http.StatusCreated)
+	assertContentType(t, response, "application/json; charset=utf-8")
+	if application.replyCalls != 1 {
+		t.Fatalf("reply calls = %d, want 1", application.replyCalls)
+	}
+	wantCommand := customerservice.GenerateBotReplyCommand{
+		ConversationID:   "conversation-from-path",
+		TriggerMessageID: "trigger-from-path",
+	}
+	if application.replyCommand != wantCommand {
+		t.Fatalf("reply command = %#v, want %#v", application.replyCommand, wantCommand)
+	}
+
+	var body model.GenerateBotReplyResponse
+	decodeResponse(t, response, &body)
+	if body.ConversationID != "conversation-from-service" ||
+		body.TriggerMessageID != "trigger-from-service" ||
+		body.MessageID != "message-2" ||
+		body.Content != "Your order is on the way." ||
+		body.Duplicate {
+		t.Fatalf("response body = %#v", body)
+	}
+}
+
+func TestGenerateBotReplyDuplicate(t *testing.T) {
+	application := &receiverStub{replyResult: customerservice.GenerateBotReplyResult{
+		ConversationID:   "conversation-1",
+		TriggerMessageID: "message-1",
+		MessageID:        "message-2",
+		Content:          "Persisted answer",
+		Duplicate:        true,
+	}}
+	engine := newTestEngine(t, application)
+
+	response := ut.PerformRequest(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages/message-1/reply",
+		nil,
+	).Result()
+
+	assertStatus(t, response, http.StatusOK)
+	var body model.GenerateBotReplyResponse
+	decodeResponse(t, response, &body)
+	if !body.Duplicate {
+		t.Fatal("duplicate = false, want true")
+	}
+	if body.MessageID != "message-2" || body.Content != "Persisted answer" {
+		t.Fatalf("response body = %#v", body)
+	}
+}
+
+func TestGenerateBotReplyErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+		wantCode   fault.Code
+		wantDetail string
+	}{
+		{
+			name:       "invalid trigger",
+			err:        customerservice.ErrInvalidReplyTrigger,
+			wantStatus: http.StatusBadRequest,
+			wantCode:   fault.CodeInvalidArgument,
+			wantDetail: "invalid request",
+		},
+		{
+			name:       "conversation not found",
+			err:        conversation.ErrConversationNotFound,
+			wantStatus: http.StatusNotFound,
+			wantCode:   fault.CodeNotFound,
+			wantDetail: "resource not found",
+		},
+		{
+			name:       "superseded",
+			err:        customerservice.ErrReplySuperseded,
+			wantStatus: http.StatusConflict,
+			wantCode:   fault.CodeConflict,
+			wantDetail: "resource conflict",
+		},
+		{
+			name:       "conversation closed",
+			err:        conversation.ErrConversationClosed,
+			wantStatus: http.StatusPreconditionFailed,
+			wantCode:   fault.CodeFailedPrecondition,
+			wantDetail: "failed precondition",
+		},
+		{
+			name:       "reply unavailable",
+			err:        customerservice.ErrReplyUnavailable,
+			wantStatus: http.StatusServiceUnavailable,
+			wantCode:   fault.CodeUnavailable,
+			wantDetail: "reply service unavailable",
+		},
+		{
+			name: "model failure",
+			err: fmt.Errorf(
+				"%w: %w",
+				customerservice.ErrReplyGenerationFailed,
+				fault.New(fault.CodeInvalidArgument, "provider api_key=sk-secret"),
+			),
+			wantStatus: http.StatusServiceUnavailable,
+			wantCode:   fault.CodeUnavailable,
+			wantDetail: "reply service unavailable",
+		},
+		{
+			name:       "empty model reply",
+			err:        customerservice.ErrEmptyReply,
+			wantStatus: http.StatusServiceUnavailable,
+			wantCode:   fault.CodeUnavailable,
+			wantDetail: "reply service unavailable",
+		},
+		{
+			name:       "cancelled",
+			err:        context.Canceled,
+			wantStatus: http.StatusRequestTimeout,
+			wantCode:   fault.CodeCancelled,
+			wantDetail: "request cancelled",
+		},
+		{
+			name:       "deadline",
+			err:        context.DeadlineExceeded,
+			wantStatus: http.StatusGatewayTimeout,
+			wantCode:   fault.CodeDeadlineExceeded,
+			wantDetail: "deadline exceeded",
+		},
+		{
+			name:       "unknown internal error",
+			err:        errors.New("database_password=secret"),
+			wantStatus: http.StatusInternalServerError,
+			wantCode:   fault.CodeInternal,
+			wantDetail: "internal error",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			application := &receiverStub{replyErr: test.err}
+			engine := newTestEngine(t, application)
+			response := ut.PerformRequest(
+				engine,
+				http.MethodPost,
+				"/v1/conversations/conversation-1/messages/message-1/reply",
+				nil,
+			).Result()
+
+			assertProblem(t, response, test.wantStatus, test.wantCode, test.wantDetail)
+			if application.replyCalls != 1 {
+				t.Fatalf("reply calls = %d, want 1", application.replyCalls)
+			}
+			responseBody := string(response.Body())
+			for _, secret := range []string{"sk-secret", "api_key", "database_password"} {
+				if strings.Contains(responseBody, secret) {
+					t.Fatalf("response contains secret marker %q: %s", secret, responseBody)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateBotReplyHTTPIsIdempotent(t *testing.T) {
+	repository := conversation.NewMemoryRepository()
+	messageIDs := []string{"message-1", "message-2"}
+	idCalls := 0
+	generatorCalls := 0
+	service, err := customerservice.New(
+		repository,
+		customerservice.MessageIDGeneratorFunc(func() (string, error) {
+			messageID := messageIDs[idCalls]
+			idCalls++
+			return messageID, nil
+		}),
+		customerservice.ClockFunc(func() time.Time {
+			return time.Date(2026, time.August, 17, 10, 0, 0, 0, time.UTC)
+		}),
+		customerservice.WithReplyGenerator(customerservice.ReplyGeneratorFunc(func(
+			_ context.Context,
+			request customerservice.ReplyRequest,
+		) (customerservice.Reply, error) {
+			generatorCalls++
+			if request.ConversationID != "conversation-1" ||
+				request.TriggerMessageID != "message-1" {
+				t.Fatalf("reply request = %#v", request)
+			}
+			return customerservice.Reply{Content: "Your order is on the way."}, nil
+		})),
+	)
+	if err != nil {
+		t.Fatalf("customerservice.New() error = %v", err)
+	}
+	engine := newTestEngine(t, service)
+
+	receiveResponse := performJSON(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages",
+		validReceiveMessageJSON,
+	)
+	assertStatus(t, receiveResponse, http.StatusCreated)
+	target := "/v1/conversations/conversation-1/messages/message-1/reply"
+	firstResponse := ut.PerformRequest(engine, http.MethodPost, target, nil).Result()
+	secondResponse := ut.PerformRequest(engine, http.MethodPost, target, nil).Result()
+
+	assertStatus(t, firstResponse, http.StatusCreated)
+	assertStatus(t, secondResponse, http.StatusOK)
+	var first model.GenerateBotReplyResponse
+	var second model.GenerateBotReplyResponse
+	decodeResponse(t, firstResponse, &first)
+	decodeResponse(t, secondResponse, &second)
+	if first.Duplicate {
+		t.Fatal("first response duplicate = true, want false")
+	}
+	if !second.Duplicate {
+		t.Fatal("second response duplicate = false, want true")
+	}
+	if first.MessageID != "message-2" || first.MessageID != second.MessageID ||
+		first.Content != "Your order is on the way." || first.Content != second.Content {
+		t.Fatalf("first = %#v; second = %#v", first, second)
+	}
+	if generatorCalls != 1 {
+		t.Fatalf("generator calls = %d, want 1", generatorCalls)
+	}
+	if idCalls != 2 {
+		t.Fatalf("ID generator calls = %d, want 2", idCalls)
+	}
+	messages, err := repository.ListMessages(context.Background(), "conversation-1")
+	if err != nil {
+		t.Fatalf("ListMessages() error = %v", err)
+	}
+	if len(messages) != 2 || messages[1].Sender() != conversation.SenderBot ||
+		messages[1].ReplyToMessageID() != "message-1" ||
+		messages[1].Content() != "Your order is on the way." {
+		t.Fatalf("stored messages = %#v", messages)
+	}
+}
+
+func TestGenerateBotReplyRejectsStaleTriggerOverHTTP(t *testing.T) {
+	repository := conversation.NewMemoryRepository()
+	messageIDs := []string{"message-1", "message-2"}
+	idCalls := 0
+	generatorCalls := 0
+	service, err := customerservice.New(
+		repository,
+		customerservice.MessageIDGeneratorFunc(func() (string, error) {
+			messageID := messageIDs[idCalls]
+			idCalls++
+			return messageID, nil
+		}),
+		customerservice.ClockFunc(func() time.Time {
+			return time.Date(2026, time.August, 17, 10, 0, 0, 0, time.UTC)
+		}),
+		customerservice.WithReplyGenerator(customerservice.ReplyGeneratorFunc(func(
+			_ context.Context,
+			_ customerservice.ReplyRequest,
+		) (customerservice.Reply, error) {
+			generatorCalls++
+			return customerservice.Reply{Content: "must not be generated"}, nil
+		})),
+	)
+	if err != nil {
+		t.Fatalf("customerservice.New() error = %v", err)
+	}
+	engine := newTestEngine(t, service)
+
+	firstResponse := performJSON(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages",
+		validReceiveMessageJSON,
+	)
+	secondResponse := performJSON(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages",
+		`{
+			"customer_id":"customer-1",
+			"channel":"web",
+			"external_message_id":"external-2",
+			"content":"I also need to change the address."
+		}`,
+	)
+	assertStatus(t, firstResponse, http.StatusCreated)
+	assertStatus(t, secondResponse, http.StatusCreated)
+
+	replyResponse := ut.PerformRequest(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages/message-1/reply",
+		nil,
+	).Result()
+
+	assertProblem(t, replyResponse, http.StatusConflict, fault.CodeConflict, "resource conflict")
+	if generatorCalls != 0 {
+		t.Fatalf("generator calls = %d, want 0", generatorCalls)
+	}
+	messages, err := repository.ListMessages(context.Background(), "conversation-1")
+	if err != nil {
+		t.Fatalf("ListMessages() error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("stored messages = %d, want 2", len(messages))
+	}
+}
+
 const validReceiveMessageJSON = `{
 	"customer_id":"customer-1",
 	"channel":"web",
@@ -354,10 +673,14 @@ const validReceiveMessageJSON = `{
 }`
 
 type receiverStub struct {
-	calls   int
-	command customerservice.ReceiveMessageCommand
-	result  customerservice.ReceiveMessageResult
-	err     error
+	calls        int
+	command      customerservice.ReceiveMessageCommand
+	result       customerservice.ReceiveMessageResult
+	err          error
+	replyCalls   int
+	replyCommand customerservice.GenerateBotReplyCommand
+	replyResult  customerservice.GenerateBotReplyResult
+	replyErr     error
 }
 
 func (stub *receiverStub) ReceiveMessage(
@@ -369,9 +692,18 @@ func (stub *receiverStub) ReceiveMessage(
 	return stub.result, stub.err
 }
 
-func newTestEngine(t *testing.T, receiver MessageReceiver) *route.Engine {
+func (stub *receiverStub) GenerateBotReply(
+	_ context.Context,
+	command customerservice.GenerateBotReplyCommand,
+) (customerservice.GenerateBotReplyResult, error) {
+	stub.replyCalls++
+	stub.replyCommand = command
+	return stub.replyResult, stub.replyErr
+}
+
+func newTestEngine(t *testing.T, application Application) *route.Engine {
 	t.Helper()
-	handler, err := NewHandler(receiver)
+	handler, err := NewHandler(application)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}

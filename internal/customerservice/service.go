@@ -47,10 +47,11 @@ func (f MessageIDGeneratorFunc) NewMessageID() (string, error) { return f() }
 
 // Service coordinates customer-service application use cases.
 type Service struct {
-	repository conversation.Repository
-	ids        MessageIDGenerator
-	clock      Clock
-	replies    ReplyGenerator
+	repository             conversation.Repository
+	ids                    MessageIDGenerator
+	clock                  Clock
+	replies                ReplyGenerator
+	replyGenerationTimeout time.Duration
 }
 
 // New creates a customer-service application service.
