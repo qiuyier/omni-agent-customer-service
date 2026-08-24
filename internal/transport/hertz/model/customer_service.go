@@ -199,10 +199,128 @@ func (p *GenerateBotReplyResponse) String() string {
 	return fmt.Sprintf("GenerateBotReplyResponse(%+v)", *p)
 }
 
+// The stream endpoint uses these DTOs as SSE data payloads. The HTTP response
+// itself is text/event-stream, so StreamBotReplyResponse is only the service
+// method's schema placeholder and is not serialized by the Hertz handler.
+type ReplyDeltaEventData struct {
+	Delta string `thrift:"Delta,1,required" form:"delta,required" json:"delta,required"`
+}
+
+func NewReplyDeltaEventData() *ReplyDeltaEventData {
+	return &ReplyDeltaEventData{}
+}
+
+func (p *ReplyDeltaEventData) InitDefault() {
+}
+
+func (p *ReplyDeltaEventData) GetDelta() (v string) {
+	return p.Delta
+}
+
+func (p *ReplyDeltaEventData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReplyDeltaEventData(%+v)", *p)
+}
+
+type ReplyCompletedEventData struct {
+	ConversationID   string `thrift:"ConversationID,1,required" form:"conversation_id,required" json:"conversation_id,required"`
+	TriggerMessageID string `thrift:"TriggerMessageID,2,required" form:"trigger_message_id,required" json:"trigger_message_id,required"`
+	MessageID        string `thrift:"MessageID,3,required" form:"message_id,required" json:"message_id,required"`
+	Content          string `thrift:"Content,4,required" form:"content,required" json:"content,required"`
+	Duplicate        bool   `thrift:"Duplicate,5,required" form:"duplicate,required" json:"duplicate,required"`
+}
+
+func NewReplyCompletedEventData() *ReplyCompletedEventData {
+	return &ReplyCompletedEventData{}
+}
+
+func (p *ReplyCompletedEventData) InitDefault() {
+}
+
+func (p *ReplyCompletedEventData) GetConversationID() (v string) {
+	return p.ConversationID
+}
+
+func (p *ReplyCompletedEventData) GetTriggerMessageID() (v string) {
+	return p.TriggerMessageID
+}
+
+func (p *ReplyCompletedEventData) GetMessageID() (v string) {
+	return p.MessageID
+}
+
+func (p *ReplyCompletedEventData) GetContent() (v string) {
+	return p.Content
+}
+
+func (p *ReplyCompletedEventData) GetDuplicate() (v bool) {
+	return p.Duplicate
+}
+
+func (p *ReplyCompletedEventData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReplyCompletedEventData(%+v)", *p)
+}
+
+type ReplySupersededEventData struct {
+	ConversationID   string `thrift:"ConversationID,1,required" form:"conversation_id,required" json:"conversation_id,required"`
+	TriggerMessageID string `thrift:"TriggerMessageID,2,required" form:"trigger_message_id,required" json:"trigger_message_id,required"`
+	Message          string `thrift:"Message,3,required" form:"message,required" json:"message,required"`
+}
+
+func NewReplySupersededEventData() *ReplySupersededEventData {
+	return &ReplySupersededEventData{}
+}
+
+func (p *ReplySupersededEventData) InitDefault() {
+}
+
+func (p *ReplySupersededEventData) GetConversationID() (v string) {
+	return p.ConversationID
+}
+
+func (p *ReplySupersededEventData) GetTriggerMessageID() (v string) {
+	return p.TriggerMessageID
+}
+
+func (p *ReplySupersededEventData) GetMessage() (v string) {
+	return p.Message
+}
+
+func (p *ReplySupersededEventData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReplySupersededEventData(%+v)", *p)
+}
+
+type StreamBotReplyResponse struct {
+}
+
+func NewStreamBotReplyResponse() *StreamBotReplyResponse {
+	return &StreamBotReplyResponse{}
+}
+
+func (p *StreamBotReplyResponse) InitDefault() {
+}
+
+func (p *StreamBotReplyResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("StreamBotReplyResponse(%+v)", *p)
+}
+
 type CustomerServiceAPI interface {
 	Health(ctx context.Context, request *HealthRequest) (r *HealthResponse, err error)
 
 	ReceiveMessage(ctx context.Context, request *ReceiveMessageRequest) (r *ReceiveMessageResponse, err error)
 
 	GenerateBotReply(ctx context.Context, request *GenerateBotReplyRequest) (r *GenerateBotReplyResponse, err error)
+
+	StreamBotReply(ctx context.Context, request *GenerateBotReplyRequest) (r *StreamBotReplyResponse, err error)
 }

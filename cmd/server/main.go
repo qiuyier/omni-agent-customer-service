@@ -54,6 +54,7 @@ func run() error {
 		}),
 		customerservice.ClockFunc(time.Now),
 		customerservice.WithReplyGenerator(replyGenerator),
+		customerservice.WithReplyStreamGenerator(replyGenerator),
 		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
 	)
 	if err != nil {

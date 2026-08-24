@@ -28,6 +28,14 @@ const (
 
 var ErrInvalidAIConfiguration = errors.New("bootstrap: invalid AI configuration")
 
+// AIReplyGenerator is the complete model capability used by the HTTP server.
+// Keeping both ports here lets the application layer remain independent from
+// Eino and from any concrete model provider.
+type AIReplyGenerator interface {
+	customerservice.ReplyGenerator
+	customerservice.ReplyStreamGenerator
+}
+
 // LookupEnv abstracts the process environment so configuration tests do not
 // mutate global state.
 type LookupEnv func(key string) (value string, found bool)
@@ -135,7 +143,7 @@ func ResolveAIConfig(
 func NewAIReplyGenerator(
 	ctx context.Context,
 	config einoadapter.ProviderConfig,
-) (customerservice.ReplyGenerator, error) {
+) (AIReplyGenerator, error) {
 	generator, err := einoadapter.NewProviderGenerator(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("create AI reply generator: %w", err)

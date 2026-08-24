@@ -23,6 +23,7 @@ func TestRouterPathsMatchThriftIDL(t *testing.T) {
 		{rpc: "Health", annotation: "api.get", routerPath: healthPath},
 		{rpc: "ReceiveMessage", annotation: "api.post", routerPath: receiveMessagePath},
 		{rpc: "GenerateBotReply", annotation: "api.post", routerPath: generateReplyPath},
+		{rpc: "StreamBotReply", annotation: "api.post", routerPath: streamReplyPath},
 	}
 	for _, test := range tests {
 		t.Run(test.rpc, func(t *testing.T) {

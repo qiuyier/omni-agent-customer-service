@@ -123,23 +123,59 @@ func (s *Service) GenerateBotReply(
 		return GenerateBotReplyResult{}, err
 	}
 
-	var snapshot replySnapshot
-	var result GenerateBotReplyResult
-	foundExisting := false
-	err = s.repository.WithinTx(ctx, func(tx conversation.Transaction) error {
-		current, findErr := tx.FindConversation(normalized.ConversationID)
+	prepared, err := s.prepareBotReply(ctx, normalized)
+	if err != nil {
+		return GenerateBotReplyResult{}, err
+	}
+	if prepared.existing != nil {
+		return *prepared.existing, nil
+	}
+	if s.replies == nil {
+		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrReplyUnavailable)
+	}
+
+	generationContext, cancelGeneration := s.newReplyGenerationContext(ctx)
+	generated, err := s.replies.Generate(generationContext, prepared.snapshot.request)
+	generationContextErr := generationContext.Err()
+	cancelGeneration()
+	if generationContextErr != nil {
+		err = generationContextErr
+	}
+	if err != nil {
+		return GenerateBotReplyResult{}, replyGenerationError(err)
+	}
+	if err := ctx.Err(); err != nil {
+		return GenerateBotReplyResult{}, err
+	}
+	if strings.TrimSpace(generated.Content) == "" {
+		return GenerateBotReplyResult{}, ErrEmptyReply
+	}
+	return s.persistBotReply(ctx, normalized, prepared.snapshot, generated.Content)
+}
+
+type preparedBotReply struct {
+	snapshot replySnapshot
+	existing *GenerateBotReplyResult
+}
+
+func (s *Service) prepareBotReply(
+	ctx context.Context,
+	command GenerateBotReplyCommand,
+) (preparedBotReply, error) {
+	var prepared preparedBotReply
+	err := s.repository.WithinTx(ctx, func(tx conversation.Transaction) error {
+		current, findErr := tx.FindConversation(command.ConversationID)
 		if findErr != nil {
 			return findErr
 		}
 
-		existing, findErr := tx.FindReplyByTriggerMessageID(normalized.TriggerMessageID)
+		existing, findErr := tx.FindReplyByTriggerMessageID(command.TriggerMessageID)
 		if findErr == nil {
-			duplicate, duplicateErr := existingReplyResult(normalized, existing)
+			duplicate, duplicateErr := existingReplyResult(command, existing)
 			if duplicateErr != nil {
 				return duplicateErr
 			}
-			result = duplicate
-			foundExisting = true
+			prepared.existing = &duplicate
 			return nil
 		}
 		if !errors.Is(findErr, conversation.ErrReplyNotFound) {
@@ -149,78 +185,61 @@ func (s *Service) GenerateBotReply(
 		if permissionErr := current.CanAcceptMessage(conversation.SenderBot); permissionErr != nil {
 			return permissionErr
 		}
-		messages, listErr := tx.ListMessages(normalized.ConversationID)
+		messages, listErr := tx.ListMessages(command.ConversationID)
 		if listErr != nil {
 			return listErr
 		}
-		history, historyErr := buildReplyHistory(messages, normalized.TriggerMessageID)
+		history, historyErr := buildReplyHistory(messages, command.TriggerMessageID)
 		if historyErr != nil {
 			return historyErr
 		}
-		snapshot = replySnapshot{
+		prepared.snapshot = replySnapshot{
 			revision:     current.Revision(),
 			messageCount: len(messages),
 			request: ReplyRequest{
-				ConversationID:   normalized.ConversationID,
-				TriggerMessageID: normalized.TriggerMessageID,
+				ConversationID:   command.ConversationID,
+				TriggerMessageID: command.TriggerMessageID,
 				History:          history,
 			},
 		}
 		return nil
 	})
-	if err != nil {
-		return GenerateBotReplyResult{}, err
-	}
-	if foundExisting {
-		return result, nil
-	}
-	if s.replies == nil {
-		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrReplyUnavailable)
-	}
+	return prepared, err
+}
 
-	generationContext := ctx
-	cancelGeneration := func() {}
+func (s *Service) newReplyGenerationContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	if s.replyGenerationTimeout > 0 {
-		generationContext, cancelGeneration = context.WithTimeout(
-			ctx,
-			s.replyGenerationTimeout,
-		)
+		return context.WithTimeout(ctx, s.replyGenerationTimeout)
 	}
-	generated, err := s.replies.Generate(generationContext, snapshot.request)
-	generationContextErr := generationContext.Err()
-	cancelGeneration()
-	if generationContextErr != nil {
-		err = generationContextErr
-	}
-	if err != nil {
-		return GenerateBotReplyResult{}, fmt.Errorf(
-			"%w: generate bot reply: %w",
-			ErrReplyGenerationFailed,
-			err,
-		)
-	}
-	if err := ctx.Err(); err != nil {
-		return GenerateBotReplyResult{}, err
-	}
-	if strings.TrimSpace(generated.Content) == "" {
-		return GenerateBotReplyResult{}, ErrEmptyReply
-	}
+	return context.WithCancel(ctx)
+}
 
+func replyGenerationError(err error) error {
+	return fmt.Errorf("%w: generate bot reply: %w", ErrReplyGenerationFailed, err)
+}
+
+func (s *Service) persistBotReply(
+	ctx context.Context,
+	command GenerateBotReplyCommand,
+	snapshot replySnapshot,
+	content string,
+) (GenerateBotReplyResult, error) {
 	messageID, err := s.ids.NewMessageID()
 	if err != nil {
 		return GenerateBotReplyResult{}, fmt.Errorf("generate message ID: %w", err)
 	}
 	generatedAt := s.clock.Now()
+	var result GenerateBotReplyResult
 
 	err = s.repository.WithinTx(ctx, func(tx conversation.Transaction) error {
-		current, findErr := tx.FindConversation(normalized.ConversationID)
+		current, findErr := tx.FindConversation(command.ConversationID)
 		if findErr != nil {
 			return findErr
 		}
 
-		existing, findErr := tx.FindReplyByTriggerMessageID(normalized.TriggerMessageID)
+		existing, findErr := tx.FindReplyByTriggerMessageID(command.TriggerMessageID)
 		if findErr == nil {
-			duplicate, duplicateErr := existingReplyResult(normalized, existing)
+			duplicate, duplicateErr := existingReplyResult(command, existing)
 			if duplicateErr != nil {
 				return duplicateErr
 			}
@@ -242,7 +261,7 @@ func (s *Service) GenerateBotReply(
 		if permissionErr := current.CanAcceptMessage(conversation.SenderBot); permissionErr != nil {
 			return permissionErr
 		}
-		messages, listErr := tx.ListMessages(normalized.ConversationID)
+		messages, listErr := tx.ListMessages(command.ConversationID)
 		if listErr != nil {
 			return listErr
 		}
@@ -254,16 +273,16 @@ func (s *Service) GenerateBotReply(
 				len(messages),
 			)
 		}
-		if _, historyErr := buildReplyHistory(messages, normalized.TriggerMessageID); historyErr != nil {
+		if _, historyErr := buildReplyHistory(messages, command.TriggerMessageID); historyErr != nil {
 			return historyErr
 		}
 
 		message, messageErr := conversation.NewMessage(conversation.MessageParams{
 			ID:               messageID,
-			ConversationID:   normalized.ConversationID,
-			ReplyToMessageID: normalized.TriggerMessageID,
+			ConversationID:   command.ConversationID,
+			ReplyToMessageID: command.TriggerMessageID,
 			Sender:           conversation.SenderBot,
-			Content:          generated.Content,
+			Content:          content,
 			CreatedAt:        generatedAt,
 		})
 		if messageErr != nil {
@@ -273,19 +292,19 @@ func (s *Service) GenerateBotReply(
 			return insertErr
 		}
 		result = GenerateBotReplyResult{
-			ConversationID:   normalized.ConversationID,
-			TriggerMessageID: normalized.TriggerMessageID,
+			ConversationID:   command.ConversationID,
+			TriggerMessageID: command.TriggerMessageID,
 			MessageID:        message.ID(),
 			Content:          message.Content(),
 		}
 		return nil
 	})
 	if errors.Is(err, conversation.ErrReplyAlreadyExists) {
-		winner, findErr := s.repository.FindReplyByTriggerMessageID(ctx, normalized.TriggerMessageID)
+		winner, findErr := s.repository.FindReplyByTriggerMessageID(ctx, command.TriggerMessageID)
 		if findErr != nil {
 			return GenerateBotReplyResult{}, fmt.Errorf("find winning reply: %w", findErr)
 		}
-		return existingReplyResult(normalized, winner)
+		return existingReplyResult(command, winner)
 	}
 	if err != nil {
 		return GenerateBotReplyResult{}, err

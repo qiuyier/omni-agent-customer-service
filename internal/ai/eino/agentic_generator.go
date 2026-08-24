@@ -2,13 +2,17 @@ package einoadapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
+	einostream "github.com/qiuyier/omni-agent-kit/adapter/eino/stream"
+	kitstream "github.com/qiuyier/omni-agent-kit/stream"
 )
 
 // AgenticModel is the narrow subset of model.AgenticModel required by the
@@ -19,6 +23,11 @@ type AgenticModel interface {
 		input []*schema.AgenticMessage,
 		opts ...model.Option,
 	) (*schema.AgenticMessage, error)
+	Stream(
+		ctx context.Context,
+		input []*schema.AgenticMessage,
+		opts ...model.Option,
+	) (*schema.StreamReader[*schema.AgenticMessage], error)
 }
 
 // AgenticGenerator implements the reply port with Eino's AgenticMessage model.
@@ -49,6 +58,75 @@ func (g *AgenticGenerator) Generate(
 		return customerservice.Reply{}, err
 	}
 
+	messages, err := g.agenticMessages(request)
+	if err != nil {
+		return customerservice.Reply{}, err
+	}
+
+	response, err := g.model.Generate(ctx, messages)
+	if err != nil {
+		return customerservice.Reply{}, fmt.Errorf("generate with Eino agentic model: %w", err)
+	}
+	content, err := assistantText(response)
+	if err != nil {
+		return customerservice.Reply{}, err
+	}
+	return customerservice.Reply{Content: content}, nil
+}
+
+// Stream maps application turns to AgenticMessage values and exposes only
+// assistant text fragments through the provider-independent stream port.
+func (g *AgenticGenerator) Stream(
+	ctx context.Context,
+	request customerservice.ReplyRequest,
+) (kitstream.Reader[customerservice.ReplyDelta], error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("%w: context is nil", ErrInvalidConfiguration)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	messages, err := g.agenticMessages(request)
+	if err != nil {
+		return nil, err
+	}
+	source, err := g.model.Stream(ctx, messages)
+	if err != nil {
+		return nil, fmt.Errorf("stream with Eino agentic model: %w", err)
+	}
+	reader, err := einostream.Wrap(source)
+	if err != nil {
+		return nil, fmt.Errorf("adapt Eino agentic stream: %w", err)
+	}
+
+	return kitstream.NewReader(func() (customerservice.ReplyDelta, error) {
+		for {
+			chunk, recvErr := reader.Recv()
+			if recvErr != nil {
+				if errors.Is(recvErr, io.EOF) {
+					return customerservice.ReplyDelta{}, io.EOF
+				}
+				return customerservice.ReplyDelta{}, fmt.Errorf(
+					"receive Eino agentic stream: %w",
+					recvErr,
+				)
+			}
+			text, extractErr := assistantText(chunk)
+			if extractErr != nil {
+				return customerservice.ReplyDelta{}, extractErr
+			}
+			if text == "" {
+				continue
+			}
+			return customerservice.ReplyDelta{Content: text}, nil
+		}
+	}, reader.Close), nil
+}
+
+func (g *AgenticGenerator) agenticMessages(
+	request customerservice.ReplyRequest,
+) ([]*schema.AgenticMessage, error) {
 	capacity := len(request.History)
 	if strings.TrimSpace(g.systemPrompt) != "" {
 		capacity++
@@ -60,33 +138,32 @@ func (g *AgenticGenerator) Generate(
 	for index, turn := range request.History {
 		message, err := agenticMessage(turn)
 		if err != nil {
-			return customerservice.Reply{}, fmt.Errorf("history turn %d: %w", index, err)
+			return nil, fmt.Errorf("history turn %d: %w", index, err)
 		}
 		messages = append(messages, message)
 	}
+	return messages, nil
+}
 
-	response, err := g.model.Generate(ctx, messages)
-	if err != nil {
-		return customerservice.Reply{}, fmt.Errorf("generate with Eino agentic model: %w", err)
+func assistantText(message *schema.AgenticMessage) (string, error) {
+	if message == nil {
+		return "", fmt.Errorf("%w: model returned nil agentic message", ErrInvalidResponse)
 	}
-	if response == nil {
-		return customerservice.Reply{}, fmt.Errorf("%w: model returned nil agentic message", ErrInvalidResponse)
-	}
-	if response.Role != schema.AgenticRoleTypeAssistant {
-		return customerservice.Reply{}, fmt.Errorf(
+	if message.Role != schema.AgenticRoleTypeAssistant {
+		return "", fmt.Errorf(
 			"%w: model returned role %q instead of assistant",
 			ErrInvalidResponse,
-			response.Role,
+			message.Role,
 		)
 	}
 
 	var content strings.Builder
-	for _, block := range response.ContentBlocks {
+	for _, block := range message.ContentBlocks {
 		if block != nil && block.AssistantGenText != nil {
 			content.WriteString(block.AssistantGenText.Text)
 		}
 	}
-	return customerservice.Reply{Content: content.String()}, nil
+	return content.String(), nil
 }
 
 func agenticMessage(turn customerservice.ReplyTurn) (*schema.AgenticMessage, error) {
@@ -108,3 +185,4 @@ func agenticMessage(turn customerservice.ReplyTurn) (*schema.AgenticMessage, err
 }
 
 var _ customerservice.ReplyGenerator = (*AgenticGenerator)(nil)
+var _ customerservice.ReplyStreamGenerator = (*AgenticGenerator)(nil)

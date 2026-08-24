@@ -51,6 +51,7 @@ type Service struct {
 	ids                    MessageIDGenerator
 	clock                  Clock
 	replies                ReplyGenerator
+	replyStreams           ReplyStreamGenerator
 	replyGenerationTimeout time.Duration
 }
 

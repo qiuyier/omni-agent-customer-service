@@ -56,6 +56,29 @@ struct GenerateBotReplyResponse {
     5: required bool Duplicate (api.body = "duplicate")
 }
 
+// The stream endpoint uses these DTOs as SSE data payloads. The HTTP response
+// itself is text/event-stream, so StreamBotReplyResponse is only the service
+// method's schema placeholder and is not serialized by the Hertz handler.
+struct ReplyDeltaEventData {
+    1: required string Delta (api.body = "delta")
+}
+
+struct ReplyCompletedEventData {
+    1: required string ConversationID (api.body = "conversation_id")
+    2: required string TriggerMessageID (api.body = "trigger_message_id")
+    3: required string MessageID (api.body = "message_id")
+    4: required string Content (api.body = "content")
+    5: required bool Duplicate (api.body = "duplicate")
+}
+
+struct ReplySupersededEventData {
+    1: required string ConversationID (api.body = "conversation_id")
+    2: required string TriggerMessageID (api.body = "trigger_message_id")
+    3: required string Message (api.body = "message")
+}
+
+struct StreamBotReplyResponse {}
+
 service CustomerServiceAPI {
     HealthResponse Health(1: HealthRequest request) (api.get = "/healthz")
 
@@ -65,5 +88,9 @@ service CustomerServiceAPI {
 
     GenerateBotReplyResponse GenerateBotReply(1: GenerateBotReplyRequest request) (
         api.post = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply"
+    )
+
+    StreamBotReplyResponse StreamBotReply(1: GenerateBotReplyRequest request) (
+        api.post = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/stream"
     )
 }

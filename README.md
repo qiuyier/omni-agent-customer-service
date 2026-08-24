@@ -6,14 +6,17 @@
 
 ## 当前进度
 
-第四阶段第二小步已经实现“HTTP 非流式自动回复闭环”：
+第四阶段第三小步已经实现“HTTP SSE 流式自动回复闭环”：
 
 - 使用产品自己的 Thrift IDL 定义跨语言 HTTP 契约；
 - 使用 `hz model` 只生成轻量 DTO，Router 与 Handler 保持手写和依赖注入；
-- 通过 Hertz 暴露存活检查、接收客户消息和生成机器人回复 API；
+- 通过 Hertz 暴露存活检查、接收客户消息、非流式回复和 SSE 流式回复 API；
 - 使用 omni-agent-kit `fault/problem` 输出安全一致的 Problem Details；
 - 将 AI 环境配置集中在 `internal/bootstrap`，供 console 与 server 复用；
 - 回复接口使用 `TriggerMessageID` 防止重复回复和过期回复写入；
+- 流式回复区分临时 `reply.delta`、已保存的 `reply.completed` 与未保存的
+  `reply.superseded`；
+- 客户端断开或生成超时会取消 Eino stream 并关闭底层 Reader，不保存半截回复；
 - 首次生成返回 201，重复请求返回 200、同一个 Message ID 和已保存内容；
 - 提供不启动端口的 Router、Handler、错误语义和真实业务链路测试。
 
@@ -38,10 +41,10 @@
 请求流：
 外部渠道 → internal/transport/hertz → internal/customerservice
                                            ├──→ internal/conversation
-                                           └──→ ReplyGenerator
-                                                     │
-                                                     ▼
-                                             internal/ai/eino → 模型供应商
+                                           └──→ ReplyGenerator / ReplyStreamGenerator
+                                                               │
+                                                               ▼
+                                                       internal/ai/eino → 模型供应商
 
 组装流：
 cmd/server → internal/bootstrap → 创建 ReplyGenerator
@@ -190,6 +193,7 @@ Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Route
 | `GET` | `/healthz` | 进程存活检查，不访问数据库或模型 |
 | `POST` | `/v1/conversations/:conversation_id/messages` | 幂等接收一条客户消息 |
 | `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply` | 为指定客户消息生成或读取机器人回复 |
+| `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/stream` | 以 SSE 流式生成回复并在完成后保存 |
 
 Handler 只按 `application/json` 解码，不允许 Query 或 Form 覆盖消息字段。
 Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来自 `api.vd`；
@@ -215,6 +219,16 @@ Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来�
 - 客户端取消和请求超时分别保持 `408 Request Timeout` 与
   `504 Gateway Timeout`；
 - Provider 的原始错误、响应正文和 API Key 都不会进入公开 Problem 响应。
+
+SSE 回复的事件语义：
+
+- `reply.delta`：模型新生成的临时文字片段，尚未保存；
+- `reply.completed`：最终内容已通过二次会话校验并保存，该事件的完整内容是权威结果；
+- `reply.superseded`：生成期间出现了更新的客户消息，之前的 delta 作废且不会保存；
+- `error`：流开始后的超时、供应商或内部错误，只包含安全的 `code` 和 `message`。
+
+如果首个事件产生前失败，接口仍返回普通 `application/problem+json`；SSE 一旦
+开始，HTTP 状态码和响应类型已经发送，后续错误只能通过终止 `error` 事件表达。
 
 错误统一使用 `application/problem+json`，例如：
 
@@ -299,6 +313,32 @@ curl --request POST \
 }
 ~~~
 
+也可以对同一个 Trigger 使用 SSE。`-N` 会关闭 curl 的输出缓冲，让每个事件立即
+显示；这是会保存回复的写操作，因此使用 `POST` 而不是 EventSource 的 `GET`：
+
+~~~bash
+curl -N --request POST \
+  --url http://127.0.0.1:8080/v1/conversations/conversation-001/messages/44be5db0-3be0-440f-b938-989a89bd0155/reply/stream
+~~~
+
+正常响应类似：
+
+~~~text
+event: reply.delta
+data: {"delta":"很抱歉，"}
+
+event: reply.delta
+data: {"delta":"请提供订单号。"}
+
+event: reply.completed
+data: {"conversation_id":"conversation-001","trigger_message_id":"44be5db0-3be0-440f-b938-989a89bd0155","message_id":"41074f6f-c798-4f89-bde0-386ff6bca194","content":"很抱歉，请提供订单号。","duplicate":false}
+~~~
+
+客户端应把 delta 当作可替换的界面预览；只有收到 `reply.completed` 才把其中的
+`content` 当作最终回复。若收到 `reply.superseded`，应丢弃已展示的临时文本并处理
+最新客户消息。对已有回复再次调用流式接口时，不会调用模型，而是直接发送一个
+`reply.completed`，其中 `duplicate=true`。
+
 回复接口会等待本次模型调用完成；应用层为整次模型生成设置 75 秒 deadline，
 这个总预算包含供应商 SDK 内部重试，而不只是某一次 HTTP 尝试。对同一个
 Trigger 重试时会直接读取已经保存的机器人消息，返回 `200 OK` 和
@@ -380,7 +420,8 @@ go vet ./...
 
 测试覆盖领域状态、ReplyTo 约束、事务回滚、模型输入映射、两种 HTTP 协议、
 模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA、新增消息、
-Hertz 路由、Thrift 绑定、Problem 错误响应、HTTP 回复幂等和过期 Trigger 等
+流完成/取消/超时/过期、Eino 流映射、Hertz 路由、Thrift 绑定、SSE 事件编码、
+Problem 错误响应、HTTP 回复幂等和过期 Trigger 等
 情况。协议测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，
 也不产生费用。
 
@@ -401,9 +442,9 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 如果以后将 kit 公开，这组私有模块配置就不再需要。
 
-## 下一阶段
+## 后续候选
 
-第四阶段下一小步会在保留当前非流式回复端点的基础上增加 SSE 流式回复。届时会
-使用 omni-agent-kit 的流适配能力处理 Eino stream、客户端断开和 `Close()`
-生命周期，并设计“流已经开始后如何表达错误和过期”的事件协议；
-`TriggerMessageID` 的幂等与过期回复保护仍留在应用层，不会被 SSE 细节替代。
+当前 SSE 已完成业务层、Eino 适配、Hertz/Thrift 契约与自动化测试。下一步可在
+以下方向中选择：使用持久化数据库替换 `MemoryRepository`，增加渠道鉴权与限流，
+或实现真实浏览器客户端来消费 SSE。无论选择哪一项，`TriggerMessageID` 的幂等
+与过期回复保护仍留在应用层，不会被传输协议或具体模型替代。

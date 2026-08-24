@@ -6,6 +6,7 @@ const (
 	healthPath         = "/healthz"
 	receiveMessagePath = "/v1/conversations/:conversation_id/messages"
 	generateReplyPath  = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply"
+	streamReplyPath    = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/stream"
 )
 
 // RegisterRoutes connects the hand-written dependency-injected handler to the
@@ -21,5 +22,6 @@ func RegisterRoutes(engine *route.Engine, handler *Handler) error {
 	engine.GET(healthPath, handler.Health)
 	engine.POST(receiveMessagePath, handler.ReceiveMessage)
 	engine.POST(generateReplyPath, handler.GenerateBotReply)
+	engine.POST(streamReplyPath, handler.StreamBotReply)
 	return nil
 }

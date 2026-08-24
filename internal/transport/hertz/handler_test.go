@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 	"github.com/qiuyier/omni-agent-customer-service/internal/transport/hertz/model"
 	"github.com/qiuyier/omni-agent-kit/fault"
+	kitstream "github.com/qiuyier/omni-agent-kit/stream"
 	"github.com/qiuyier/omni-agent-kit/transport/hertz/problem"
 )
 
@@ -665,6 +667,128 @@ func TestGenerateBotReplyRejectsStaleTriggerOverHTTP(t *testing.T) {
 	}
 }
 
+func TestStreamBotReplyFailureBeforeFirstEventIsProblem(t *testing.T) {
+	secret := errors.New("provider api_key=sk-secret")
+	application := &receiverStub{
+		streamReader: kitstream.NewReader(func() (customerservice.BotReplyStreamEvent, error) {
+			return customerservice.BotReplyStreamEvent{}, fmt.Errorf(
+				"%w: %w",
+				customerservice.ErrReplyGenerationFailed,
+				secret,
+			)
+		}, nil),
+	}
+	engine := newTestEngine(t, application)
+
+	response := ut.PerformRequest(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages/message-1/reply/stream",
+		nil,
+	).Result()
+
+	assertProblem(
+		t,
+		response,
+		http.StatusServiceUnavailable,
+		fault.CodeUnavailable,
+		"reply service unavailable",
+	)
+	if strings.Contains(string(response.Body()), "sk-secret") {
+		t.Fatalf("problem response leaked provider error: %s", response.Body())
+	}
+}
+
+func TestStreamBotReplyRejectsNilApplicationReader(t *testing.T) {
+	application := &receiverStub{}
+	engine := newTestEngine(t, application)
+
+	response := ut.PerformRequest(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages/message-1/reply/stream",
+		nil,
+	).Result()
+
+	assertProblem(t, response, http.StatusInternalServerError, fault.CodeInternal, "internal error")
+}
+
+func TestEncodeBotReplyStreamEvents(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      customerservice.BotReplyStreamEvent
+		wantType   string
+		wantFields map[string]any
+	}{
+		{
+			name:       "delta",
+			input:      customerservice.BotReplyStreamEvent{Type: customerservice.BotReplyStreamEventDelta, Delta: "hello"},
+			wantType:   "reply.delta",
+			wantFields: map[string]any{"delta": "hello"},
+		},
+		{
+			name: "completed",
+			input: customerservice.BotReplyStreamEvent{
+				Type: customerservice.BotReplyStreamEventCompleted,
+				Result: customerservice.GenerateBotReplyResult{
+					ConversationID:   "conversation-1",
+					TriggerMessageID: "message-1",
+					MessageID:        "message-2",
+					Content:          "hello",
+					Duplicate:        true,
+				},
+			},
+			wantType: "reply.completed",
+			wantFields: map[string]any{
+				"conversation_id":    "conversation-1",
+				"trigger_message_id": "message-1",
+				"message_id":         "message-2",
+				"content":            "hello",
+				"duplicate":          true,
+			},
+		},
+		{
+			name: "superseded",
+			input: customerservice.BotReplyStreamEvent{
+				Type: customerservice.BotReplyStreamEventSuperseded,
+				Result: customerservice.GenerateBotReplyResult{
+					ConversationID:   "conversation-1",
+					TriggerMessageID: "message-1",
+				},
+			},
+			wantType: "reply.superseded",
+			wantFields: map[string]any{
+				"conversation_id":    "conversation-1",
+				"trigger_message_id": "message-1",
+				"message":            "reply superseded by a newer customer message",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			event, err := encodeBotReplyStreamEvent(context.Background(), test.input)
+			if err != nil {
+				t.Fatalf("encodeBotReplyStreamEvent() error = %v", err)
+			}
+			if event.Type != test.wantType || event.ID != "" {
+				t.Fatalf("encoded event type = %q, ID = %q", event.Type, event.ID)
+			}
+			var fields map[string]any
+			if err := json.Unmarshal(event.Data, &fields); err != nil {
+				t.Fatalf("decode event data %q: %v", event.Data, err)
+			}
+			if !reflect.DeepEqual(fields, test.wantFields) {
+				t.Fatalf("event data = %#v, want %#v", fields, test.wantFields)
+			}
+		})
+	}
+
+	if _, err := encodeBotReplyStreamEvent(context.Background(), customerservice.BotReplyStreamEvent{}); err == nil {
+		t.Fatal("unknown event type error = nil")
+	}
+}
+
 const validReceiveMessageJSON = `{
 	"customer_id":"customer-1",
 	"channel":"web",
@@ -673,14 +797,27 @@ const validReceiveMessageJSON = `{
 }`
 
 type receiverStub struct {
-	calls        int
-	command      customerservice.ReceiveMessageCommand
-	result       customerservice.ReceiveMessageResult
-	err          error
-	replyCalls   int
-	replyCommand customerservice.GenerateBotReplyCommand
-	replyResult  customerservice.GenerateBotReplyResult
-	replyErr     error
+	calls         int
+	command       customerservice.ReceiveMessageCommand
+	result        customerservice.ReceiveMessageResult
+	err           error
+	replyCalls    int
+	replyCommand  customerservice.GenerateBotReplyCommand
+	replyResult   customerservice.GenerateBotReplyResult
+	replyErr      error
+	streamCalls   int
+	streamCommand customerservice.GenerateBotReplyCommand
+	streamReader  kitstream.Reader[customerservice.BotReplyStreamEvent]
+	streamErr     error
+}
+
+func (stub *receiverStub) StreamBotReply(
+	_ context.Context,
+	command customerservice.GenerateBotReplyCommand,
+) (kitstream.Reader[customerservice.BotReplyStreamEvent], error) {
+	stub.streamCalls++
+	stub.streamCommand = command
+	return stub.streamReader, stub.streamErr
 }
 
 func (stub *receiverStub) ReceiveMessage(
