@@ -34,6 +34,20 @@ type CreateParams struct {
 	CreatedAt  time.Time
 }
 
+// RestoreParams contains the complete persisted state required to rehydrate a
+// conversation. Callers must use Restore instead of constructing aggregate
+// state directly so database data passes the same domain invariants.
+type RestoreParams struct {
+	ID         string
+	CustomerID string
+	Channel    string
+	Status     Status
+	AgentID    string
+	Revision   uint64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 // Conversation is the aggregate root for a customer-service conversation.
 // Fields are private so status changes must pass through domain methods.
 type Conversation struct {
@@ -75,6 +89,48 @@ func New(params CreateParams) (*Conversation, error) {
 		createdAt:  createdAt,
 		updatedAt:  createdAt,
 	}, nil
+}
+
+// Restore rehydrates a conversation from persisted state after validating all
+// aggregate invariants. It does not perform a state transition or increment
+// the revision.
+func Restore(params RestoreParams) (*Conversation, error) {
+	id, err := requiredString("id", params.ID)
+	if err != nil {
+		return nil, err
+	}
+	customerID, err := requiredString("customer_id", params.CustomerID)
+	if err != nil {
+		return nil, err
+	}
+	channel, err := requiredString("channel", params.Channel)
+	if err != nil {
+		return nil, err
+	}
+	status := Status(strings.TrimSpace(string(params.Status)))
+	createdAt, err := requiredTime("created_at", params.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	updatedAt, err := requiredTime("updated_at", params.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	current := &Conversation{
+		id:         id,
+		customerID: customerID,
+		channel:    channel,
+		status:     status,
+		agentID:    strings.TrimSpace(params.AgentID),
+		revision:   params.Revision,
+		createdAt:  createdAt,
+		updatedAt:  updatedAt,
+	}
+	if err := validateConversation(current); err != nil {
+		return nil, err
+	}
+	return current, nil
 }
 
 // RequestHandoff moves a bot-owned conversation into the human queue.
@@ -247,4 +303,44 @@ func requiredTime(field string, value time.Time) (time.Time, error) {
 		return time.Time{}, invalidArgument(field, "is required")
 	}
 	return value.UTC(), nil
+}
+
+func validateConversation(current *Conversation) error {
+	if current == nil {
+		return invalidArgument("conversation", "is nil")
+	}
+	if _, err := requiredString("id", current.id); err != nil {
+		return err
+	}
+	if _, err := requiredString("customer_id", current.customerID); err != nil {
+		return err
+	}
+	if _, err := requiredString("channel", current.channel); err != nil {
+		return err
+	}
+	if !current.status.Valid() {
+		return invalidArgument("status", fmt.Sprintf("%q is unknown", current.status))
+	}
+	if _, err := requiredTime("created_at", current.createdAt); err != nil {
+		return err
+	}
+	if _, err := requiredTime("updated_at", current.updatedAt); err != nil {
+		return err
+	}
+	if current.updatedAt.Before(current.createdAt) {
+		return invalidArgument("updated_at", "must not be before created_at")
+	}
+	if current.revision == 0 {
+		return invalidArgument("revision", "must be greater than zero")
+	}
+	if current.revision > uint64(1<<63-1) {
+		return invalidArgument("revision", "must fit in a signed 64-bit integer")
+	}
+	if current.status == StatusHumanActive && current.agentID == "" {
+		return invalidArgument("agent_id", "is required while status is human_active")
+	}
+	if (current.status == StatusBotActive || current.status == StatusWaitingHuman) && current.agentID != "" {
+		return invalidArgument("agent_id", fmt.Sprintf("must be empty while status is %s", current.status))
+	}
+	return nil
 }

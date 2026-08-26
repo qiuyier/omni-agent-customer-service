@@ -222,6 +222,25 @@ func (s *Service) ReceiveMessage(
 		}
 		return nil
 	})
+	if errors.Is(err, conversation.ErrDuplicateExternalMessage) {
+		// A persistent repository can let its unique index choose the winner
+		// when two processes concurrently miss the idempotency lookup. Read the
+		// committed winner outside the failed transaction, then compare the
+		// complete payload just like the normal duplicate fast path.
+		existing, findErr := s.repository.FindMessageByExternalID(
+			ctx,
+			normalized.Channel,
+			normalized.ExternalMessageID,
+		)
+		if findErr != nil {
+			return ReceiveMessageResult{}, fmt.Errorf("find winning message: %w", findErr)
+		}
+		current, findErr := s.repository.FindConversation(ctx, existing.ConversationID())
+		if findErr != nil {
+			return ReceiveMessageResult{}, fmt.Errorf("find winning conversation: %w", findErr)
+		}
+		return duplicateResult(normalized, current, existing)
+	}
 	if err != nil {
 		return ReceiveMessageResult{}, err
 	}

@@ -3,4 +3,5 @@
 bin/
 *.out
 coverage.out
+.env
 .env.local

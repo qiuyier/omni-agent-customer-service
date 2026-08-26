@@ -14,12 +14,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
-	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 	hertztransport "github.com/qiuyier/omni-agent-customer-service/internal/transport/hertz"
 )
 
 const defaultHTTPAddress = "127.0.0.1:8080"
+
+const startupTimeout = 10 * time.Second
 
 func main() {
 	if err := run(); err != nil {
@@ -42,13 +43,25 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("resolve AI configuration: %w", err)
 	}
-	replyGenerator, err := bootstrap.NewAIReplyGenerator(context.Background(), aiConfig)
+	repositoryConfig, err := bootstrap.ResolveRepositoryConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve storage configuration: %w", err)
+	}
+	startupContext, cancelStartup := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancelStartup()
+	repositoryRuntime, err := bootstrap.NewConversationRepository(startupContext, repositoryConfig)
+	if err != nil {
+		return fmt.Errorf("create conversation repository: %w", err)
+	}
+	defer repositoryRuntime.Close()
+	replyGenerator, err := bootstrap.NewAIReplyGenerator(startupContext, aiConfig)
 	if err != nil {
 		return err
 	}
+	cancelStartup()
 
 	service, err := customerservice.New(
-		conversation.NewMemoryRepository(),
+		repositoryRuntime.Repository,
 		customerservice.MessageIDGeneratorFunc(func() (string, error) {
 			return uuid.NewString(), nil
 		}),

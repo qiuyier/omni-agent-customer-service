@@ -472,40 +472,6 @@ func cloneConversation(current *Conversation) *Conversation {
 	return &cloned
 }
 
-func validateConversation(current *Conversation) error {
-	if current == nil {
-		return invalidArgument("conversation", "is nil")
-	}
-	if _, err := requiredString("id", current.id); err != nil {
-		return err
-	}
-	if _, err := requiredString("customer_id", current.customerID); err != nil {
-		return err
-	}
-	if _, err := requiredString("channel", current.channel); err != nil {
-		return err
-	}
-	if !current.status.Valid() {
-		return invalidArgument("status", fmt.Sprintf("%q is unknown", current.status))
-	}
-	if _, err := requiredTime("created_at", current.createdAt); err != nil {
-		return err
-	}
-	if _, err := requiredTime("updated_at", current.updatedAt); err != nil {
-		return err
-	}
-	if current.updatedAt.Before(current.createdAt) {
-		return invalidArgument("updated_at", "must not be before created_at")
-	}
-	if current.revision == 0 {
-		return invalidArgument("revision", "must be greater than zero")
-	}
-	if current.status == StatusHumanActive && current.agentID == "" {
-		return invalidArgument("agent_id", "is required while status is human_active")
-	}
-	return nil
-}
-
 func contextError(ctx context.Context) error {
 	if ctx == nil {
 		return invalidArgument("context", "is nil")

@@ -53,6 +53,90 @@ func TestNewConversationValidation(t *testing.T) {
 	}
 }
 
+func TestRestoreConversation(t *testing.T) {
+	updatedAt := baseTime.Add(5 * time.Minute)
+	current, err := conversation.Restore(conversation.RestoreParams{
+		ID:         " conversation-1 ",
+		CustomerID: " customer-1 ",
+		Channel:    " web ",
+		Status:     conversation.StatusHumanActive,
+		AgentID:    " agent-7 ",
+		Revision:   4,
+		CreatedAt:  baseTime,
+		UpdatedAt:  updatedAt,
+	})
+	if err != nil {
+		t.Fatalf("Restore() error = %v", err)
+	}
+	if current.ID() != "conversation-1" ||
+		current.CustomerID() != "customer-1" ||
+		current.Channel() != "web" ||
+		current.Status() != conversation.StatusHumanActive ||
+		current.AgentID() != "agent-7" ||
+		current.Revision() != 4 ||
+		!current.CreatedAt().Equal(baseTime) ||
+		!current.UpdatedAt().Equal(updatedAt) {
+		t.Fatalf("restored conversation = %#v", current)
+	}
+	if current.CreatedAt().Location() != time.UTC || current.UpdatedAt().Location() != time.UTC {
+		t.Fatalf("restored timestamps were not normalized to UTC")
+	}
+}
+
+func TestRestoreConversationRejectsInvalidPersistedState(t *testing.T) {
+	valid := conversation.RestoreParams{
+		ID:         "conversation-1",
+		CustomerID: "customer-1",
+		Channel:    "web",
+		Status:     conversation.StatusBotActive,
+		Revision:   1,
+		CreatedAt:  baseTime,
+		UpdatedAt:  baseTime,
+	}
+	tests := []struct {
+		name   string
+		mutate func(*conversation.RestoreParams)
+	}{
+		{name: "unknown status", mutate: func(params *conversation.RestoreParams) {
+			params.Status = conversation.Status("unknown")
+		}},
+		{name: "zero revision", mutate: func(params *conversation.RestoreParams) {
+			params.Revision = 0
+		}},
+		{name: "revision exceeds persistent range", mutate: func(params *conversation.RestoreParams) {
+			params.Revision = uint64(1 << 63)
+		}},
+		{name: "updated before created", mutate: func(params *conversation.RestoreParams) {
+			params.UpdatedAt = params.CreatedAt.Add(-time.Second)
+		}},
+		{name: "human active without agent", mutate: func(params *conversation.RestoreParams) {
+			params.Status = conversation.StatusHumanActive
+		}},
+		{name: "blank agent", mutate: func(params *conversation.RestoreParams) {
+			params.Status = conversation.StatusHumanActive
+			params.AgentID = "   "
+		}},
+		{name: "bot active with agent", mutate: func(params *conversation.RestoreParams) {
+			params.Status = conversation.StatusBotActive
+			params.AgentID = "agent-1"
+		}},
+		{name: "waiting human with agent", mutate: func(params *conversation.RestoreParams) {
+			params.Status = conversation.StatusWaitingHuman
+			params.AgentID = "agent-1"
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			params := valid
+			test.mutate(&params)
+			if _, err := conversation.Restore(params); !errors.Is(err, conversation.ErrInvalidArgument) {
+				t.Fatalf("Restore() error = %v, want ErrInvalidArgument", err)
+			}
+		})
+	}
+}
+
 func TestHandoffLifecycle(t *testing.T) {
 	current := newConversation(t)
 

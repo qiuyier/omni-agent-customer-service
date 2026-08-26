@@ -6,6 +6,15 @@
 
 ## 当前进度
 
+第五阶段已经加入可切换的 PostgreSQL 持久化基础设施：
+
+- 业务层继续只依赖 `conversation.Repository`，运行时可选择 memory 或 postgres；
+- 使用 pgx v5 连接池和短事务实现会话、消息、外部幂等键与回复索引；
+- 使用会话 advisory lock 保护“尚不存在的会话”并发创建；
+- 使用数据库唯一索引选出并发幂等赢家，Service 回读并验证完整请求数据；
+- 使用 Tern 管理具名约束、复合外键、稳定消息顺序和 schema 版本；
+- 提供固定 PostgreSQL 16.15 的 Docker Compose，以及双连接池真实并发测试。
+
 第四阶段第三小步已经实现“HTTP SSE 流式自动回复闭环”：
 
 - 使用产品自己的 Thrift IDL 定义跨语言 HTTP 契约；
@@ -41,14 +50,17 @@
 请求流：
 外部渠道 → internal/transport/hertz → internal/customerservice
                                            ├──→ internal/conversation
+                                           ├──→ conversation.Repository
+                                           │          ├── MemoryRepository
+                                           │          └── postgres.Repository → PostgreSQL
                                            └──→ ReplyGenerator / ReplyStreamGenerator
                                                                │
                                                                ▼
                                                        internal/ai/eino → 模型供应商
 
 组装流：
-cmd/server → internal/bootstrap → 创建 ReplyGenerator
-     └──→ 创建 Service 并注入 ReplyGenerator → 创建 Handler → 注册路由
+cmd/server → internal/bootstrap → 创建 Repository + ReplyGenerator
+     └──→ 创建 Service 并注入两个接口 → 创建 Handler → 注册路由
 
 cmd/console → internal/bootstrap → 单轮 AI 链路
 ~~~
@@ -244,6 +256,43 @@ SSE 回复的事件语义：
 
 ## 本地运行
 
+项目要求 Go 1.25 或更高版本；本地 PostgreSQL 流程还需要 Docker Desktop 或兼容
+Docker Engine。当前代码使用 pgx v5.10.0、Tern v2.4.3 和 PostgreSQL 16.15。
+
+### PostgreSQL 与迁移（可选）
+
+默认 `STORAGE_DRIVER=memory`，不需要数据库，但进程退出后数据会消失。需要持久化
+或多实例共享幂等键时，先启动项目专用 PostgreSQL：
+
+~~~bash
+docker compose -f deploy/local/compose.yaml up -d --wait postgres
+~~~
+
+本地 Compose 默认监听 `127.0.0.1:15432`，数据库仅使用开发凭据。应用迁移使用
+同一个 `DATABASE_URL`：
+
+~~~bash
+export DATABASE_URL='postgres://omni_agent:omni_agent_local@127.0.0.1:15432/omni_agent_customer_service?sslmode=disable'
+go run ./cmd/migrate
+~~~
+
+迁移命令可重复执行，Tern 只运行尚未应用的版本。不要对
+`internal/persistence/postgres/migrations/*.sql` 直接运行 `psql -f`：每个 Tern
+文件同时包含 up 和 down 两部分，只有 Tern 会按分隔标记选择正确方向。
+PostgreSQL 模式启动时还会校验 Tern 版本和两张业务表；未迁移、版本不匹配或表
+缺失时 server 会直接拒绝启动，而不是等到首个业务请求才报错。
+
+真实数据库集成测试需要显式提供测试 DSN：
+
+~~~bash
+export TEST_DATABASE_URL='postgres://omni_agent:omni_agent_local@127.0.0.1:15432/omni_agent_customer_service_test?sslmode=disable'
+go test ./internal/persistence/postgres -count=1 -v
+~~~
+
+集成测试会重置测试库中的 `customer_service` 业务表，因此测试数据库名必须以
+`_test` 结尾；测试代码会拒绝迁移或清理其他数据库。不要把开发库或生产库 DSN
+填入 `TEST_DATABASE_URL`，也不要让并行 CI job 共享同一个测试数据库。
+
 ### HTTP 服务（需要对应供应商配置）
 
 `cmd/server` 同时暴露接收消息和生成回复接口，因此启动时会校验 AI 配置并创建
@@ -258,6 +307,10 @@ OpenAI-compatible 端点时可以不配置 Key。缺少必要配置会直接启�
 set -a
 source .env.local
 set +a
+
+# 以下两项只在选择 PostgreSQL 时设置；memory 模式不需要。
+export STORAGE_DRIVER=postgres
+export DATABASE_URL='postgres://omni_agent:omni_agent_local@127.0.0.1:15432/omni_agent_customer_service?sslmode=disable'
 
 go run ./cmd/server -address 127.0.0.1:8080
 ~~~
@@ -345,10 +398,10 @@ Trigger 重试时会直接读取已经保存的机器人消息，返回 `200 OK`
 `duplicate=true`。当前拆成两个端点，是为了让渠道消息接收与较慢、可能失败的
 模型调用具有独立的重试和超时边界。
 
-当前 `cmd/server` 默认只监听本机回环地址，并使用 `MemoryRepository`：进程重启
-后消息会丢失，多实例之间也不共享幂等键，所以它是本地开发入口，不是可直接
-暴露到公网的生产服务。对外接入前还需要渠道签名/HMAC、认证、限流、消息大小
-限制，以及带数据库唯一约束的持久化 Repository。
+当前 `cmd/server` 默认只监听本机回环地址，并默认使用 `MemoryRepository`；设置
+`STORAGE_DRIVER=postgres` 后，消息、幂等键和回复会在进程重启后保留，并可由
+多个服务实例共享。无论选择哪种 Repository，对外接入前仍需要渠道签名/HMAC、
+认证、限流、消息大小限制、数据库备份和最小权限账号。
 
 ### AI 配置与模型控制台
 
@@ -418,6 +471,9 @@ go test -race ./...
 go vet ./...
 ~~~
 
+设置 `TEST_DATABASE_URL` 后，`go test ./...` 还会运行 PostgreSQL 提交、回滚、
+重连持久性、约束和跨连接池并发用例；未设置时这些集成用例会明确跳过。
+
 测试覆盖领域状态、ReplyTo 约束、事务回滚、模型输入映射、两种 HTTP 协议、
 模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA、新增消息、
 流完成/取消/超时/过期、Eino 流映射、Hertz 路由、Thrift 绑定、SSE 事件编码、
@@ -444,7 +500,7 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 ## 后续候选
 
-当前 SSE 已完成业务层、Eino 适配、Hertz/Thrift 契约与自动化测试。下一步可在
-以下方向中选择：使用持久化数据库替换 `MemoryRepository`，增加渠道鉴权与限流，
-或实现真实浏览器客户端来消费 SSE。无论选择哪一项，`TriggerMessageID` 的幂等
-与过期回复保护仍留在应用层，不会被传输协议或具体模型替代。
+当前 SSE 与 PostgreSQL 持久化已经完成业务层、Eino 适配、Hertz/Thrift 契约和
+自动化测试。下一步可增加渠道鉴权与限流、完善优雅停机与可观测性，或实现真实
+浏览器客户端来消费 SSE。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复
+保护仍留在应用层，不会被传输协议、数据库或具体模型替代。
