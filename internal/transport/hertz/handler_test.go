@@ -41,12 +41,16 @@ func TestRegisterRoutesRejectsInvalidDependencies(t *testing.T) {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
 
-	if err := RegisterRoutes(nil, handler); !errors.Is(err, errInvalidDependency) {
+	security := newTestSecurityMiddleware(t)
+	if err := RegisterRoutes(nil, handler, security); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(nil, handler) error = %v, want %v", err, errInvalidDependency)
 	}
 	httpServer := server.New()
-	if err := RegisterRoutes(httpServer.Engine, nil); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, nil, security); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, nil) error = %v, want %v", err, errInvalidDependency)
+	}
+	if err := RegisterRoutes(httpServer.Engine, handler, nil); !errors.Is(err, errInvalidDependency) {
+		t.Fatalf("RegisterRoutes(engine, handler, nil) error = %v, want %v", err, errInvalidDependency)
 	}
 }
 
@@ -56,11 +60,23 @@ func TestHealth(t *testing.T) {
 
 	assertStatus(t, response, http.StatusOK)
 	assertContentType(t, response, "application/json; charset=utf-8")
+	if requestID := string(response.Header.Peek(RequestIDHeader)); requestID == "" {
+		t.Fatal("health response X-Request-ID is empty")
+	}
 	var body model.HealthResponse
 	decodeResponse(t, response, &body)
 	if body.Status != "ok" {
 		t.Fatalf("health status = %q, want %q", body.Status, "ok")
 	}
+
+	responseWithWrongToken := ut.PerformRequest(
+		engine,
+		http.MethodGet,
+		healthPath,
+		nil,
+		ut.Header{Key: "Authorization", Value: "Bearer wrong-token"},
+	).Result()
+	assertStatus(t, responseWithWrongToken, http.StatusOK)
 }
 
 func TestReceiveMessageCreated(t *testing.T) {
@@ -157,13 +173,13 @@ func TestReceiveMessageRejectsFormBody(t *testing.T) {
 	receiver := &receiverStub{}
 	engine := newTestEngine(t, receiver)
 	payload := "customer_id=customer-1&channel=web&external_message_id=external-1&content=secret"
-	response := ut.PerformRequest(
+	response := performAuthorizedRequest(
 		engine,
 		http.MethodPost,
 		"/v1/conversations/conversation-1/messages",
 		&ut.Body{Body: strings.NewReader(payload), Len: len(payload)},
 		ut.Header{Key: "Content-Type", Value: "application/x-www-form-urlencoded"},
-	).Result()
+	)
 
 	assertProblem(t, response, http.StatusBadRequest, fault.CodeInvalidArgument, "invalid request")
 	if receiver.calls != 0 {
@@ -360,7 +376,7 @@ func TestGenerateBotReplyCreated(t *testing.T) {
 	target := "/v1/conversations/conversation-from-path/messages/trigger-from-path/reply" +
 		"?conversation_id=query-must-not-win&trigger_message_id=query-must-not-win"
 
-	response := ut.PerformRequest(engine, http.MethodPost, target, nil).Result()
+	response := performAuthorizedRequest(engine, http.MethodPost, target, nil)
 
 	assertStatus(t, response, http.StatusCreated)
 	assertContentType(t, response, "application/json; charset=utf-8")
@@ -396,12 +412,12 @@ func TestGenerateBotReplyDuplicate(t *testing.T) {
 	}}
 	engine := newTestEngine(t, application)
 
-	response := ut.PerformRequest(
+	response := performAuthorizedRequest(
 		engine,
 		http.MethodPost,
 		"/v1/conversations/conversation-1/messages/message-1/reply",
 		nil,
-	).Result()
+	)
 
 	assertStatus(t, response, http.StatusOK)
 	var body model.GenerateBotReplyResponse
@@ -502,12 +518,12 @@ func TestGenerateBotReplyErrors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			application := &receiverStub{replyErr: test.err}
 			engine := newTestEngine(t, application)
-			response := ut.PerformRequest(
+			response := performAuthorizedRequest(
 				engine,
 				http.MethodPost,
 				"/v1/conversations/conversation-1/messages/message-1/reply",
 				nil,
-			).Result()
+			)
 
 			assertProblem(t, response, test.wantStatus, test.wantCode, test.wantDetail)
 			if application.replyCalls != 1 {
@@ -563,8 +579,8 @@ func TestGenerateBotReplyHTTPIsIdempotent(t *testing.T) {
 	)
 	assertStatus(t, receiveResponse, http.StatusCreated)
 	target := "/v1/conversations/conversation-1/messages/message-1/reply"
-	firstResponse := ut.PerformRequest(engine, http.MethodPost, target, nil).Result()
-	secondResponse := ut.PerformRequest(engine, http.MethodPost, target, nil).Result()
+	firstResponse := performAuthorizedRequest(engine, http.MethodPost, target, nil)
+	secondResponse := performAuthorizedRequest(engine, http.MethodPost, target, nil)
 
 	assertStatus(t, firstResponse, http.StatusCreated)
 	assertStatus(t, secondResponse, http.StatusOK)
@@ -647,12 +663,12 @@ func TestGenerateBotReplyRejectsStaleTriggerOverHTTP(t *testing.T) {
 	assertStatus(t, firstResponse, http.StatusCreated)
 	assertStatus(t, secondResponse, http.StatusCreated)
 
-	replyResponse := ut.PerformRequest(
+	replyResponse := performAuthorizedRequest(
 		engine,
 		http.MethodPost,
 		"/v1/conversations/conversation-1/messages/message-1/reply",
 		nil,
-	).Result()
+	)
 
 	assertProblem(t, replyResponse, http.StatusConflict, fault.CodeConflict, "resource conflict")
 	if generatorCalls != 0 {
@@ -680,12 +696,12 @@ func TestStreamBotReplyFailureBeforeFirstEventIsProblem(t *testing.T) {
 	}
 	engine := newTestEngine(t, application)
 
-	response := ut.PerformRequest(
+	response := performAuthorizedRequest(
 		engine,
 		http.MethodPost,
 		"/v1/conversations/conversation-1/messages/message-1/reply/stream",
 		nil,
-	).Result()
+	)
 
 	assertProblem(
 		t,
@@ -703,12 +719,12 @@ func TestStreamBotReplyRejectsNilApplicationReader(t *testing.T) {
 	application := &receiverStub{}
 	engine := newTestEngine(t, application)
 
-	response := ut.PerformRequest(
+	response := performAuthorizedRequest(
 		engine,
 		http.MethodPost,
 		"/v1/conversations/conversation-1/messages/message-1/reply/stream",
 		nil,
-	).Result()
+	)
 
 	assertProblem(t, response, http.StatusInternalServerError, fault.CodeInternal, "internal error")
 }
@@ -845,20 +861,34 @@ func newTestEngine(t *testing.T, application Application) *route.Engine {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
 	httpServer := server.New()
-	if err := RegisterRoutes(httpServer.Engine, handler); err != nil {
+	if err := RegisterRoutes(httpServer.Engine, handler, newTestSecurityMiddleware(t)); err != nil {
 		t.Fatalf("RegisterRoutes() error = %v", err)
 	}
 	return httpServer.Engine
 }
 
 func performJSON(engine *route.Engine, method, target, payload string) *protocol.Response {
-	return ut.PerformRequest(
+	return performAuthorizedRequest(
 		engine,
 		method,
 		target,
 		&ut.Body{Body: strings.NewReader(payload), Len: len(payload)},
 		ut.Header{Key: "Content-Type", Value: "application/json; charset=utf-8"},
-	).Result()
+	)
+}
+
+func performAuthorizedRequest(
+	engine *route.Engine,
+	method string,
+	target string,
+	body *ut.Body,
+	headers ...ut.Header,
+) *protocol.Response {
+	headers = append(headers, ut.Header{
+		Key:   "Authorization",
+		Value: "Bearer " + testAPIAuthToken,
+	})
+	return ut.PerformRequest(engine, method, target, body, headers...).Result()
 }
 
 func assertStatus(t *testing.T, response *protocol.Response, want int) {

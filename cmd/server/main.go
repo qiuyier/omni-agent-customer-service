@@ -39,6 +39,14 @@ func run() error {
 	if strings.TrimSpace(*address) == "" {
 		return errors.New("HTTP address must not be blank")
 	}
+	apiConfig, err := bootstrap.ResolveAPIConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve API configuration: %w", err)
+	}
+	securityMiddleware, err := hertztransport.NewSecurityMiddleware(apiConfig.BearerToken)
+	if err != nil {
+		return fmt.Errorf("create HTTP security middleware: %w", err)
+	}
 	aiConfig, err := bootstrap.ResolveAIConfig(os.LookupEnv, bootstrap.AIOverrides{})
 	if err != nil {
 		return fmt.Errorf("resolve AI configuration: %w", err)
@@ -82,7 +90,11 @@ func run() error {
 		server.WithHostPorts(strings.TrimSpace(*address)),
 		server.WithSenseClientDisconnection(true),
 	)
-	if err := hertztransport.RegisterRoutes(httpServer.Engine, handler); err != nil {
+	if err := hertztransport.RegisterRoutes(
+		httpServer.Engine,
+		handler,
+		securityMiddleware,
+	); err != nil {
 		return fmt.Errorf("register HTTP routes: %w", err)
 	}
 

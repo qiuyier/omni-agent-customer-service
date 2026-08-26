@@ -3,25 +3,38 @@ package hertz
 import "github.com/cloudwego/hertz/pkg/route"
 
 const (
-	healthPath         = "/healthz"
-	receiveMessagePath = "/v1/conversations/:conversation_id/messages"
-	generateReplyPath  = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply"
-	streamReplyPath    = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/stream"
+	apiPrefix           = "/v1"
+	healthPath          = "/healthz"
+	receiveMessageRoute = "/conversations/:conversation_id/messages"
+	generateReplyRoute  = "/conversations/:conversation_id/messages/:trigger_message_id/reply"
+	streamReplyRoute    = "/conversations/:conversation_id/messages/:trigger_message_id/reply/stream"
+	receiveMessagePath  = apiPrefix + receiveMessageRoute
+	generateReplyPath   = apiPrefix + generateReplyRoute
+	streamReplyPath     = apiPrefix + streamReplyRoute
 )
 
 // RegisterRoutes connects the hand-written dependency-injected handler to the
 // paths declared in idl/customer_service.thrift.
-func RegisterRoutes(engine *route.Engine, handler *Handler) error {
+func RegisterRoutes(
+	engine *route.Engine,
+	handler *Handler,
+	security *SecurityMiddleware,
+) error {
 	if engine == nil {
 		return invalidDependency("route engine is nil")
 	}
 	if handler == nil {
 		return invalidDependency("handler is nil")
 	}
+	if security == nil {
+		return invalidDependency("security middleware is nil")
+	}
 
+	engine.Use(security.RequestID)
 	engine.GET(healthPath, handler.Health)
-	engine.POST(receiveMessagePath, handler.ReceiveMessage)
-	engine.POST(generateReplyPath, handler.GenerateBotReply)
-	engine.POST(streamReplyPath, handler.StreamBotReply)
+	api := engine.Group(apiPrefix, security.RequireBearerToken)
+	api.POST(receiveMessageRoute, handler.ReceiveMessage)
+	api.POST(generateReplyRoute, handler.GenerateBotReply)
+	api.POST(streamReplyRoute, handler.StreamBotReply)
 	return nil
 }
