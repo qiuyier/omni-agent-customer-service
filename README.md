@@ -6,14 +6,17 @@
 
 ## 当前进度
 
-第六阶段第一小步已经加入 HTTP 请求身份与基础访问控制：
+第六阶段第二小步已经加入 HTTP 请求身份、基础访问控制与单实例限流：
 
 - 所有已注册路由都会生成或安全透传 `X-Request-ID`，并通过标准 Context 向下游传播；
 - `/healthz` 保持匿名可用，三个 `/v1` 业务端点统一使用 Bearer Token 鉴权；
 - 启动时强制校验 `API_AUTH_TOKEN`，缺失或弱 token 会让服务 fail-fast；
 - 服务端只保留 token 的 SHA-256 摘要，并以常量时间比较认证凭据；
 - 缺失、格式错误、重复或不匹配的凭据统一返回安全的 `401 Problem Details`；
-- 鉴权仍只属于 Hertz/Bootstrap 边界，业务层、Repository 和模型适配器均未感知。
+- 认证后的 `/v1` 请求共享令牌桶，默认每秒补充 20 个令牌、最多突发 40 个请求；
+- 超限请求立即返回 `429 resource_exhausted` 和 `Retry-After`，不会进入 Handler；
+- Request ID、鉴权和限流仍只属于 Hertz/Bootstrap 边界，业务层、Repository 和
+  模型适配器均未感知。
 
 第五阶段已经加入可切换的 PostgreSQL 持久化基础设施：
 
@@ -57,18 +60,21 @@
 
 ~~~text
 请求流：
-外部渠道 → Request ID → Bearer 鉴权 → internal/transport/hertz → internal/customerservice
-                                           ├──→ internal/conversation
-                                           ├──→ conversation.Repository
-                                           │          ├── MemoryRepository
-                                           │          └── postgres.Repository → PostgreSQL
-                                           └──→ ReplyGenerator / ReplyStreamGenerator
-                                                               │
-                                                               ▼
-                                                       internal/ai/eino → 模型供应商
+外部渠道 → Request ID → Bearer 鉴权 → 令牌桶限流 → internal/transport/hertz
+                                                        │
+                                                        ▼
+                                            internal/customerservice
+                                              ├──→ internal/conversation
+                                              ├──→ conversation.Repository
+                                              │          ├── MemoryRepository
+                                              │          └── postgres.Repository → PostgreSQL
+                                              └──→ ReplyGenerator / ReplyStreamGenerator
+                                                                  │
+                                                                  ▼
+                                                          internal/ai/eino → 模型供应商
 
 组装流：
-cmd/server → internal/bootstrap → 创建 Security Middleware + Repository + ReplyGenerator
+cmd/server → internal/bootstrap → 创建 Security/RateLimit Middleware + Repository + ReplyGenerator
      └──→ 创建 Service 并注入两个接口 → 创建 Handler → 注册公开/受保护路由
 
 cmd/console → internal/bootstrap → 单轮 AI 链路
@@ -200,6 +206,7 @@ internal/transport/hertz/handler.go                  DTO ↔ Command/Result
        │
        ├── error.go                                  业务错误 ↔ fault
        ├── middleware.go                             Request ID + Bearer 鉴权
+       ├── rate_limit.go                             单实例令牌桶 + 429
        └── router.go                                 URL ↔ Handler
 ~~~
 
@@ -222,6 +229,13 @@ Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Route
 `X-Request-ID`：安全的调用方值会被透传，缺失、重复、超过 128 字节或包含不安全
 字符时由服务端重新生成 UUID。Bearer 认证失败会在读取请求体、调用业务层、访问
 数据库或模型之前返回 `401 unauthenticated`，并带 `WWW-Authenticate`。
+
+认证通过后，请求按照 `API_RATE_LIMIT_RPS` 和 `API_RATE_LIMIT_BURST` 进入一个
+进程内共享令牌桶；默认值分别是 `20` 和 `40`。令牌不足时立即返回普通
+`429 application/problem+json`，错误码为 `resource_exhausted`，并用
+`Retry-After` 告知至少等待多少秒。已认证但请求体无效的请求仍会消耗令牌，因为
+限流发生在 JSON 解析之前。一次 SSE POST 只消耗一个令牌，流中的 delta 不重复
+计数；客户端重连是一次新请求，会再次参与限流。
 
 Handler 只按 `application/json` 解码，不允许 Query 或 Form 覆盖消息字段。
 Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来自 `api.vd`；
@@ -312,14 +326,16 @@ go test ./internal/persistence/postgres -count=1 -v
 ### HTTP 服务（需要对应供应商配置）
 
 `cmd/server` 同时暴露接收消息和生成回复接口，因此启动时会校验入站
-`API_AUTH_TOKEN`、AI 配置和存储配置。公网模型供应商需要对应 API Key；`custom`
-指向无鉴权的本地 OpenAI-compatible 端点时可以不配置模型 Key。缺少必要配置会
-直接启动失败，不会等到第一次请求才暴露问题。
+`API_AUTH_TOKEN`、限流参数、AI 配置和存储配置。公网模型供应商需要对应 API
+Key；`custom` 指向无鉴权的本地 OpenAI-compatible 端点时可以不配置模型 Key。
+缺少必要配置，或者 RPS/Burst 不是正数时会直接启动失败，不会等到第一次请求才
+暴露问题。
 
 先把 `.env.example` 复制为被 Git 忽略的 `.env.local`，填入供应商配置，再加载到
 当前 shell。`API_AUTH_TOKEN` 至少 32 字节且不能包含空白，可以用
 `openssl rand -hex 32` 生成后填入；它是外部系统调用本服务的凭据，不能复用
-`AI_API_KEY`。程序不会自行读取 dotenv 文件：
+`AI_API_KEY`。`API_RATE_LIMIT_RPS` 和 `API_RATE_LIMIT_BURST` 可以省略并使用
+`20/40` 默认值，也可以在 `.env.local` 中覆盖。程序不会自行读取 dotenv 文件：
 
 ~~~bash
 set -a
@@ -423,7 +439,8 @@ Trigger 重试时会直接读取已经保存的机器人消息，返回 `200 OK`
 `STORAGE_DRIVER=postgres` 后，消息、幂等键和回复会在进程重启后保留，并可由
 多个服务实例共享。通用 Bearer Token 只负责调用本服务的第一层认证；接入微信、
 钉钉等真实 webhook 时，仍需验证各渠道自己的签名/HMAC。生产环境还需要 token
-轮换、多调用方身份、限流、消息大小限制、数据库备份和最小权限账号。
+轮换、多调用方身份、消息大小限制、数据库备份和最小权限账号。当前限流桶位于
+单个进程内，多实例部署若要求全局统一额度，应改由 Redis 或 API Gateway 协调。
 
 ### AI 配置与模型控制台
 
@@ -499,7 +516,8 @@ go vet ./...
 测试覆盖领域状态、ReplyTo 约束、事务回滚、模型输入映射、两种 HTTP 协议、
 模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA、新增消息、
 流完成/取消/超时/过期、Eino 流映射、Hertz 路由、Thrift 绑定、SSE 事件编码、
-Request ID、Bearer 鉴权、Problem 错误响应、HTTP 回复幂等和过期 Trigger 等
+Request ID、Bearer 鉴权、令牌桶限流、429/Retry-After、Problem 错误响应、HTTP
+回复幂等和过期 Trigger 等
 情况。协议测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，
 也不产生费用。
 
@@ -522,8 +540,8 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 ## 后续候选
 
-当前 SSE、PostgreSQL 持久化、Request ID 与基础 Bearer 鉴权已经完成业务层、
-Eino 适配、Hertz/Thrift 契约和自动化测试。下一步可基于已认证调用方增加限流，
-完善优雅停机与结构化可观测性，或实现真实浏览器客户端来消费 SSE。无论选择哪
-一项，`TriggerMessageID` 的幂等与过期回复保护仍留在应用层，不会被传输协议、
-数据库或具体模型替代。
+当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权与单实例限流已经完成
+业务层、Eino 适配、Hertz/Thrift 契约和自动化测试。下一步可增加 AI 回复并发
+上限、多调用方身份与分布式限流，完善优雅停机和结构化可观测性，或实现真实
+浏览器客户端来消费 SSE。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复
+保护仍留在应用层，不会被传输协议、数据库或具体模型替代。

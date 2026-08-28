@@ -47,6 +47,13 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create HTTP security middleware: %w", err)
 	}
+	rateLimitMiddleware, err := hertztransport.NewRateLimitMiddleware(
+		apiConfig.RateLimitRPS,
+		apiConfig.RateLimitBurst,
+	)
+	if err != nil {
+		return fmt.Errorf("create HTTP rate limit middleware: %w", err)
+	}
 	aiConfig, err := bootstrap.ResolveAIConfig(os.LookupEnv, bootstrap.AIOverrides{})
 	if err != nil {
 		return fmt.Errorf("resolve AI configuration: %w", err)
@@ -94,6 +101,7 @@ func run() error {
 		httpServer.Engine,
 		handler,
 		securityMiddleware,
+		rateLimitMiddleware,
 	); err != nil {
 		return fmt.Errorf("register HTTP routes: %w", err)
 	}

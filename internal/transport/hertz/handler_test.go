@@ -42,15 +42,19 @@ func TestRegisterRoutesRejectsInvalidDependencies(t *testing.T) {
 	}
 
 	security := newTestSecurityMiddleware(t)
-	if err := RegisterRoutes(nil, handler, security); !errors.Is(err, errInvalidDependency) {
+	rateLimit := newTestRateLimitMiddleware(t)
+	if err := RegisterRoutes(nil, handler, security, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(nil, handler) error = %v, want %v", err, errInvalidDependency)
 	}
 	httpServer := server.New()
-	if err := RegisterRoutes(httpServer.Engine, nil, security); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, nil, security, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, nil) error = %v, want %v", err, errInvalidDependency)
 	}
-	if err := RegisterRoutes(httpServer.Engine, handler, nil); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, handler, nil, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, handler, nil) error = %v, want %v", err, errInvalidDependency)
+	}
+	if err := RegisterRoutes(httpServer.Engine, handler, security, nil); !errors.Is(err, errInvalidDependency) {
+		t.Fatalf("RegisterRoutes(engine, handler, security, nil) error = %v, want %v", err, errInvalidDependency)
 	}
 }
 
@@ -856,15 +860,38 @@ func (stub *receiverStub) GenerateBotReply(
 
 func newTestEngine(t *testing.T, application Application) *route.Engine {
 	t.Helper()
+	return newTestEngineWithRateLimit(t, application, newTestRateLimitMiddleware(t))
+}
+
+func newTestEngineWithRateLimit(
+	t *testing.T,
+	application Application,
+	rateLimit *RateLimitMiddleware,
+) *route.Engine {
+	t.Helper()
 	handler, err := NewHandler(application)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
 	httpServer := server.New()
-	if err := RegisterRoutes(httpServer.Engine, handler, newTestSecurityMiddleware(t)); err != nil {
+	if err := RegisterRoutes(
+		httpServer.Engine,
+		handler,
+		newTestSecurityMiddleware(t),
+		rateLimit,
+	); err != nil {
 		t.Fatalf("RegisterRoutes() error = %v", err)
 	}
 	return httpServer.Engine
+}
+
+func newTestRateLimitMiddleware(t *testing.T) *RateLimitMiddleware {
+	t.Helper()
+	middleware, err := NewRateLimitMiddleware(1000, 1000)
+	if err != nil {
+		t.Fatalf("NewRateLimitMiddleware() error = %v", err)
+	}
+	return middleware
 }
 
 func performJSON(engine *route.Engine, method, target, payload string) *protocol.Response {

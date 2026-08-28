@@ -19,6 +19,7 @@ func RegisterRoutes(
 	engine *route.Engine,
 	handler *Handler,
 	security *SecurityMiddleware,
+	rateLimit *RateLimitMiddleware,
 ) error {
 	if engine == nil {
 		return invalidDependency("route engine is nil")
@@ -29,10 +30,17 @@ func RegisterRoutes(
 	if security == nil {
 		return invalidDependency("security middleware is nil")
 	}
+	if rateLimit == nil {
+		return invalidDependency("rate limit middleware is nil")
+	}
 
 	engine.Use(security.RequestID)
 	engine.GET(healthPath, handler.Health)
-	api := engine.Group(apiPrefix, security.RequireBearerToken)
+	api := engine.Group(
+		apiPrefix,
+		security.RequireBearerToken,
+		rateLimit.Limit,
+	)
 	api.POST(receiveMessageRoute, handler.ReceiveMessage)
 	api.POST(generateReplyRoute, handler.GenerateBotReply)
 	api.POST(streamReplyRoute, handler.StreamBotReply)

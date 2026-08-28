@@ -10,6 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/jackc/tern/v2 v2.4.3
 	github.com/qiuyier/omni-agent-kit v0.0.0-20260805082658-f91829f653e0
+	golang.org/x/time v0.15.0
 )
 
 require (
