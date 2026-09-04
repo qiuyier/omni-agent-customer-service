@@ -81,6 +81,12 @@ func TestClassifyError(t *testing.T) {
 			wantStatus: http.StatusServiceUnavailable,
 		},
 		{
+			name:       "reply capacity exceeded",
+			err:        customerservice.ErrReplyCapacityExceeded,
+			wantCode:   fault.CodeResourceExhausted,
+			wantStatus: http.StatusTooManyRequests,
+		},
+		{
 			name: "preclassified provider error remains unavailable",
 			err: fmt.Errorf(
 				"%w: %w",
@@ -162,5 +168,33 @@ func TestClassifyErrorPreservesFault(t *testing.T) {
 	original := fault.New(fault.CodeUnavailable, "model unavailable")
 	if got := classifyError(original); got != original {
 		t.Fatalf("classifyError() = %v, want original fault", got)
+	}
+}
+
+func TestClassifyStreamTerminalErrorPrefersRequestCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	writerErr := errors.New("socket write failed with api_key=secret")
+
+	classified := classifyStreamTerminalError(ctx, writerErr)
+	if code := fault.CodeOf(classified); code != fault.CodeCancelled {
+		t.Fatalf("code = %q, want %q", code, fault.CodeCancelled)
+	}
+	if !errors.Is(classified, context.Canceled) {
+		t.Fatalf("classified error = %v, want context.Canceled cause", classified)
+	}
+	if errors.Is(classified, writerErr) {
+		t.Fatalf("classified error retained lower-priority writer error: %v", classified)
+	}
+}
+
+func TestClassifyStreamTerminalErrorUsesWriterFailureWhileRequestIsActive(t *testing.T) {
+	writerErr := fmt.Errorf("%w: provider detail", customerservice.ErrReplyGenerationFailed)
+	classified := classifyStreamTerminalError(context.Background(), writerErr)
+	if code := fault.CodeOf(classified); code != fault.CodeUnavailable {
+		t.Fatalf("code = %q, want %q", code, fault.CodeUnavailable)
+	}
+	if !errors.Is(classified, writerErr) {
+		t.Fatalf("classified error does not retain writer error: %v", classified)
 	}
 }

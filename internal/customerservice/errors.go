@@ -41,6 +41,10 @@ var (
 	// ErrReplyGenerationFailed classifies a provider or model invocation
 	// failure while preserving the original cause for errors.Is/errors.As.
 	ErrReplyGenerationFailed = errors.New("customer service: reply generation failed")
+
+	// ErrReplyCapacityExceeded indicates that all model-generation slots on
+	// this service instance are currently in use. Callers should retry later.
+	ErrReplyCapacityExceeded = errors.New("customer service: reply capacity exceeded")
 )
 
 func invalidInput(field, reason string) error {

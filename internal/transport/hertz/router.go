@@ -19,6 +19,7 @@ func RegisterRoutes(
 	engine *route.Engine,
 	handler *Handler,
 	security *SecurityMiddleware,
+	accessLog *AccessLogMiddleware,
 	rateLimit *RateLimitMiddleware,
 ) error {
 	if engine == nil {
@@ -30,11 +31,14 @@ func RegisterRoutes(
 	if security == nil {
 		return invalidDependency("security middleware is nil")
 	}
+	if accessLog == nil {
+		return invalidDependency("access log middleware is nil")
+	}
 	if rateLimit == nil {
 		return invalidDependency("rate limit middleware is nil")
 	}
 
-	engine.Use(security.RequestID)
+	engine.Use(recoverPanic, security.RequestID, accessLog.Log)
 	engine.GET(healthPath, handler.Health)
 	api := engine.Group(
 		apiPrefix,

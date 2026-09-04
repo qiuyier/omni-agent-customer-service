@@ -53,6 +53,8 @@ type Service struct {
 	replies                ReplyGenerator
 	replyStreams           ReplyStreamGenerator
 	replyGenerationTimeout time.Duration
+	replyCapacity          *replyCapacityLimiter
+	replyObserver          ReplyObserver
 }
 
 // New creates a customer-service application service.
@@ -71,7 +73,12 @@ func New(
 	if clock == nil {
 		return nil, fmt.Errorf("%w: clock is nil", ErrInvalidDependency)
 	}
-	service := &Service{repository: repository, ids: ids, clock: clock}
+	service := &Service{
+		repository:    repository,
+		ids:           ids,
+		clock:         clock,
+		replyObserver: nopReplyObserver{},
+	}
 	for index, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("%w: option %d is nil", ErrInvalidDependency, index)

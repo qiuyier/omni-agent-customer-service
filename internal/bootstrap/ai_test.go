@@ -34,6 +34,61 @@ func TestResolveAIConfigUsesDefaultsAndProviderCredential(t *testing.T) {
 	}
 }
 
+func TestResolveAIReplyRuntimeConfigUsesDefaultAndOverride(t *testing.T) {
+	defaultConfig, err := bootstrap.ResolveAIReplyRuntimeConfig(environment(nil))
+	if err != nil {
+		t.Fatalf("ResolveAIReplyRuntimeConfig() error = %v", err)
+	}
+	if defaultConfig.MaxConcurrentReplies != bootstrap.DefaultAIMaxConcurrentReplies {
+		t.Fatalf(
+			"MaxConcurrentReplies = %d, want %d",
+			defaultConfig.MaxConcurrentReplies,
+			bootstrap.DefaultAIMaxConcurrentReplies,
+		)
+	}
+
+	overridden, err := bootstrap.ResolveAIReplyRuntimeConfig(environment(map[string]string{
+		"AI_MAX_CONCURRENT_REPLIES": " 12 ",
+	}))
+	if err != nil {
+		t.Fatalf("ResolveAIReplyRuntimeConfig() error = %v", err)
+	}
+	if overridden.MaxConcurrentReplies != 12 {
+		t.Fatalf("MaxConcurrentReplies = %d, want 12", overridden.MaxConcurrentReplies)
+	}
+}
+
+func TestResolveAIReplyRuntimeConfigRejectsInvalidValues(t *testing.T) {
+	tests := []struct {
+		name   string
+		lookup bootstrap.LookupEnv
+	}{
+		{name: "nil lookup"},
+		{name: "zero", lookup: environment(map[string]string{"AI_MAX_CONCURRENT_REPLIES": "0"})},
+		{name: "negative", lookup: environment(map[string]string{"AI_MAX_CONCURRENT_REPLIES": "-1"})},
+		{name: "decimal", lookup: environment(map[string]string{"AI_MAX_CONCURRENT_REPLIES": "1.5"})},
+		{name: "text", lookup: environment(map[string]string{"AI_MAX_CONCURRENT_REPLIES": "many"})},
+		{
+			name: "overflow",
+			lookup: environment(map[string]string{
+				"AI_MAX_CONCURRENT_REPLIES": "999999999999999999999999999999999999",
+			}),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := bootstrap.ResolveAIReplyRuntimeConfig(test.lookup)
+			if !errors.Is(err, bootstrap.ErrInvalidAIConfiguration) {
+				t.Fatalf(
+					"ResolveAIReplyRuntimeConfig() error = %v, want ErrInvalidAIConfiguration",
+					err,
+				)
+			}
+		})
+	}
+}
+
 func TestResolveAIConfigAppliesOverridePrecedence(t *testing.T) {
 	config, err := bootstrap.ResolveAIConfig(environment(map[string]string{
 		"AI_PROVIDER":     "openai",

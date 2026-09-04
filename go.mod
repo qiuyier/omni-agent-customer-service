@@ -7,9 +7,11 @@ require (
 	github.com/cloudwego/eino-ext/components/model/agenticopenai v0.2.2
 	github.com/cloudwego/hertz v0.10.5
 	github.com/google/uuid v1.6.0
+	github.com/hertz-contrib/logger/zap v1.1.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/jackc/tern/v2 v2.4.3
 	github.com/qiuyier/omni-agent-kit v0.0.0-20260805082658-f91829f653e0
+	go.uber.org/zap v1.28.0
 	golang.org/x/time v0.15.0
 )
 
@@ -62,6 +64,7 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.11.0 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect

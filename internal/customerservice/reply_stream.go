@@ -99,21 +99,60 @@ func (s *Service) StreamBotReply(
 			ErrReplyUnavailable,
 		)
 	}
-
+	attempt, err := s.beginReplyAttempt(ctx, ReplyModeStream, prepared.snapshot.request)
+	if err != nil {
+		return nil, err
+	}
 	generationContext, cancelGeneration := s.newReplyGenerationContext(ctx)
+	capacityTransferred := false
+	initializationOutcome := ReplyOutcomeGenerationFailed
+	initializationCleanupFailed := false
+	defer func() {
+		if !capacityTransferred {
+			cancelGeneration()
+			attempt.finish(
+				initializationOutcome,
+				ReplyPhaseInitialize,
+				false,
+				initializationCleanupFailed,
+			)
+		}
+	}()
+
 	source, err := s.replyStreams.Stream(generationContext, prepared.snapshot.request)
 	if generationErr := generationContext.Err(); generationErr != nil {
 		err = generationErr
 	}
 	if err != nil {
-		if source != nil {
-			err = errors.Join(err, source.Close())
-		}
+		// Classify the primary initialization failure before joining cleanup
+		// errors. A Close error such as context.Canceled must not overwrite the
+		// real provider outcome.
+		initializationOutcome = replyOutcomeFromError(err, ReplyOutcomeGenerationFailed)
 		cancelGeneration()
+		if source != nil {
+			// Pessimistically mark cleanup failed so a Close panic is still
+			// represented by the outer lifecycle fallback.
+			initializationCleanupFailed = true
+			closeErr := source.Close()
+			initializationCleanupFailed = closeErr != nil
+			err = errors.Join(err, closeErr)
+		}
+		attempt.finish(
+			initializationOutcome,
+			ReplyPhaseInitialize,
+			false,
+			initializationCleanupFailed,
+		)
 		return nil, replyGenerationError(err)
 	}
 	if source == nil {
 		cancelGeneration()
+		attempt.finish(
+			ReplyOutcomeGenerationFailed,
+			ReplyPhaseInitialize,
+			false,
+			false,
+		)
 		return nil, replyGenerationError(errors.New("reply stream generator returned nil reader"))
 	}
 
@@ -125,8 +164,11 @@ func (s *Service) StreamBotReply(
 		service:           s,
 		command:           normalized,
 		snapshot:          prepared.snapshot,
+		attempt:           attempt,
 	}
-	return kitstream.NewReader(state.recv, state.close), nil
+	reader := kitstream.NewReader(state.recv, state.close)
+	capacityTransferred = true
+	return reader, nil
 }
 
 type botReplyStreamState struct {
@@ -137,11 +179,24 @@ type botReplyStreamState struct {
 	service           *Service
 	command           GenerateBotReplyCommand
 	snapshot          replySnapshot
+	attempt           *replyAttempt
 	content           strings.Builder
 	done              bool
 }
 
 func (s *botReplyStreamState) recv() (BotReplyStreamEvent, error) {
+	panicOutcome := ReplyOutcomeGenerationFailed
+	panicPhase := ReplyPhaseReceive
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			s.done = true
+			s.cancelGeneration()
+			cleanupFailed := closeReplySourceAfterPanic(s.source)
+			s.attempt.finish(panicOutcome, panicPhase, false, cleanupFailed)
+			panic(recovered)
+		}
+	}()
+
 	if s.done {
 		return BotReplyStreamEvent{}, io.EOF
 	}
@@ -161,13 +216,26 @@ func (s *botReplyStreamState) recv() (BotReplyStreamEvent, error) {
 
 		case errors.Is(err, io.EOF):
 			s.done = true
-			if generationErr := s.generationContext.Err(); generationErr != nil {
+			generationErr := s.generationContext.Err()
+			closeErr := s.finishGeneration(ReplyOutcomeGenerationFailed, ReplyPhaseClose)
+			cleanupFailed := closeErr != nil
+			if generationErr != nil {
+				s.attempt.finish(
+					replyOutcomeFromError(generationErr, ReplyOutcomeGenerationFailed),
+					ReplyPhaseReceive,
+					false,
+					cleanupFailed,
+				)
 				return BotReplyStreamEvent{}, replyGenerationError(generationErr)
 			}
+			panicPhase = ReplyPhaseValidate
 			content := s.content.String()
 			if strings.TrimSpace(content) == "" {
+				s.attempt.finish(ReplyOutcomeEmpty, ReplyPhaseValidate, false, cleanupFailed)
 				return BotReplyStreamEvent{}, ErrEmptyReply
 			}
+			panicOutcome = ReplyOutcomePersistenceFailed
+			panicPhase = ReplyPhasePersist
 			result, persistErr := s.service.persistBotReply(
 				s.requestContext,
 				s.command,
@@ -175,6 +243,7 @@ func (s *botReplyStreamState) recv() (BotReplyStreamEvent, error) {
 				content,
 			)
 			if errors.Is(persistErr, ErrReplySuperseded) {
+				s.attempt.finish(ReplyOutcomeSuperseded, ReplyPhasePersist, false, cleanupFailed)
 				return BotReplyStreamEvent{
 					Type: BotReplyStreamEventSuperseded,
 					Result: GenerateBotReplyResult{
@@ -184,8 +253,20 @@ func (s *botReplyStreamState) recv() (BotReplyStreamEvent, error) {
 				}, nil
 			}
 			if persistErr != nil {
+				s.attempt.finish(
+					replyOutcomeFromError(persistErr, ReplyOutcomePersistenceFailed),
+					ReplyPhasePersist,
+					false,
+					cleanupFailed,
+				)
 				return BotReplyStreamEvent{}, persistErr
 			}
+			s.attempt.finish(
+				ReplyOutcomeCompleted,
+				ReplyPhasePersist,
+				result.Duplicate,
+				cleanupFailed,
+			)
 			return BotReplyStreamEvent{
 				Type:   BotReplyStreamEventCompleted,
 				Result: result,
@@ -193,15 +274,58 @@ func (s *botReplyStreamState) recv() (BotReplyStreamEvent, error) {
 
 		default:
 			s.done = true
-			if generationErr := s.generationContext.Err(); generationErr != nil {
+			generationErr := s.generationContext.Err()
+			closeErr := s.finishGeneration(ReplyOutcomeGenerationFailed, ReplyPhaseClose)
+			if generationErr != nil {
 				err = generationErr
 			}
+			s.attempt.finish(
+				replyOutcomeFromError(err, ReplyOutcomeGenerationFailed),
+				ReplyPhaseReceive,
+				false,
+				closeErr != nil,
+			)
 			return BotReplyStreamEvent{}, replyGenerationError(err)
 		}
 	}
 }
 
 func (s *botReplyStreamState) close() error {
+	requestErr := s.requestContext.Err()
+	generationErr := s.generationContext.Err()
+
+	outcome := ReplyOutcomeAbandoned
+	if generationErr != nil {
+		outcome = replyOutcomeFromError(generationErr, ReplyOutcomeAbandoned)
+	} else if requestErr != nil {
+		outcome = replyOutcomeFromError(requestErr, ReplyOutcomeAbandoned)
+	}
+	closeErr := s.finishGeneration(outcome, ReplyPhaseClose)
+	s.attempt.finish(outcome, ReplyPhaseClose, false, closeErr != nil)
+	return closeErr
+}
+
+func (s *botReplyStreamState) finishGeneration(
+	panicOutcome ReplyOutcome,
+	panicPhase ReplyPhase,
+) (closeErr error) {
+	closeReturned := false
+	defer func() {
+		s.attempt.generationDone()
+		if !closeReturned {
+			s.attempt.finish(panicOutcome, panicPhase, false, true)
+		}
+	}()
 	s.cancelGeneration()
-	return s.source.Close()
+	closeErr = s.source.Close()
+	closeReturned = true
+	return closeErr
+}
+
+func closeReplySourceAfterPanic(source kitstream.Reader[ReplyDelta]) (cleanupFailed bool) {
+	cleanupFailed = true
+	defer func() {
+		_ = recover()
+	}()
+	return source.Close() != nil
 }

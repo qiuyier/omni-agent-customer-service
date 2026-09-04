@@ -20,6 +20,11 @@ const (
 	// same value is also applied to individual provider requests.
 	DefaultAIReplyTimeout = 75 * time.Second
 
+	// DefaultAIMaxConcurrentReplies bounds simultaneous model generations in
+	// one server process. Streaming replies hold a slot until their model stream
+	// finishes or is closed.
+	DefaultAIMaxConcurrentReplies = 8
+
 	// DefaultAISystemPrompt is shared by every executable that builds the
 	// customer-service reply generator.
 	DefaultAISystemPrompt = `你是企业智能客服。请使用与客户相同的语言回答，表达清晰、友好、简洁。
@@ -47,6 +52,38 @@ type AIOverrides struct {
 	Protocol string
 	Model    string
 	BaseURL  string
+}
+
+// AIReplyRuntimeConfig contains application-level model execution policy. It
+// is deliberately separate from provider credentials/protocol configuration
+// and from HTTP-boundary API configuration.
+type AIReplyRuntimeConfig struct {
+	MaxConcurrentReplies int
+}
+
+// ResolveAIReplyRuntimeConfig loads process-local reply execution limits.
+func ResolveAIReplyRuntimeConfig(lookup LookupEnv) (AIReplyRuntimeConfig, error) {
+	if lookup == nil {
+		return AIReplyRuntimeConfig{}, fmt.Errorf(
+			"%w: environment lookup is nil",
+			ErrInvalidAIConfiguration,
+		)
+	}
+
+	value := strings.TrimSpace(environmentValue(lookup, "AI_MAX_CONCURRENT_REPLIES"))
+	if value == "" {
+		return AIReplyRuntimeConfig{
+			MaxConcurrentReplies: DefaultAIMaxConcurrentReplies,
+		}, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return AIReplyRuntimeConfig{}, fmt.Errorf(
+			"%w: AI_MAX_CONCURRENT_REPLIES must be a positive integer",
+			ErrInvalidAIConfiguration,
+		)
+	}
+	return AIReplyRuntimeConfig{MaxConcurrentReplies: parsed}, nil
 }
 
 // ResolveAIConfig combines command-line overrides, generic AI_* variables and

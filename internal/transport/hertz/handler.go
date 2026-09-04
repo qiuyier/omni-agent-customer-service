@@ -91,12 +91,20 @@ func (h *Handler) StreamBotReply(ctx context.Context, requestContext *app.Reques
 		event, recvErr := reader.Recv()
 		if recvErr != nil && !errors.Is(recvErr, io.EOF) {
 			recvErr = classifyError(recvErr)
+			rememberRequestFault(requestContext, recvErr)
 		}
 		return event, recvErr
 	}, reader.Close)
 	started, err := sse.Write(ctx, requestContext, classified, encodeBotReplyStreamEvent)
-	if err != nil && !started {
-		writeProblem(requestContext, classifyError(err))
+	if err != nil {
+		// A client disconnect can surface as a low-level writer error that does
+		// not wrap context.Canceled. Prefer the request context so access logs do
+		// not misclassify an expected disconnect as an internal server failure.
+		classifiedErr := classifyStreamTerminalError(ctx, err)
+		rememberRequestFault(requestContext, classifiedErr)
+		if !started {
+			writeProblem(requestContext, classifiedErr)
+		}
 	}
 }
 
@@ -259,5 +267,6 @@ func writeProblem(ctx *app.RequestContext, err error) {
 	// Problem contains only scalar fields, so JSON marshaling cannot fail. These
 	// handlers do not install a streaming writer; SSE handlers must handle
 	// problem.ErrStreamingResponse separately after a stream has started.
+	rememberRequestFault(ctx, err)
 	_ = problem.Write(ctx, err)
 }

@@ -6,7 +6,33 @@
 
 ## 当前进度
 
-第六阶段第二小步已经加入 HTTP 请求身份、基础访问控制与单实例限流：
+第六阶段第四小步已经加入基于 Uber Zap 的结构化可观测性：
+
+- `cmd/server` 创建一套共享 Zap Logger，Hertz `hlog`、HTTP 访问日志和 AI 回复
+  日志使用相同的级别与格式；
+- 每个 HTTP 请求只记录一条 `http.request.completed`，包括 Request ID、方法、
+  路由模板、状态码、耗时和安全错误码；
+- `customerservice.Service` 只依赖与传输、日志框架无关的 `ReplyObserver`，Zap
+  实现位于 `internal/observability`；
+- AI 回复记录 started/rejected/finished 生命周期、并发容量、模型耗时、总耗时和
+  终止阶段，不为每个流式 delta 单独写日志；
+- SSE 访问日志覆盖到 EOF、失败或客户端断开，所有终止路径只完成一次；
+- 日志事件不携带客户消息、模型回复、System Prompt、API Key、Bearer Token 或
+  供应商原始错误。
+
+第六阶段第三小步已经加入进程级 AI 回复并发上限：
+
+- `cmd/server` 默认最多同时执行 8 个模型生成，可通过
+  `AI_MAX_CONCURRENT_REPLIES` 配置；
+- 非流式回复和 SSE 流式回复共享同一组名额，不会各自放大供应商并发；
+- 并发器位于 `customerservice.Service`，未来增加 gRPC、消息队列或其他入口也
+  不能绕过；
+- 无效请求、过期 Trigger 和已经保存的幂等回复不会占用模型名额；
+- 容量用尽时立即返回 `429 resource_exhausted`，不建立可能过期的无限等待队列；
+- 普通调用在模型方法返回时释放；流式调用在 EOF、读取失败或 `Close` 时释放，
+  多条终止路径只会归还一次名额。
+
+第六阶段第二小步已经加入 HTTP 请求身份、基础访问控制与单实例请求限流：
 
 - 所有已注册路由都会生成或安全透传 `X-Request-ID`，并通过标准 Context 向下游传播；
 - `/healthz` 保持匿名可用，三个 `/v1` 业务端点统一使用 Bearer Token 鉴权；
@@ -60,22 +86,24 @@
 
 ~~~text
 请求流：
-外部渠道 → Request ID → Bearer 鉴权 → 令牌桶限流 → internal/transport/hertz
-                                                        │
-                                                        ▼
-                                            internal/customerservice
-                                              ├──→ internal/conversation
-                                              ├──→ conversation.Repository
-                                              │          ├── MemoryRepository
-                                              │          └── postgres.Repository → PostgreSQL
-                                              └──→ ReplyGenerator / ReplyStreamGenerator
-                                                                  │
-                                                                  ▼
-                                                          internal/ai/eino → 模型供应商
+外部渠道 → Request ID → Zap AccessLog → Bearer 鉴权 → 令牌桶限流 → internal/transport/hertz
+                                                                         │
+                                                                         ▼
+                                                             internal/customerservice
+                                                               ├── AI 回复并发槽
+                                                               ├── ReplyObserver（业务端口）
+                                                               ├──→ internal/conversation
+                                                               ├──→ conversation.Repository
+                                                               │          ├── MemoryRepository
+                                                               │          └── postgres.Repository → PostgreSQL
+                                                               └──→ ReplyGenerator / ReplyStreamGenerator
+                                                                                   │
+                                                                                   ▼
+                                                                           internal/ai/eino → 模型供应商
 
 组装流：
-cmd/server → internal/bootstrap → 创建 Security/RateLimit Middleware + Repository + ReplyGenerator
-     └──→ 创建 Service 并注入两个接口 → 创建 Handler → 注册公开/受保护路由
+cmd/server → internal/bootstrap → 创建 Zap/hlog + 中间件 + Repository + ReplyGenerator
+     └──→ 注入 ReplyObserver、两个 AI 接口与共享并发上限 → 创建 Handler → 注册路由
 
 cmd/console → internal/bootstrap → 单轮 AI 链路
 ~~~
@@ -91,6 +119,10 @@ type ReplyGenerator interface {
 因此模型供应商、本地模型和企业 AI 网关都可以替换，领域模型不依赖 Eino
 类型，自动化测试也不需要 API Key。
 
+可观测性使用同样的依赖倒置：业务层发布有限、无正文的 `ReplyObserver` 事件，
+`internal/observability` 才负责把事件写成 Zap 日志。因此替换日志库、增加指标或
+接入 Trace 时，不需要修改客服业务规则。
+
 ## 自动回复流程
 
 模型调用位于两个短事务之间：
@@ -103,7 +135,9 @@ type ReplyGenerator interface {
   → 读取有序历史并记录 Revision / 消息水位
 
 事务外
+  → 非阻塞获取进程内 AI 回复名额
   → 调用 ReplyGenerator
+  → 模型调用结束后释放名额
   → 拒绝模型错误或空白回复
 
 事务二
@@ -122,8 +156,10 @@ type ReplyGenerator interface {
 - 消息水位可以识别模型生成期间新增的客户、系统或工具上下文；
 - Repository 对 `ReplyToMessageID` 建立逻辑唯一索引，同一 trigger 最多
   保存一条 bot 回复；
-- 两个并发模型调用可能都会发生，但只有一个结果能入库，其他调用返回同一
-  条获胜回复；
+- 并发模型调用总数受进程级共享槽位限制；同一 Trigger 的两个调用仍可能在额度
+  内同时发生，但只有一个结果能入库，其他调用返回同一条获胜回复；
+- 非流式调用只在 `Generate` 执行期间持有名额；流式调用从 `Stream` 启动前持有，
+  到底层流 EOF、报错或关闭时释放；
 - 持久化 Repository 的事务内 `FindConversation` 必须锁定会话行，SQL
   实现应使用等价于 `SELECT ... FOR UPDATE` 的机制；数据库仍需为
   `reply_to_message_id` 建立唯一约束。
@@ -207,6 +243,7 @@ internal/transport/hertz/handler.go                  DTO ↔ Command/Result
        ├── error.go                                  业务错误 ↔ fault
        ├── middleware.go                             Request ID + Bearer 鉴权
        ├── rate_limit.go                             单实例令牌桶 + 429
+       ├── access_log.go                             Zap 请求生命周期日志
        └── router.go                                 URL ↔ Handler
 ~~~
 
@@ -237,6 +274,13 @@ Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Route
 限流发生在 JSON 解析之前。一次 SSE POST 只消耗一个令牌，流中的 delta 不重复
 计数；客户端重连是一次新请求，会再次参与限流。
 
+请求令牌桶之后还有独立的 AI 生成容量保护。`AI_MAX_CONCURRENT_REPLIES` 默认是
+`8`，只限制真正需要调用模型的新回复；接收消息、健康检查、无效/过期 Trigger
+和已持久化回复的幂等读取不会占用名额。非流式与 SSE 共享同一组进程内槽位，
+容量满时在调用 Eino/供应商之前立即返回 `429 resource_exhausted`。并发槽何时释放
+取决于正在执行的模型调用，无法可靠预测等待秒数，因此这种 429 不伪造
+`Retry-After`；SSE 也会在响应流开始前返回普通 Problem Details。
+
 Handler 只按 `application/json` 解码，不允许 Query 或 Form 覆盖消息字段。
 Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来自 `api.vd`；
 纯空格等业务无效值仍由 `customerservice.Service` 完成最终校验。URL 中的
@@ -257,6 +301,7 @@ Thrift 的 `required` 表达 IDL/schema 约束，运行时基础非空校验来�
   Message ID 和内容，不会再次调用模型；
 - Trigger 已不是最新客户消息，或生成期间会话发生变化：`409 Conflict`，临时生成
   内容不会保存；
+- 当前进程的 AI 回复槽位已满：`429 Too Many Requests`，不会排队或调用模型；
 - AI 未配置、供应商调用失败或模型返回空内容：`503 Service Unavailable`；
 - 客户端取消和请求超时分别保持 `408 Request Timeout` 与
   `504 Gateway Timeout`；
@@ -283,6 +328,42 @@ SSE 回复的事件语义：
   "detail": "invalid request"
 }
 ~~~
+
+## 结构化日志与可观测性
+
+`cmd/server` 使用一套共享的 Uber Zap Logger。`LOG_LEVEL` 支持 `debug`、`info`、
+`warn`、`error`，默认 `info`；`LOG_FORMAT` 支持 `json` 和 `console`，默认
+`json`。生产环境推荐 JSON，便于日志平台按字段查询；本地调试可以使用 console。
+非法值会让服务在监听端口前直接启动失败。
+
+| 变量 | 可选值 | 默认值 | 用途 |
+| --- | --- | --- | --- |
+| `LOG_LEVEL` | `debug` / `info` / `warn` / `error` | `info` | 最低输出级别 |
+| `LOG_FORMAT` | `json` / `console` | `json` | 结构化 JSON 或本地可读格式 |
+
+HTTP 层在请求完整结束后写一条 `http.request.completed`，稳定字段包括
+`request_id`、`http_method`、`http_route`、`http_status`、`duration_ms` 和
+`streaming`；已分类失败还会包含 `fault_code`。`http_route` 使用 Hertz 路由
+模板，未匹配请求固定记录为 `unmatched`，不会把原始 URL、Query 或路径参数写入
+日志。4xx 使用 warn，5xx 使用 error，其余使用 info；SSE 已经开始但最终失败时，
+会按 `fault_code` 对应的失败级别记录，而不是把无法改变的 HTTP 200 当成成功。
+
+SSE 写出是同步生命周期，因此访问日志不会在首个 delta 后提前结束：
+`duration_ms` 覆盖到 EOF、流错误或客户端断开。SSE 已经开始后，即使 HTTP 状态
+保持 200，日志仍可通过安全的 `fault_code` 表达真实终止原因。每个 delta 不单独
+写日志，避免日志量随模型输出长度增长。
+
+AI 层通过 `customerservice.ReplyObserver` 发布 `ai.reply.started`、
+`ai.reply.rejected` 和 `ai.reply.finished`。`active_replies` 与
+`max_concurrent_replies` 表示容量；`model_duration_ms` 只表示模型资源占用时间，
+`total_duration_ms` 还包含生成后的校验与持久化；`outcome` 和
+`terminal_phase` 是有限、安全的终止分类。
+
+日志只保留定位故障所需的元数据，不写客户消息、模型回复、System Prompt、
+API Key、Authorization、原始供应商错误或响应正文。排查时可使用 `request_id`
+关联 HTTP 与 AI 生命周期，再结合 `outcome`、`terminal_phase` 和 `fault_code`。
+AI 事件会记录 `conversation_id` 和 `trigger_message_id` 作为关联字段，因此调用方
+必须使用不含手机号、邮箱等个人信息的不可读 ID。
 
 ## 本地运行
 
@@ -326,16 +407,18 @@ go test ./internal/persistence/postgres -count=1 -v
 ### HTTP 服务（需要对应供应商配置）
 
 `cmd/server` 同时暴露接收消息和生成回复接口，因此启动时会校验入站
-`API_AUTH_TOKEN`、限流参数、AI 配置和存储配置。公网模型供应商需要对应 API
-Key；`custom` 指向无鉴权的本地 OpenAI-compatible 端点时可以不配置模型 Key。
-缺少必要配置，或者 RPS/Burst 不是正数时会直接启动失败，不会等到第一次请求才
-暴露问题。
+`API_AUTH_TOKEN`、请求限流参数、AI 配置、AI 并发上限、日志配置和存储配置。
+公网模型供应商需要对应 API Key；`custom` 指向无鉴权的本地 OpenAI-compatible
+端点时可以不配置模型 Key。缺少必要配置，或者 RPS/Burst/AI 并发上限、日志配置
+非法时会直接启动失败，不会等到第一次请求才暴露问题。
 
 先把 `.env.example` 复制为被 Git 忽略的 `.env.local`，填入供应商配置，再加载到
 当前 shell。`API_AUTH_TOKEN` 至少 32 字节且不能包含空白，可以用
 `openssl rand -hex 32` 生成后填入；它是外部系统调用本服务的凭据，不能复用
 `AI_API_KEY`。`API_RATE_LIMIT_RPS` 和 `API_RATE_LIMIT_BURST` 可以省略并使用
-`20/40` 默认值，也可以在 `.env.local` 中覆盖。程序不会自行读取 dotenv 文件：
+`20/40` 默认值；`AI_MAX_CONCURRENT_REPLIES` 可以省略并使用 `8`，也可以在
+`.env.local` 中覆盖。`LOG_FORMAT=console` 更适合本地阅读，生产通常保留默认的
+`json`。程序不会自行读取 dotenv 文件：
 
 ~~~bash
 set -a
@@ -439,8 +522,9 @@ Trigger 重试时会直接读取已经保存的机器人消息，返回 `200 OK`
 `STORAGE_DRIVER=postgres` 后，消息、幂等键和回复会在进程重启后保留，并可由
 多个服务实例共享。通用 Bearer Token 只负责调用本服务的第一层认证；接入微信、
 钉钉等真实 webhook 时，仍需验证各渠道自己的签名/HMAC。生产环境还需要 token
-轮换、多调用方身份、消息大小限制、数据库备份和最小权限账号。当前限流桶位于
-单个进程内，多实例部署若要求全局统一额度，应改由 Redis 或 API Gateway 协调。
+轮换、多调用方身份、消息大小限制、数据库备份和最小权限账号。当前请求令牌桶
+和 AI 回复并发槽都位于单个进程内，多实例部署若要求全局统一额度，应改由 Redis、
+API Gateway 或专门的任务调度层协调。
 
 ### AI 配置与模型控制台
 
@@ -456,6 +540,9 @@ AI_MODEL=
 AI_BASE_URL=
 AI_ALLOW_INSECURE_HTTP=false
 AI_SYSTEM_PROMPT=
+AI_MAX_CONCURRENT_REPLIES=8
+LOG_LEVEL=info
+LOG_FORMAT=console
 ~~~
 
 - `AI_PROVIDER` 默认是 `openai`；
@@ -464,7 +551,10 @@ AI_SYSTEM_PROMPT=
 - `AI_MODEL` 对 OpenAI 可留空使用项目默认值，其他厂商必填；
 - `AI_BASE_URL` 通常留空，使用 `custom` 时必填；
 - `AI_ALLOW_INSECURE_HTTP` 默认 `false`，只用于明确接受风险的可信内网；
-- `AI_SYSTEM_PROMPT` 可选，留空时使用项目内置的客服提示词。
+- `AI_SYSTEM_PROMPT` 可选，留空时使用项目内置的客服提示词；
+- `AI_MAX_CONCURRENT_REPLIES` 是 `cmd/server` 的进程级并发上限，默认 `8`；
+  `cmd/console` 每次只执行一轮，不需要启用该限制。
+- `LOG_LEVEL` 和 `LOG_FORMAT` 只影响 `cmd/server` 的运行日志，不进入 AI 请求。
 
 模型请求会把 System Prompt 和完整客户会话发送到最终解析出的 Base URL，配置
 凭据时还会发送 API Key。为避免误配置造成客户数据明文泄露，所有非回环端点
@@ -516,10 +606,12 @@ go vet ./...
 测试覆盖领域状态、ReplyTo 约束、事务回滚、模型输入映射、两种 HTTP 协议、
 模型失败、空白回复、幂等重试、并发生成、生成期间转人工、ABA、新增消息、
 流完成/取消/超时/过期、Eino 流映射、Hertz 路由、Thrift 绑定、SSE 事件编码、
-Request ID、Bearer 鉴权、令牌桶限流、429/Retry-After、Problem 错误响应、HTTP
-回复幂等和过期 Trigger 等
-情况。协议测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，
-也不产生费用。
+Request ID、Bearer 鉴权、令牌桶限流、AI 回复共享并发槽、超限 429、流式名额
+释放、并发不超卖、Zap 配置、HTTP 单请求单日志、路由模板脱敏、ReplyObserver
+生命周期、容量快照、SSE 完整生命周期、终止事件 exactly-once、日志敏感字段
+缺失、Retry-After、Problem 错误响应、HTTP 回复幂等和过期 Trigger 等情况。协议
+测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，也不产生
+费用。
 
 修改 IDL 后，固定生成器版本并重新生成 DTO：
 
@@ -540,8 +632,10 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 ## 后续候选
 
-当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权与单实例限流已经完成
-业务层、Eino 适配、Hertz/Thrift 契约和自动化测试。下一步可增加 AI 回复并发
-上限、多调用方身份与分布式限流，完善优雅停机和结构化可观测性，或实现真实
-浏览器客户端来消费 SSE。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复
-保护仍留在应用层，不会被传输协议、数据库或具体模型替代。
+当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流与
+AI 回复共享并发上限、Zap 结构化日志已经完成业务层、Eino 适配、Hertz/Thrift
+契约和自动化测试。下一步可以让同一个 `ReplyObserver` 输出 Prometheus 指标或
+OpenTelemetry Trace，而不修改客服业务规则；也可以实现优雅停机，在停止接收新
+请求后为正在执行的普通回复和 SSE 留出有上限的排空时间。之后再考虑多调用方
+身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器 SSE
+客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在应用层。

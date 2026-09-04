@@ -58,6 +58,9 @@ func classifyError(err error) error {
 	case errors.Is(err, customerservice.ErrInvalidDependency):
 		return fault.Wrap(fault.CodeInternal, "internal error", err)
 
+	case errors.Is(err, customerservice.ErrReplyCapacityExceeded):
+		return fault.Wrap(fault.CodeResourceExhausted, "reply capacity exhausted", err)
+
 	case errors.Is(err, customerservice.ErrReplyUnavailable),
 		errors.Is(err, customerservice.ErrReplyGenerationFailed),
 		errors.Is(err, customerservice.ErrEmptyReply):
@@ -72,4 +75,13 @@ func classifyError(err error) error {
 	// problem.Write safely turns unclassified errors into an internal fault
 	// without exposing err.Error() to the client.
 	return err
+}
+
+func classifyStreamTerminalError(ctx context.Context, err error) error {
+	if ctx != nil {
+		if contextErr := ctx.Err(); contextErr != nil {
+			return classifyError(contextErr)
+		}
+	}
+	return classifyError(err)
 }

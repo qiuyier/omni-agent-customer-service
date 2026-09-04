@@ -134,23 +134,42 @@ func (s *Service) GenerateBotReply(
 		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrReplyUnavailable)
 	}
 
-	generationContext, cancelGeneration := s.newReplyGenerationContext(ctx)
-	generated, err := s.replies.Generate(generationContext, prepared.snapshot.request)
-	generationContextErr := generationContext.Err()
-	cancelGeneration()
-	if generationContextErr != nil {
-		err = generationContextErr
-	}
+	generated, attempt, err := s.invokeReplyGenerator(ctx, prepared.snapshot.request)
 	if err != nil {
+		if errors.Is(err, ErrReplyCapacityExceeded) {
+			return GenerateBotReplyResult{}, err
+		}
 		return GenerateBotReplyResult{}, replyGenerationError(err)
 	}
+	fallbackOutcome := ReplyOutcomeGenerationFailed
+	fallbackPhase := ReplyPhaseValidate
+	defer func() {
+		// Normal return paths finish explicitly. This fallback only has an
+		// effect when unexpected application code panics after generation.
+		attempt.finish(fallbackOutcome, fallbackPhase, false, false)
+	}()
 	if err := ctx.Err(); err != nil {
+		attempt.finish(replyOutcomeFromError(err, ReplyOutcomeGenerationFailed), ReplyPhaseValidate, false, false)
 		return GenerateBotReplyResult{}, err
 	}
 	if strings.TrimSpace(generated.Content) == "" {
+		attempt.finish(ReplyOutcomeEmpty, ReplyPhaseValidate, false, false)
 		return GenerateBotReplyResult{}, ErrEmptyReply
 	}
-	return s.persistBotReply(ctx, normalized, prepared.snapshot, generated.Content)
+	fallbackOutcome = ReplyOutcomePersistenceFailed
+	fallbackPhase = ReplyPhasePersist
+	result, err := s.persistBotReply(ctx, normalized, prepared.snapshot, generated.Content)
+	if err != nil {
+		attempt.finish(
+			replyOutcomeFromError(err, ReplyOutcomePersistenceFailed),
+			ReplyPhasePersist,
+			false,
+			false,
+		)
+		return GenerateBotReplyResult{}, err
+	}
+	attempt.finish(ReplyOutcomeCompleted, ReplyPhasePersist, result.Duplicate, false)
+	return result, nil
 }
 
 type preparedBotReply struct {
@@ -212,6 +231,49 @@ func (s *Service) newReplyGenerationContext(ctx context.Context) (context.Contex
 		return context.WithTimeout(ctx, s.replyGenerationTimeout)
 	}
 	return context.WithCancel(ctx)
+}
+
+func (s *Service) invokeReplyGenerator(
+	ctx context.Context,
+	request ReplyRequest,
+) (Reply, *replyAttempt, error) {
+	attempt, err := s.beginReplyAttempt(ctx, ReplyModeGenerate, request)
+	if err != nil {
+		return Reply{}, nil, err
+	}
+
+	generationContext, cancelGeneration := s.newReplyGenerationContext(ctx)
+	generationTransferred := false
+	defer func() {
+		cancelGeneration()
+		attempt.generationDone()
+		if !generationTransferred {
+			// Provider panics still propagate to the transport Recovery, but the
+			// capacity lease and lifecycle event must be completed first.
+			attempt.finish(
+				ReplyOutcomeGenerationFailed,
+				ReplyPhaseGenerate,
+				false,
+				false,
+			)
+		}
+	}()
+
+	generated, err := s.replies.Generate(generationContext, request)
+	if generationContextErr := generationContext.Err(); generationContextErr != nil {
+		err = generationContextErr
+	}
+	if err != nil {
+		attempt.finish(
+			replyOutcomeFromError(err, ReplyOutcomeGenerationFailed),
+			ReplyPhaseGenerate,
+			false,
+			false,
+		)
+		return Reply{}, attempt, err
+	}
+	generationTransferred = true
+	return generated, attempt, nil
 }
 
 func replyGenerationError(err error) error {

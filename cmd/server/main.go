@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/google/uuid"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
+	"github.com/qiuyier/omni-agent-customer-service/internal/observability"
 	hertztransport "github.com/qiuyier/omni-agent-customer-service/internal/transport/hertz"
 )
 
@@ -39,6 +41,29 @@ func run() error {
 	if strings.TrimSpace(*address) == "" {
 		return errors.New("HTTP address must not be blank")
 	}
+	loggingConfig, err := bootstrap.ResolveLoggingConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve logging configuration: %w", err)
+	}
+	hertzLogger, err := bootstrap.NewZapLogger(loggingConfig)
+	if err != nil {
+		return fmt.Errorf("create Zap logger: %w", err)
+	}
+	logger := hertzLogger.Logger()
+	defer func() { _ = logger.Sync() }()
+	hlog.SetLogger(hertzLogger)
+
+	accessLogMiddleware, err := hertztransport.NewAccessLogMiddleware(logger)
+	if err != nil {
+		return fmt.Errorf("create HTTP access log middleware: %w", err)
+	}
+	replyObserver, err := observability.NewZapReplyObserver(
+		logger,
+		hertztransport.RequestIDFromContext,
+	)
+	if err != nil {
+		return fmt.Errorf("create AI reply observer: %w", err)
+	}
 	apiConfig, err := bootstrap.ResolveAPIConfig(os.LookupEnv)
 	if err != nil {
 		return fmt.Errorf("resolve API configuration: %w", err)
@@ -57,6 +82,10 @@ func run() error {
 	aiConfig, err := bootstrap.ResolveAIConfig(os.LookupEnv, bootstrap.AIOverrides{})
 	if err != nil {
 		return fmt.Errorf("resolve AI configuration: %w", err)
+	}
+	aiRuntimeConfig, err := bootstrap.ResolveAIReplyRuntimeConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve AI runtime configuration: %w", err)
 	}
 	repositoryConfig, err := bootstrap.ResolveRepositoryConfig(os.LookupEnv)
 	if err != nil {
@@ -84,6 +113,8 @@ func run() error {
 		customerservice.WithReplyGenerator(replyGenerator),
 		customerservice.WithReplyStreamGenerator(replyGenerator),
 		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
+		customerservice.WithMaxConcurrentReplies(aiRuntimeConfig.MaxConcurrentReplies),
+		customerservice.WithReplyObserver(replyObserver),
 	)
 	if err != nil {
 		return fmt.Errorf("create customer-service application: %w", err)
@@ -93,7 +124,10 @@ func run() error {
 		return fmt.Errorf("create HTTP handler: %w", err)
 	}
 
-	httpServer := server.Default(
+	// RegisterRoutes installs a safe Recovery before the Zap access logger.
+	// server.Default is intentionally avoided because its Recovery logs raw
+	// panic values and stack source through hlog.
+	httpServer := server.New(
 		server.WithHostPorts(strings.TrimSpace(*address)),
 		server.WithSenseClientDisconnection(true),
 	)
@@ -101,6 +135,7 @@ func run() error {
 		httpServer.Engine,
 		handler,
 		securityMiddleware,
+		accessLogMiddleware,
 		rateLimitMiddleware,
 	); err != nil {
 		return fmt.Errorf("register HTTP routes: %w", err)

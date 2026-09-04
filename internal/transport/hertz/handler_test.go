@@ -15,6 +15,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/ut"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/route"
+	"go.uber.org/zap"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
@@ -42,18 +43,22 @@ func TestRegisterRoutesRejectsInvalidDependencies(t *testing.T) {
 	}
 
 	security := newTestSecurityMiddleware(t)
+	accessLog := newTestAccessLogMiddleware(t)
 	rateLimit := newTestRateLimitMiddleware(t)
-	if err := RegisterRoutes(nil, handler, security, rateLimit); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(nil, handler, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(nil, handler) error = %v, want %v", err, errInvalidDependency)
 	}
 	httpServer := server.New()
-	if err := RegisterRoutes(httpServer.Engine, nil, security, rateLimit); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, nil, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, nil) error = %v, want %v", err, errInvalidDependency)
 	}
-	if err := RegisterRoutes(httpServer.Engine, handler, nil, rateLimit); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, handler, nil, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, handler, nil) error = %v, want %v", err, errInvalidDependency)
 	}
-	if err := RegisterRoutes(httpServer.Engine, handler, security, nil); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, handler, security, nil, rateLimit); !errors.Is(err, errInvalidDependency) {
+		t.Fatalf("RegisterRoutes(engine, handler, security, nil access log) error = %v, want %v", err, errInvalidDependency)
+	}
+	if err := RegisterRoutes(httpServer.Engine, handler, security, accessLog, nil); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, handler, security, nil) error = %v, want %v", err, errInvalidDependency)
 	}
 }
@@ -478,6 +483,13 @@ func TestGenerateBotReplyErrors(t *testing.T) {
 			wantDetail: "reply service unavailable",
 		},
 		{
+			name:       "reply capacity exceeded",
+			err:        customerservice.ErrReplyCapacityExceeded,
+			wantStatus: http.StatusTooManyRequests,
+			wantCode:   fault.CodeResourceExhausted,
+			wantDetail: "reply capacity exhausted",
+		},
+		{
 			name: "model failure",
 			err: fmt.Errorf(
 				"%w: %w",
@@ -719,6 +731,32 @@ func TestStreamBotReplyFailureBeforeFirstEventIsProblem(t *testing.T) {
 	}
 }
 
+func TestStreamBotReplyCapacityExceededBeforeStreamIsProblem(t *testing.T) {
+	application := &receiverStub{streamErr: customerservice.ErrReplyCapacityExceeded}
+	engine := newTestEngine(t, application)
+
+	response := performAuthorizedRequest(
+		engine,
+		http.MethodPost,
+		"/v1/conversations/conversation-1/messages/message-1/reply/stream",
+		nil,
+	)
+
+	assertProblem(
+		t,
+		response,
+		http.StatusTooManyRequests,
+		fault.CodeResourceExhausted,
+		"reply capacity exhausted",
+	)
+	if application.streamCalls != 1 {
+		t.Fatalf("stream calls = %d, want 1", application.streamCalls)
+	}
+	if retryAfter := response.Header.Peek("Retry-After"); len(retryAfter) != 0 {
+		t.Fatalf("Retry-After = %q, want omitted for concurrency capacity", retryAfter)
+	}
+}
+
 func TestStreamBotReplyRejectsNilApplicationReader(t *testing.T) {
 	application := &receiverStub{}
 	engine := newTestEngine(t, application)
@@ -878,11 +916,21 @@ func newTestEngineWithRateLimit(
 		httpServer.Engine,
 		handler,
 		newTestSecurityMiddleware(t),
+		newTestAccessLogMiddleware(t),
 		rateLimit,
 	); err != nil {
 		t.Fatalf("RegisterRoutes() error = %v", err)
 	}
 	return httpServer.Engine
+}
+
+func newTestAccessLogMiddleware(t *testing.T) *AccessLogMiddleware {
+	t.Helper()
+	middleware, err := NewAccessLogMiddleware(zap.NewNop())
+	if err != nil {
+		t.Fatalf("NewAccessLogMiddleware() error = %v", err)
+	}
+	return middleware
 }
 
 func newTestRateLimitMiddleware(t *testing.T) *RateLimitMiddleware {
