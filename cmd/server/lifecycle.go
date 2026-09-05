@@ -281,9 +281,6 @@ func closeHTTPServer(httpServer lifecycleServer, closeResults chan<- error) {
 }
 
 func durationMillisecondsSince(startedAt time.Time) float64 {
-	duration := time.Since(startedAt)
-	if duration < 0 {
-		duration = 0
-	}
+	duration := max(time.Since(startedAt), 0)
 	return float64(duration.Nanoseconds()) / 1e6
 }
