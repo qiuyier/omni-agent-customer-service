@@ -82,6 +82,10 @@ struct StreamBotReplyResponse {}
 service CustomerServiceAPI {
     HealthResponse Health(1: HealthRequest request) (api.get = "/healthz")
 
+    // Liveness and readiness deliberately reuse the same small response DTO;
+    // their status codes and lifecycle semantics are different.
+    HealthResponse Ready(1: HealthRequest request) (api.get = "/readyz")
+
     ReceiveMessageResponse ReceiveMessage(1: ReceiveMessageRequest request) (
         api.post = "/v1/conversations/:conversation_id/messages"
     )

@@ -317,6 +317,9 @@ func (p *StreamBotReplyResponse) String() string {
 
 type CustomerServiceAPI interface {
 	Health(ctx context.Context, request *HealthRequest) (r *HealthResponse, err error)
+	// Liveness and readiness deliberately reuse the same small response DTO;
+	// their status codes and lifecycle semantics are different.
+	Ready(ctx context.Context, request *HealthRequest) (r *HealthResponse, err error)
 
 	ReceiveMessage(ctx context.Context, request *ReceiveMessageRequest) (r *ReceiveMessageResponse, err error)
 

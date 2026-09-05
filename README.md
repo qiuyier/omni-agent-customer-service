@@ -6,6 +6,23 @@
 
 ## 当前进度
 
+第六阶段第五小步已经加入可控的 HTTP 优雅停机：
+
+- 新增匿名 `/readyz`：正常服务时返回 200，进入排空后，仍能到达 Handler 的
+  探针返回 `503 unavailable`；`/healthz` 的 Handler 保持返回 200；
+- `/v1` 的排空闸门位于鉴权和限流之前，停机后到达的新请求不消耗令牌，也不会
+  进入 Handler、数据库或模型；已经越过闸门的普通请求和 SSE 可以继续完成；
+- `cmd/server` 不再使用无返回值的 `Spin()`，而是显式监听 `SIGINT`、`SIGTERM`，
+  先进入 draining，再调用 Hertz `Shutdown`；
+- `SERVER_SHUTDOWN_TIMEOUT` 默认 `90s`，同时控制外层停机预算与 Hertz 内部等待，
+  避免 Hertz 默认的 5 秒上限提前结束排空；
+- 所有请求继承独立的进程级根 Context。正常停机不会取消它；排空超时或失败时
+  才强制取消，使 Eino、SSE 和数据库调用收到取消信号；
+- 第一次终止信号开始排空并恢复系统默认信号行为；第二次 `Ctrl+C`/终止信号可由
+  操作系统立即结束进程。强制取消后，Close 和 Run 收尾共用额外 1 秒等待预算；
+- Zap 会记录 `server.shutdown.started`、`server.shutdown.completed`、
+  `server.shutdown.timeout` 或 `server.shutdown.failed`，不记录敏感请求数据。
+
 第六阶段第四小步已经加入基于 Uber Zap 的结构化可观测性：
 
 - `cmd/server` 创建一套共享 Zap Logger，Hertz `hlog`、HTTP 访问日志和 AI 回复
@@ -86,9 +103,9 @@
 
 ~~~text
 请求流：
-外部渠道 → Request ID → Zap AccessLog → Bearer 鉴权 → 令牌桶限流 → internal/transport/hertz
-                                                                         │
-                                                                         ▼
+外部渠道 → Request ID → Zap AccessLog → 排空闸门 → Bearer 鉴权 → 令牌桶限流 → Hertz Handler
+                                                                                 │
+                                                                                 ▼
                                                              internal/customerservice
                                                                ├── AI 回复并发槽
                                                                ├── ReplyObserver（业务端口）
@@ -104,6 +121,7 @@
 组装流：
 cmd/server → internal/bootstrap → 创建 Zap/hlog + 中间件 + Repository + ReplyGenerator
      └──→ 注入 ReplyObserver、两个 AI 接口与共享并发上限 → 创建 Handler → 注册路由
+     └──→ SIGINT/SIGTERM → draining → Hertz Shutdown → completed / forced cancel
 
 cmd/console → internal/bootstrap → 单轮 AI 链路
 ~~~
@@ -244,6 +262,7 @@ internal/transport/hertz/handler.go                  DTO ↔ Command/Result
        ├── middleware.go                             Request ID + Bearer 鉴权
        ├── rate_limit.go                             单实例令牌桶 + 429
        ├── access_log.go                             Zap 请求生命周期日志
+       ├── availability.go                           readiness + 排空闸门
        └── router.go                                 URL ↔ Handler
 ~~~
 
@@ -257,15 +276,32 @@ Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Route
 | Method | Path | 用途 |
 | --- | --- | --- |
 | `GET` | `/healthz` | 进程存活检查，不访问数据库或模型 |
+| `GET` | `/readyz` | 是否应继续接收新业务流量；排空期间返回 503 |
 | `POST` | `/v1/conversations/:conversation_id/messages` | 幂等接收一条客户消息 |
 | `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply` | 为指定客户消息生成或读取机器人回复 |
 | `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/stream` | 以 SSE 流式生成回复并在完成后保存 |
 
-`/healthz` 不需要认证；所有 `/v1` 请求必须携带
+`/healthz` 与 `/readyz` 不需要认证；所有 `/v1` 请求必须携带
 `Authorization: Bearer <API_AUTH_TOKEN>`。所有成功和 Problem 响应都会包含
 `X-Request-ID`：安全的调用方值会被透传，缺失、重复、超过 128 字节或包含不安全
 字符时由服务端重新生成 UUID。Bearer 认证失败会在读取请求体、调用业务层、访问
 数据库或模型之前返回 `401 unauthenticated`，并带 `WWW-Authenticate`。
+
+收到 `SIGINT` 或 `SIGTERM` 后，服务先把 readiness 切为失败，并在鉴权之前用
+`503 unavailable` 拒绝仍能到达路由的新 `/v1` 请求，然后立即调用 Hertz
+`Shutdown` 关闭监听端口。端口关闭后，新连接会被拒绝；此时不能依靠新建连接
+访问 `/healthz` 或 `/readyz`。目前没有内置等待负载均衡器更新的延迟窗口。
+
+已经进入 Handler 的请求不会因第一次信号立即取消，而是获得最多
+`SERVER_SHUTDOWN_TIMEOUT` 的排空时间。超时或 Shutdown 失败后取消请求根
+Context，再给 Close 和 Run 收尾共用最多 1 秒等待预算。业务取消依赖下游遵守
+Context；强制路径不会再同步等待可能阻塞的 PostgreSQL 连接池关闭。同步日志
+写入和正常资源关闭不属于该等待预算，因此它不是进程退出的绝对墙钟上限。
+
+当前 Hertz v0.10.5 的 standard 网络实现还有内部约 30 秒的排空上限；使用该
+实现时，即使配置 `90s`，也可能提前报错并取消请求。默认 netpoll 实现按配置
+预算等待。部署时应为实际使用的网络实现验证停机行为，并让外层进程管理器的
+强制终止期限覆盖排空和收尾时间。
 
 认证通过后，请求按照 `API_RATE_LIMIT_RPS` 和 `API_RATE_LIMIT_BURST` 进入一个
 进程内共享令牌桶；默认值分别是 `20` 和 `40`。令牌不足时立即返回普通
@@ -432,6 +468,10 @@ export DATABASE_URL='postgres://omni_agent:omni_agent_local@127.0.0.1:15432/omni
 go run ./cmd/server -address 127.0.0.1:8080
 ~~~
 
+`cmd/server` 现在包含多个 Go 文件，启动时需要运行整个 package：
+`go run ./cmd/server`。GoLand 的 Run Configuration 也应选择 Package/Directory，
+仅运行 `cmd/server/main.go` 会遗漏同目录中的停机协调器。
+
 `-address` 优先于 `HTTP_ADDRESS`；两者都不设置时默认监听 `127.0.0.1:8080`。
 
 发送消息：
@@ -543,6 +583,7 @@ AI_SYSTEM_PROMPT=
 AI_MAX_CONCURRENT_REPLIES=8
 LOG_LEVEL=info
 LOG_FORMAT=console
+SERVER_SHUTDOWN_TIMEOUT=90s
 ~~~
 
 - `AI_PROVIDER` 默认是 `openai`；
@@ -555,6 +596,8 @@ LOG_FORMAT=console
 - `AI_MAX_CONCURRENT_REPLIES` 是 `cmd/server` 的进程级并发上限，默认 `8`；
   `cmd/console` 每次只执行一轮，不需要启用该限制。
 - `LOG_LEVEL` 和 `LOG_FORMAT` 只影响 `cmd/server` 的运行日志，不进入 AI 请求。
+- `SERVER_SHUTDOWN_TIMEOUT` 使用 Go duration 格式并且必须大于 0；默认 `90s`。
+  Kubernetes 等外层终止宽限期应比它至少多留数秒。
 
 模型请求会把 System Prompt 和完整客户会话发送到最终解析出的 Base URL，配置
 凭据时还会发送 API Key。为避免误配置造成客户数据明文泄露，所有非回环端点
@@ -609,7 +652,8 @@ go vet ./...
 Request ID、Bearer 鉴权、令牌桶限流、AI 回复共享并发槽、超限 429、流式名额
 释放、并发不超卖、Zap 配置、HTTP 单请求单日志、路由模板脱敏、ReplyObserver
 生命周期、容量快照、SSE 完整生命周期、终止事件 exactly-once、日志敏感字段
-缺失、Retry-After、Problem 错误响应、HTTP 回复幂等和过期 Trigger 等情况。协议
+缺失、readiness 状态转换、排空期间新旧请求分流、停机超时强制取消、Retry-After、
+Problem 错误响应、HTTP 回复幂等和过期 Trigger 等情况。协议
 测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，也不产生
 费用。
 
@@ -632,10 +676,10 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 ## 后续候选
 
-当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流与
-AI 回复共享并发上限、Zap 结构化日志已经完成业务层、Eino 适配、Hertz/Thrift
-契约和自动化测试。下一步可以让同一个 `ReplyObserver` 输出 Prometheus 指标或
-OpenTelemetry Trace，而不修改客服业务规则；也可以实现优雅停机，在停止接收新
-请求后为正在执行的普通回复和 SSE 留出有上限的排空时间。之后再考虑多调用方
-身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器 SSE
-客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在应用层。
+当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
+AI 回复共享并发上限、Zap 结构化日志与可控优雅停机已经完成业务层、Eino 适配、
+Hertz/Thrift 契约和自动化测试。下一步可以让同一个 `ReplyObserver` 输出
+Prometheus 指标或 OpenTelemetry Trace，而不修改客服业务规则；也可以继续增加
+多调用方身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器
+SSE 客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在
+应用层。

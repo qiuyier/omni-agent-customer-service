@@ -45,20 +45,24 @@ func TestRegisterRoutesRejectsInvalidDependencies(t *testing.T) {
 	security := newTestSecurityMiddleware(t)
 	accessLog := newTestAccessLogMiddleware(t)
 	rateLimit := newTestRateLimitMiddleware(t)
-	if err := RegisterRoutes(nil, handler, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
+	availability := NewAvailability()
+	if err := RegisterRoutes(nil, handler, availability, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(nil, handler) error = %v, want %v", err, errInvalidDependency)
 	}
 	httpServer := server.New()
-	if err := RegisterRoutes(httpServer.Engine, nil, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, nil, availability, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, nil) error = %v, want %v", err, errInvalidDependency)
 	}
-	if err := RegisterRoutes(httpServer.Engine, handler, nil, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, handler, nil, security, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
+		t.Fatalf("RegisterRoutes(engine, handler, nil availability) error = %v, want %v", err, errInvalidDependency)
+	}
+	if err := RegisterRoutes(httpServer.Engine, handler, availability, nil, accessLog, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, handler, nil) error = %v, want %v", err, errInvalidDependency)
 	}
-	if err := RegisterRoutes(httpServer.Engine, handler, security, nil, rateLimit); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, handler, availability, security, nil, rateLimit); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, handler, security, nil access log) error = %v, want %v", err, errInvalidDependency)
 	}
-	if err := RegisterRoutes(httpServer.Engine, handler, security, accessLog, nil); !errors.Is(err, errInvalidDependency) {
+	if err := RegisterRoutes(httpServer.Engine, handler, availability, security, accessLog, nil); !errors.Is(err, errInvalidDependency) {
 		t.Fatalf("RegisterRoutes(engine, handler, security, nil) error = %v, want %v", err, errInvalidDependency)
 	}
 }
@@ -915,6 +919,7 @@ func newTestEngineWithRateLimit(
 	if err := RegisterRoutes(
 		httpServer.Engine,
 		handler,
+		NewAvailability(),
 		newTestSecurityMiddleware(t),
 		newTestAccessLogMiddleware(t),
 		rateLimit,

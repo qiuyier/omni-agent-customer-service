@@ -5,6 +5,7 @@ import "github.com/cloudwego/hertz/pkg/route"
 const (
 	apiPrefix           = "/v1"
 	healthPath          = "/healthz"
+	readinessPath       = "/readyz"
 	receiveMessageRoute = "/conversations/:conversation_id/messages"
 	generateReplyRoute  = "/conversations/:conversation_id/messages/:trigger_message_id/reply"
 	streamReplyRoute    = "/conversations/:conversation_id/messages/:trigger_message_id/reply/stream"
@@ -18,6 +19,7 @@ const (
 func RegisterRoutes(
 	engine *route.Engine,
 	handler *Handler,
+	availability *Availability,
 	security *SecurityMiddleware,
 	accessLog *AccessLogMiddleware,
 	rateLimit *RateLimitMiddleware,
@@ -27,6 +29,9 @@ func RegisterRoutes(
 	}
 	if handler == nil {
 		return invalidDependency("handler is nil")
+	}
+	if availability == nil {
+		return invalidDependency("availability is nil")
 	}
 	if security == nil {
 		return invalidDependency("security middleware is nil")
@@ -40,8 +45,10 @@ func RegisterRoutes(
 
 	engine.Use(recoverPanic, security.RequestID, accessLog.Log)
 	engine.GET(healthPath, handler.Health)
+	engine.GET(readinessPath, availability.Readiness)
 	api := engine.Group(
 		apiPrefix,
+		availability.RequireReady,
 		security.RequireBearerToken,
 		rateLimit.Limit,
 	)

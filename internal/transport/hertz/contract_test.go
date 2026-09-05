@@ -21,6 +21,7 @@ func TestRouterPathsMatchThriftIDL(t *testing.T) {
 		routerPath string
 	}{
 		{rpc: "Health", annotation: "api.get", routerPath: healthPath},
+		{rpc: "Ready", annotation: "api.get", routerPath: readinessPath},
 		{rpc: "ReceiveMessage", annotation: "api.post", routerPath: receiveMessagePath},
 		{rpc: "GenerateBotReply", annotation: "api.post", routerPath: generateReplyPath},
 		{rpc: "StreamBotReply", annotation: "api.post", routerPath: streamReplyPath},

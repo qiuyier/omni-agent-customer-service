@@ -119,6 +119,37 @@ func TestAccessLogRecordsSafeFaultWithoutCredentialsOrProviderErrors(t *testing.
 	})
 }
 
+func TestAccessLogClassifiesDrainingReadinessWithoutSensitiveData(t *testing.T) {
+	availability := NewAvailability()
+	engine, logs := newObservedAccessLogEngineWithAvailability(
+		t,
+		&receiverStub{},
+		availability,
+	)
+	availability.BeginDraining()
+
+	response := ut.PerformRequest(
+		engine,
+		http.MethodGet,
+		readinessPath,
+		nil,
+		ut.Header{Key: RequestIDHeader, Value: "request-draining"},
+		ut.Header{Key: "Authorization", Value: "Bearer secret-must-not-log"},
+	).Result()
+	assertStatus(t, response, http.StatusServiceUnavailable)
+
+	entry := takeSingleAccessLog(t, logs)
+	if entry.Level != zapcore.ErrorLevel {
+		t.Fatalf("entry level = %s, want error", entry.Level)
+	}
+	fields := entry.ContextMap()
+	assertAccessLogField(t, fields, "request_id", "request-draining")
+	assertAccessLogField(t, fields, "http_route", readinessPath)
+	assertAccessLogField(t, fields, "http_status", int64(http.StatusServiceUnavailable))
+	assertAccessLogField(t, fields, "fault_code", string(fault.CodeUnavailable))
+	assertLogOmits(t, entry, "secret-must-not-log")
+}
+
 func TestAccessLogUsesUnmatchedForUnknownPaths(t *testing.T) {
 	engine, logs := newObservedAccessLogEngine(t, &receiverStub{})
 	rawPathDetail := "alice@example.com"
@@ -277,6 +308,15 @@ func newObservedAccessLogEngine(
 	application Application,
 ) (*route.Engine, *observer.ObservedLogs) {
 	t.Helper()
+	return newObservedAccessLogEngineWithAvailability(t, application, NewAvailability())
+}
+
+func newObservedAccessLogEngineWithAvailability(
+	t *testing.T,
+	application Application,
+	availability *Availability,
+) (*route.Engine, *observer.ObservedLogs) {
+	t.Helper()
 	core, logs := observer.New(zapcore.DebugLevel)
 	accessLog, err := NewAccessLogMiddleware(zap.New(core))
 	if err != nil {
@@ -290,6 +330,7 @@ func newObservedAccessLogEngine(
 	if err := RegisterRoutes(
 		httpServer.Engine,
 		handler,
+		availability,
 		newTestSecurityMiddleware(t),
 		accessLog,
 		newTestRateLimitMiddleware(t),

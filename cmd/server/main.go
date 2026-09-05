@@ -6,8 +6,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -97,7 +101,12 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create conversation repository: %w", err)
 	}
-	defer repositoryRuntime.Close()
+	closeRepository := true
+	defer func() {
+		if closeRepository {
+			repositoryRuntime.Close()
+		}
+	}()
 	replyGenerator, err := bootstrap.NewAIReplyGenerator(startupContext, aiConfig)
 	if err != nil {
 		return err
@@ -124,16 +133,34 @@ func run() error {
 		return fmt.Errorf("create HTTP handler: %w", err)
 	}
 
+	serverConfig, err := bootstrap.ResolveServerConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve server configuration: %w", err)
+	}
+	listener, err := net.Listen("tcp", strings.TrimSpace(*address))
+	if err != nil {
+		return fmt.Errorf("listen for HTTP requests: %w", err)
+	}
+	// Closing an already-closed net.Listener is harmless. Keeping this fallback
+	// unconditional also covers a failure before Hertz starts owning it.
+	defer func() { _ = listener.Close() }()
+
+	availability := hertztransport.NewAvailability()
+	requestRootContext, cancelRequests := context.WithCancel(context.Background())
+	defer cancelRequests()
+
 	// RegisterRoutes installs a safe Recovery before the Zap access logger.
 	// server.Default is intentionally avoided because its Recovery logs raw
 	// panic values and stack source through hlog.
-	httpServer := server.New(
-		server.WithHostPorts(strings.TrimSpace(*address)),
-		server.WithSenseClientDisconnection(true),
+	httpServer := newHertzServer(
+		listener,
+		requestRootContext,
+		serverConfig.ShutdownTimeout,
 	)
 	if err := hertztransport.RegisterRoutes(
 		httpServer.Engine,
 		handler,
+		availability,
 		securityMiddleware,
 		accessLogMiddleware,
 		rateLimitMiddleware,
@@ -141,8 +168,44 @@ func run() error {
 		return fmt.Errorf("register HTTP routes: %w", err)
 	}
 
-	httpServer.Spin()
-	return nil
+	stopContext, stopSignals := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	restoreDefaultSignals := sync.OnceFunc(stopSignals)
+	defer restoreDefaultSignals()
+	serveErr := serveHTTP(
+		stopContext,
+		httpServer,
+		availability,
+		serverConfig.ShutdownTimeout,
+		restoreDefaultSignals,
+		cancelRequests,
+		logger,
+	)
+	if errors.Is(serveErr, errForcedShutdown) {
+		// PostgreSQL pool Close waits without a context for checked-out
+		// connections. After a forced stop, process exit is safer than starting
+		// another unbounded wait on handlers that exceeded the grace period.
+		closeRepository = false
+	}
+	return serveErr
+}
+
+func newHertzServer(
+	listener net.Listener,
+	requestRootContext context.Context,
+	shutdownTimeout time.Duration,
+) *server.Hertz {
+	return server.New(
+		server.WithListener(listener),
+		server.WithExitWaitTime(shutdownTimeout),
+		server.WithOnAccept(func(net.Conn) context.Context {
+			return requestRootContext
+		}),
+		server.WithSenseClientDisconnection(true),
+	)
 }
 
 func environmentOrDefault(name, fallback string) string {
