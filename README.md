@@ -6,6 +6,18 @@
 
 ## 当前进度
 
+第六阶段第六小步已经加入 Prometheus AI 回复指标：
+
+- 同一组 `ReplyObserver` 事件同时驱动 Zap 和 Prometheus，普通回复和 SSE 共用
+  统计口径；组合 Observer 对每个成员分别隔离 panic；
+- 统计模型生成尝试的开始、容量拒绝、终止结果和耗时分布，不统计每个 delta；
+- 实时并发数在抓取时读取 `Service.ReplyCapacity()`，不会被延迟或乱序的事件
+  覆盖，也不会把模型结束后的数据库保存时间算作模型槽位占用；
+- 可选 `/metrics` 使用独立的 `METRICS_AUTH_TOKEN`，未配置时不注册路由；监控
+  凭证和业务凭证不能互用，抓取不消耗 `/v1` 的限流额度；
+- 每个 server 拥有独立 Registry，标签只使用有限的 `mode`、`outcome`，不包含
+  Request ID、Conversation ID、Trigger ID、客户内容或供应商错误。
+
 第六阶段第五小步已经加入可控的 HTTP 优雅停机：
 
 - 新增匿名 `/readyz`：正常服务时返回 200，进入排空后，仍能到达 Handler 的
@@ -263,6 +275,7 @@ internal/transport/hertz/handler.go                  DTO ↔ Command/Result
        ├── rate_limit.go                             单实例令牌桶 + 429
        ├── access_log.go                             Zap 请求生命周期日志
        ├── availability.go                           readiness + 排空闸门
+       ├── metrics.go                                受保护的 Prometheus 抓取接口
        └── router.go                                 URL ↔ Handler
 ~~~
 
@@ -271,12 +284,16 @@ Repository 和构造函数注入边界。`hz model` 只生成 HTTP 所需类型�
 Handler 或 Thrift RPC processor 带进业务代码。`hz model` 不生成 Router，
 因此 `router.go` 手工镜像 IDL 的 URL；路由和状态码行为由传输层测试锁定。
 
+`/metrics` 是运维抓取协议，不是业务 JSON DTO，使用 Prometheus 官方 `promhttp`
+与 Hertz `adaptor.HertzHandler` 对接，不加入 Thrift IDL，也不需要重新生成 DTO。
+
 当前端点：
 
 | Method | Path | 用途 |
 | --- | --- | --- |
 | `GET` | `/healthz` | 进程存活检查，不访问数据库或模型 |
 | `GET` | `/readyz` | 是否应继续接收新业务流量；排空期间返回 503 |
+| `GET` | `/metrics` | Prometheus 指标；配置 `METRICS_AUTH_TOKEN` 后启用，使用独立 Bearer 认证 |
 | `POST` | `/v1/conversations/:conversation_id/messages` | 幂等接收一条客户消息 |
 | `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply` | 为指定客户消息生成或读取机器人回复 |
 | `POST` | `/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/stream` | 以 SSE 流式生成回复并在完成后保存 |
@@ -401,6 +418,74 @@ API Key、Authorization、原始供应商错误或响应正文。排查时可使
 AI 事件会记录 `conversation_id` 和 `trigger_message_id` 作为关联字段，因此调用方
 必须使用不含手机号、邮箱等个人信息的不可读 ID。
 
+### Prometheus 指标
+
+在被忽略的 `.env.local` 中配置独立随机凭证 `METRICS_AUTH_TOKEN`，至少 32 字节、
+不含空白且不能与 `API_AUTH_TOKEN` 相同。可以用 `openssl rand -hex 32` 生成；
+不要复用模型 Key。留空时 `/metrics` 返回 404；配置了非法值则启动失败。
+程序仍不自动读取 dotenv，更新配置后需要重新加载环境并重启 server：
+
+~~~bash
+set -a
+source .env.local
+set +a
+go run ./cmd/server
+~~~
+
+在另一个已加载同一环境的终端验证：
+
+~~~bash
+curl -fsS -H "Authorization: Bearer ${METRICS_AUTH_TOKEN}" http://127.0.0.1:8080/metrics
+~~~
+
+没有凭证、错误凭证或业务 Token 都返回 401。监控 Token 不能调用 `/v1`。
+该路由继承 Request ID、Zap 访问日志与安全 Recovery，但不经过业务请求令牌桶
+或 readiness 闸门；同时抓取超过 2 个时独立返回 503。停机关闭监听后，指标端点
+与其他端点一样无法再接受新连接。不要把该端口无保护地暴露到公网，跨主机抓取
+应通过可信内网与 TLS 入口保护凭证。
+
+以下指标都以 `omni_agent_customer_service_ai_reply_` 为前缀：
+
+| 后缀 | 类型 | 标签 | 含义 |
+| --- | --- | --- | --- |
+| `started_total` | Counter | `mode` | 获得容量名额的生成尝试次数 |
+| `rejected_total` | Counter | `mode` | 因模型并发容量耗尽而拒绝的次数 |
+| `finished_total` | Counter | `mode`, `outcome` | 生成尝试达到终止状态的次数 |
+| `model_duration_seconds` | Histogram | `mode` | 模型生成时间，流式包含消费与关闭 |
+| `total_duration_seconds` | Histogram | `mode` | 从获得容量到终止的时间，包含持久化 |
+| `active` | Gauge | 无 | 当前进程占用的模型生成槽位 |
+| `limit` | Gauge | 无 | 当前进程配置的模型生成上限 |
+
+`mode` 为 `generate` / `stream`；`outcome` 为 `completed`、`superseded`、
+`empty`、`generation_failed`、`persistence_failed`、`canceled`、
+`deadline_exceeded`、`abandoned`。未识别的枚举值统一归到 `unknown`，不会直接
+变成新标签值。已知序列启动时输出零值，不需要先调用模型。
+
+这些指标不是 HTTP 请求总数：校验失败、读取快照失败、直接重放已有回复都不进入
+生成生命周期；HTTP 令牌桶的 429 也不计入 `rejected_total`。生成后发现并发重复
+的尝试仍消耗过模型资源，会记录一次 `completed`，其 duplicate 细节保留在日志。
+`finished_total` 的失败分类来自业务结果，不能用 SSE 的 HTTP 200 代替成功判断。
+清理失败标记与具体终止阶段目前只保留在 Zap，不新增指标维度。
+
+两种耗时都在尝试终止时记录，不是首 token 延迟；初始参数校验和快照准备不计入。
+`active` 表示容量名额占用，不是 HTTP 请求数或供应商连接数，模型结束后即使数据库
+还在保存，名额也已归还。库调用者若没有配置并发限制，`limit=0`、`active=0` 表示
+无限且未跟踪；`cmd/server` 始终配置正数上限。Counter 在进程重启后归零，历史与
+跨实例聚合由 Prometheus 保存、查询，本应用不会启动或部署 Prometheus/Grafana。
+
+例如查询所有实例每秒开始的生成次数，以及按模式聚合的模型耗时 P95：
+
+~~~promql
+sum by (mode) (rate(omni_agent_customer_service_ai_reply_started_total[5m]))
+
+histogram_quantile(0.95,
+  sum by (le, mode) (rate(omni_agent_customer_service_ai_reply_model_duration_seconds_bucket[5m]))
+)
+~~~
+
+没有观测样本时分位数可能为 NaN，并不表示耗时为零。Collector/Registry 的实现
+方式可参考 [Prometheus Go 客户端文档](https://pkg.go.dev/github.com/prometheus/client_golang@v1.23.2/prometheus)。
+
 ## 本地运行
 
 项目要求 Go 1.25 或更高版本；本地 PostgreSQL 流程还需要 Docker Desktop 或兼容
@@ -444,6 +529,7 @@ go test ./internal/persistence/postgres -count=1 -v
 
 `cmd/server` 同时暴露接收消息和生成回复接口，因此启动时会校验入站
 `API_AUTH_TOKEN`、请求限流参数、AI 配置、AI 并发上限、日志配置和存储配置。
+可选的 `METRICS_AUTH_TOKEN` 在配置后也会校验，但缺省不会阻止原有服务启动。
 公网模型供应商需要对应 API Key；`custom` 指向无鉴权的本地 OpenAI-compatible
 端点时可以不配置模型 Key。缺少必要配置，或者 RPS/Burst/AI 并发上限、日志配置
 非法时会直接启动失败，不会等到第一次请求才暴露问题。
@@ -652,7 +738,8 @@ go vet ./...
 Request ID、Bearer 鉴权、令牌桶限流、AI 回复共享并发槽、超限 429、流式名额
 释放、并发不超卖、Zap 配置、HTTP 单请求单日志、路由模板脱敏、ReplyObserver
 生命周期、容量快照、SSE 完整生命周期、终止事件 exactly-once、日志敏感字段
-缺失、readiness 状态转换、排空期间新旧请求分流、停机超时强制取消、Retry-After、
+缺失、组合 Observer 故障隔离、Prometheus 标签边界与耗时单位、抓取实时容量、
+监控凭证隔离、真实 HTTP 指标输出、readiness 状态转换、排空期间新旧请求分流、停机超时强制取消、Retry-After、
 Problem 错误响应、HTTP 回复幂等和过期 Trigger 等情况。协议
 测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，也不产生
 费用。
@@ -677,9 +764,10 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 ## 后续候选
 
 当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
-AI 回复共享并发上限、Zap 结构化日志与可控优雅停机已经完成业务层、Eino 适配、
-Hertz/Thrift 契约和自动化测试。下一步可以让同一个 `ReplyObserver` 输出
-Prometheus 指标或 OpenTelemetry Trace，而不修改客服业务规则；也可以继续增加
+AI 回复共享并发上限、Zap 结构化日志、Prometheus 指标与可控优雅停机已经完成。
+下一步建议进入客服知识库 RAG：先定义检索端口与可测试的知识注入流程，再接入
+真实检索存储，让回复能够依据企业资料回答。后续也可以让 `ReplyObserver` 输出
+OpenTelemetry Trace，或继续增加
 多调用方身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器
 SSE 客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在
 应用层。

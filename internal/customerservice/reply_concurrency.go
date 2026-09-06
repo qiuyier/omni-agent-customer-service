@@ -38,6 +38,25 @@ func WithMaxConcurrentReplies(maxConcurrent int) Option {
 	}
 }
 
+// ReplyCapacity returns the current process-local model-generation capacity.
+// Both fields are read under the same limiter lock, so callers can safely use
+// this snapshot even when lifecycle observer events arrive out of order. Slots
+// are released before reply persistence, not when the complete request ends.
+// Without WithMaxConcurrentReplies, capacity is unlimited and untracked: the
+// returned zero snapshot does not imply that no model generations are active.
+func (s *Service) ReplyCapacity() ReplyCapacitySnapshot {
+	if s.replyCapacity == nil {
+		return ReplyCapacitySnapshot{}
+	}
+	limiter := s.replyCapacity
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	return ReplyCapacitySnapshot{
+		Active: limiter.active,
+		Limit:  limiter.limit,
+	}
+}
+
 func (s *Service) acquireReplyCapacity() (
 	*replyCapacityLease,
 	ReplyCapacitySnapshot,

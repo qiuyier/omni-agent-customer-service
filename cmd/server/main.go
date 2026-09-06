@@ -17,6 +17,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
@@ -61,7 +62,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create HTTP access log middleware: %w", err)
 	}
-	replyObserver, err := observability.NewZapReplyObserver(
+	zapReplyObserver, err := observability.NewZapReplyObserver(
 		logger,
 		hertztransport.RequestIDFromContext,
 	)
@@ -71,6 +72,15 @@ func run() error {
 	apiConfig, err := bootstrap.ResolveAPIConfig(os.LookupEnv)
 	if err != nil {
 		return fmt.Errorf("resolve API configuration: %w", err)
+	}
+	metricsConfig, err := bootstrap.ResolveMetricsConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve metrics configuration: %w", err)
+	}
+	metricsObserver := observability.NewPrometheusReplyObserver()
+	replyObserver, err := observability.NewReplyObserverGroup(zapReplyObserver, metricsObserver)
+	if err != nil {
+		return fmt.Errorf("create combined AI reply observer: %w", err)
 	}
 	securityMiddleware, err := hertztransport.NewSecurityMiddleware(apiConfig.BearerToken)
 	if err != nil {
@@ -166,6 +176,27 @@ func run() error {
 		rateLimitMiddleware,
 	); err != nil {
 		return fmt.Errorf("register HTTP routes: %w", err)
+	}
+	if metricsConfig.BearerToken != "" {
+		// Build one registry per server, after Service exists. The collector
+		// reads live capacity; no mutable callback or global registry is needed.
+		capacityCollector, err := observability.NewReplyCapacityCollector(service.ReplyCapacity)
+		if err != nil {
+			return fmt.Errorf("create AI reply capacity collector: %w", err)
+		}
+		registry := prometheus.NewRegistry()
+		for _, collector := range []prometheus.Collector{metricsObserver, capacityCollector} {
+			if err := registry.Register(collector); err != nil {
+				return fmt.Errorf("register AI reply metrics: %w", err)
+			}
+		}
+		metricsSecurity, err := hertztransport.NewSecurityMiddleware(metricsConfig.BearerToken)
+		if err != nil {
+			return fmt.Errorf("create metrics security middleware: %w", err)
+		}
+		if err := hertztransport.RegisterMetricsRoute(httpServer.Engine, registry, metricsSecurity); err != nil {
+			return fmt.Errorf("register metrics route: %w", err)
+		}
 	}
 
 	stopContext, stopSignals := signal.NotifyContext(
