@@ -6,6 +6,18 @@
 
 ## 当前进度
 
+第七阶段第一小步已经加入本地 FAQ RAG 最小闭环：
+
+- 业务层定义 `KnowledgeRetriever`、`KnowledgeSnippet`，不依赖 Eino、向量库或
+  HTTP；知识上下文独立于聊天历史传给模型；
+- 可选 `KNOWLEDGE_FAQ_PATH` 在启动时加载本地 JSON，使用明确的关键词匹配，
+  普通回复和 SSE 共用检索准备；未配置时保持原有行为；
+- 重放已有回复不会检索或调用模型。检索使用原始 Trigger 的快照，在事务外、
+  获取模型并发名额前完成，不改变幂等与过期回复校验；
+- 固定检索超时、查询长度、片段数量和资料总长度边界；故障与无命中分开处理；
+- 固定知识使用规则放在 system 消息，资料经 JSON 转义后放在单独 user 参考消息，
+  不写进聊天记录。本步不包含向量检索、引用结构化落库或文档上传。
+
 第六阶段第六小步已经加入 Prometheus AI 回复指标：
 
 - 同一组 `ReplyObserver` 事件同时驱动 Zap 和 Prometheus，普通回复和 SSE 共用
@@ -121,6 +133,7 @@
                                                              internal/customerservice
                                                                ├── AI 回复并发槽
                                                                ├── ReplyObserver（业务端口）
+                                                               ├── KnowledgeRetriever → internal/knowledge/faq
                                                                ├──→ internal/conversation
                                                                ├──→ conversation.Repository
                                                                │          ├── MemoryRepository
@@ -131,7 +144,7 @@
                                                                            internal/ai/eino → 模型供应商
 
 组装流：
-cmd/server → internal/bootstrap → 创建 Zap/hlog + 中间件 + Repository + ReplyGenerator
+cmd/server → internal/bootstrap → 创建 Zap/hlog + 中间件 + Repository + ReplyGenerator + 可选 FAQ
      └──→ 注入 ReplyObserver、两个 AI 接口与共享并发上限 → 创建 Handler → 注册路由
      └──→ SIGINT/SIGTERM → draining → Hertz Shutdown → completed / forced cancel
 
@@ -150,7 +163,7 @@ type ReplyGenerator interface {
 类型，自动化测试也不需要 API Key。
 
 可观测性使用同样的依赖倒置：业务层发布有限、无正文的 `ReplyObserver` 事件，
-`internal/observability` 才负责把事件写成 Zap 日志。因此替换日志库、增加指标或
+`internal/observability` 才负责把事件写成 Zap 日志与 Prometheus 指标。因此替换日志库或
 接入 Trace 时，不需要修改客服业务规则。
 
 ## 自动回复流程
@@ -165,6 +178,7 @@ type ReplyGenerator interface {
   → 读取有序历史并记录 Revision / 消息水位
 
 事务外
+  → 可选知识检索：使用触发消息快照，独立超时与资料长度预算
   → 非阻塞获取进程内 AI 回复名额
   → 调用 ReplyGenerator
   → 模型调用结束后释放名额
@@ -178,6 +192,10 @@ type ReplyGenerator interface {
 
 模型调用不能放进事务：一次推理可能持续数秒，长时间持锁会阻塞收消息和
 转人工。调用前后重复校验，则能在不持有长事务的同时保证结果没有过期。
+
+检索同样不持有事务，也不占用模型名额。即使检索期间客户发来新消息，本次检索
+与生成仍基于原始快照；最终保存时会拒绝过期回答。SSE 可能先输出临时 delta，
+随后输出 `reply.superseded`，客户端仍须丢弃这些临时内容。
 
 ### 并发保护
 
@@ -193,6 +211,108 @@ type ReplyGenerator interface {
 - 持久化 Repository 的事务内 `FindConversation` 必须锁定会话行，SQL
   实现应使用等价于 `SELECT ... FOR UPDATE` 的机制；数据库仍需为
   `reply_to_message_id` 建立唯一约束。
+
+## 本地 FAQ 知识检索（RAG）
+
+RAG 在这里是“先找参考资料，再交给模型回答”，不是重新训练模型。当前检索器是
+确定性的关键词子串匹配，不具备语义向量检索或自动理解同义词的能力。
+
+### 启用与演示
+
+在实际加载的 `.env.local` 或 GoLand 环境配置中添加：
+
+~~~dotenv
+KNOWLEDGE_FAQ_PATH=examples/knowledge/faq.json
+~~~
+
+从项目根目录启动，先加载环境，再运行已有入口：
+
+~~~bash
+set -a
+source .env.local
+set +a
+go run ./cmd/server
+~~~
+
+服务端接口与 SSE 协议不变。可以先发送“人工客服几点上班？”或“如何重置密码？”，
+再为返回的消息 ID 调用普通回复或 SSE 回复接口。也可使用单轮控制台验证：
+
+~~~bash
+go run ./cmd/console -message '人工客服几点上班？'
+~~~
+
+这两个运行入口会使用你配置的真实模型，可能产生费用；自动化测试则只使用本地
+模拟模型。本次提供的 `examples/knowledge/faq.json` 是明确标注的虚构演示资料，
+不能作为实际企业政策使用。
+
+相对路径基于进程的工作目录，不是 `.env.local` 所在目录；GoLand 的 Working
+directory 应设置为项目根目录，也可以配置绝对路径。文件只在启动时加载一次，
+修改后需要重启；留空则关闭 RAG。建议将真实资料放到已忽略的 `knowledge.local/`
+目录或仓库外受控路径，不要把内部资料和密钥提交到 Git。
+
+### FAQ 格式和匹配方式
+
+文件顶层是非空 JSON 数组，每条有 `id`、`title`、`source`、`content`、`keywords`：
+
+~~~json
+[
+  {
+    "id": "demo-hours",
+    "title": "演示客服时间",
+    "source": "demo/handbook/hours",
+    "content": "仅供演示：演示商店人工客服时间为工作日 09:00—18:00。",
+    "keywords": ["客服时间", "人工客服", "几点上班"]
+  }
+]
+~~~
+
+- `id` 必须唯一，`source` 是来源标识，不会被当作 URL 抓取或文件路径读取。
+- 大小写不敏感地匹配 `keywords` 子串；每条按命中的不同关键词数排序，同分保留
+  文件顺序。不会自动分词、改写问题、判断否定关系或推断指代，关键词需人工维护。
+- 查询来自已确认的最新客户 Trigger，不把整段历史或参考资料再拿去检索。
+- 文件限普通 UTF-8 JSON 文件、最多 1 MiB / 1000 条，拒绝未知字段和尾随 JSON。
+  每条最多 20 个关键词，每个最多 64 个 Unicode 字符。
+- `id` / `title` / `source` 分别最多 128 / 128 / 256 个 Unicode 字符；每条
+  `id + title + source + content` 合计不能超过 6000 个字符。非法数据会阻止启动。
+
+### 三种状态与执行边界
+
+`ReplyRequest.Knowledge == nil` 表示未启用检索，保留原有提示词；非 nil 且片段为空
+表示检索成功但没有可用依据。无命中时仍调用模型，固定规则要求它承认资料不足、
+必要时澄清问题，不编造企业政策。关键词命中也不代表内容一定足以回答问题。
+
+检索出错则返回 `ErrKnowledgeRetrievalFailed`，不会退化成无命中继续调用模型。
+HTTP 层将普通检索故障映射成安全的 503 Problem，超时为 504、取消为 408；SSE
+尚未开始时也返回 Problem，而不是伪装成已开始的成功流。
+
+默认检索预算为 2 秒，调用方更早的 deadline 优先；Go 调用者可使用
+`WithKnowledgeRetrievalTimeout` 调整。实现必须遵守 Context，程序不会为不合作
+的检索器创建可能泄漏的后台 goroutine。这个预算独立于原有的 75 秒模型生成预算。
+
+查询只使用前 512 个 Unicode 字符，但不会截断传给模型的原始聊天历史。最多取
+Top 3；去重后按结果顺序选择资料，`id/title/source/content` 的总预算为 6000 个
+字符。后续片段放不下时整条跳过，不截断可能含有例外条件的政策。不补检 Top 3
+之外的候选。这里限制的是新增资料，不是整个 Prompt 的 token 数；JSON 包装和
+转义另有长度开销，整段会话的 token 管理留待后续。
+
+检索属于生成前准备：不发出 AI 开始/结束事件、不占模型槽位，现有模型耗时指标
+不包含检索耗时；HTTP 访问日志的总耗时会包含它。此版本未新增检索专用指标。
+
+### 知识与指令分离
+
+`internal/ai/eino/reply_prompt.go` 为普通回复和 SSE 构建相同的消息结构：既有系统
+提示词、固定知识使用规则、单独的 user-role JSON 参考资料、原有聊天历史。
+资料中的标题、来源和正文都按不可信数据处理，不提升为系统指令；JSON 转义可
+避免文本拼接破坏数据边界，但这些措施不能保证模型永不受注入影响或永不产生幻觉。
+
+资料和检索片段不作为消息写入数据库，现有回复仍只保存最终机器人文本。模型可能
+在文本里给出来源标识，但本步没有结构化引用校验、来源版本快照或可审计引用落库。
+检索资料会随请求发送到配置的模型供应商，启用前须确认数据授权；不记录资料正文
+到 Zap 或 Prometheus。
+
+当前是每个服务实例一份受控 FAQ，不是多租户知识库。不要把互相隔离的企业资料
+混在同一文件中。更换检索实现只需替换 `KnowledgeRetriever` 的适配器；租户身份、
+访问权限和检索范围需要在后续多租户阶段显式设计。
 
 ## 模型供应商与协议适配
 
@@ -529,6 +649,7 @@ go test ./internal/persistence/postgres -count=1 -v
 
 `cmd/server` 同时暴露接收消息和生成回复接口，因此启动时会校验入站
 `API_AUTH_TOKEN`、请求限流参数、AI 配置、AI 并发上限、日志配置和存储配置。
+配置 `KNOWLEDGE_FAQ_PATH` 时，还会在启动前加载并校验 FAQ 文件。
 可选的 `METRICS_AUTH_TOKEN` 在配置后也会校验，但缺省不会阻止原有服务启动。
 公网模型供应商需要对应 API Key；`custom` 指向无鉴权的本地 OpenAI-compatible
 端点时可以不配置模型 Key。缺少必要配置，或者 RPS/Burst/AI 并发上限、日志配置
@@ -675,7 +796,7 @@ SERVER_SHUTDOWN_TIMEOUT=90s
 - `AI_PROVIDER` 默认是 `openai`；
 - `AI_PROTOCOL` 留空时使用上表中的厂商默认协议；
 - `AI_API_KEY` 是推荐的统一密钥变量；
-- `AI_MODEL` 对 OpenAI 可留空使用项目默认值，其他厂商必填；
+- `AI_MODEL` 对 OpenAI 可留空使用项目默认值 `gpt-6-astra`，其他厂商必填；
 - `AI_BASE_URL` 通常留空，使用 `custom` 时必填；
 - `AI_ALLOW_INSECURE_HTTP` 默认 `false`，只用于明确接受风险的可信内网；
 - `AI_SYSTEM_PROMPT` 可选，留空时使用项目内置的客服提示词；
@@ -684,6 +805,29 @@ SERVER_SHUTDOWN_TIMEOUT=90s
 - `LOG_LEVEL` 和 `LOG_FORMAT` 只影响 `cmd/server` 的运行日志，不进入 AI 请求。
 - `SERVER_SHUTDOWN_TIMEOUT` 使用 Go duration 格式并且必须大于 0；默认 `90s`。
   Kubernetes 等外层终止宽限期应比它至少多留数秒。
+
+#### GPT-6 Astra 迁移
+
+OpenAI 默认使用 `gpt-6-astra` 和 Responses API。已有 `AI_MODEL`、
+`OPENAI_MODEL` 或控制台 `--model` 覆盖值不会被代码默认值替换；迁移已有部署时，
+请显式设置 `AI_MODEL=gpt-6-astra`，并确认 `AI_PROVIDER=openai`、
+`AI_PROTOCOL=responses` 以及目标服务地址正确。`.env.example` 是模板，不会自动加载。
+
+按[官方迁移指南](https://developers.openai.com/api/docs/guides/latest-model#gpt-6-astra-update-api-and-model-parameters)，
+Astra 不接受 `temperature`、`top_p`、`top_logprobs`；Chat Completions 还不能发送
+`logprobs`，Responses 的 `include` 不能包含 `message.output_text.logprobs`。
+当前默认请求没有这些参数，也没有旧的 `prompt_cache_retention`，因此无需新增
+缓存配置或升级 SDK。程序化使用 Chat Completions 的 `ExtraFields` 时，也须遵守这些限制。
+工具调用须使用 Responses；其他厂商的协议和模型配置不变。
+
+本次保留未显式设置推理档位的行为，不将“未设置”视为 `none`，也不新增推理档位环境变量。
+若自行扩展请求并使用了 `none` / `minimal`，按指南从 `low` 开始对比验证。
+客服提示词、75 秒回复超时和知识参考隔离规则保持不变，是否调整应由真实评测决定。
+
+本地通用适配层验证：`go test ./internal/ai/eino -run TestDefaultResponsesWireContract -count=1`。
+该测试经过真实 Eino/SDK 序列化，使用本地 HTTP/SSE 模拟服务，不需要密钥，
+但不能证明账号模型权限或真实模型效果。上线前另用非敏感测试会话检查知识命中/未命中、
+引用准确性、提示注入防护、流式回复及实际延迟；不要把真实客户数据用于首次验证。
 
 模型请求会把 System Prompt 和完整客户会话发送到最终解析出的 Base URL，配置
 凭据时还会发送 API Key。为避免误配置造成客户数据明文泄露，所有非回环端点
@@ -744,6 +888,10 @@ Problem 错误响应、HTTP 回复幂等和过期 Trigger 等情况。协议
 测试使用进程内测试引擎或本地 `httptest` 服务，不需要真实 API Key，也不产生
 费用。
 
+知识库测试另外覆盖 FAQ 文件校验、中文/英文关键词匹配、稳定排序、无命中、
+查询与完整片段预算、不可变快照、取消/超时、重放跳过检索、检索期间新增消息、
+资料不进入系统角色或数据库，以及 FAQ → Service → Eino 的普通/流式接线。
+
 修改 IDL 后，固定生成器版本并重新生成 DTO：
 
 ~~~bash
@@ -765,9 +913,9 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
 AI 回复共享并发上限、Zap 结构化日志、Prometheus 指标与可控优雅停机已经完成。
-下一步建议进入客服知识库 RAG：先定义检索端口与可测试的知识注入流程，再接入
-真实检索存储，让回复能够依据企业资料回答。后续也可以让 `ReplyObserver` 输出
-OpenTelemetry Trace，或继续增加
+第七阶段第一小步已完成可选本地 FAQ RAG。下一步可以先用一组代表性问题验证
+检索命中与无命中行为，再扩展文档切分、语义检索或可审计的结构化来源引用。
+后续也可以让 `ReplyObserver` 输出 OpenTelemetry Trace，或继续增加
 多调用方身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器
 SSE 客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在
 应用层。

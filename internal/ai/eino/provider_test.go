@@ -15,6 +15,97 @@ import (
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 )
 
+// Exercise the real Eino/SDK serialization against a local endpoint, not a
+// mocked AgenticModel. No credentials or external model access are required.
+func TestDefaultResponsesWireContract(t *testing.T) {
+	for _, streaming := range []bool{false, true} {
+		name := "generate"
+		if streaming {
+			name = "stream"
+		}
+		t.Run(name, func(t *testing.T) {
+			requests := make(chan recordedRequest, 1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests <- recordRequest(r)
+				if !streaming {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = io.WriteString(w, `{"id":"resp_test","object":"response","status":"completed","model":"responses-test-model","output":[{"id":"msg_test","type":"message","role":"assistant","status":"completed","content":[{"type":"output_text","text":"Hello","annotations":[]}]}]}`)
+					return
+				}
+				w.Header().Set("Content-Type", "text/event-stream")
+				for _, event := range []string{
+					`{"type":"response.created","response":{"id":"resp_test","model":"responses-test-model","status":"in_progress"}}`,
+					`{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_test","type":"message","role":"assistant","status":"in_progress","content":[]}}`,
+					`{"type":"response.content_part.added","item_id":"msg_test","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[]}}`,
+					`{"type":"response.output_text.delta","item_id":"msg_test","output_index":0,"content_index":0,"delta":"Hel"}`,
+					`{"type":"response.output_text.delta","item_id":"msg_test","output_index":0,"content_index":0,"delta":"lo"}`,
+					`{"type":"response.completed","response":{"id":"resp_test","model":"responses-test-model","status":"completed","output":[]}}`,
+				} {
+					_, _ = io.WriteString(w, "data: "+event+"\n\n")
+					w.(http.Flusher).Flush()
+				}
+			}))
+			defer server.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			generator, err := einoadapter.NewOpenAIResponsesGenerator(ctx, einoadapter.OpenAIResponsesConfig{
+				APIKey: "local-test-only", BaseURL: server.URL + "/v1",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			input := customerservice.ReplyRequest{History: []customerservice.ReplyTurn{
+				{Role: customerservice.ReplyRoleUser, Content: "hello"},
+			}}
+			var text strings.Builder
+			if streaming {
+				reader, err := generator.Stream(ctx, input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer reader.Close()
+				for {
+					delta, err := reader.Recv()
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					text.WriteString(delta.Content)
+				}
+			} else {
+				reply, err := generator.Generate(ctx, input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				text.WriteString(reply.Content)
+			}
+			if text.String() != "Hello" {
+				t.Fatalf("reply = %q", text.String())
+			}
+			var request recordedRequest
+			select {
+			case request = <-requests:
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			if request.err != nil {
+				t.Fatal(request.err)
+			}
+			if request.method != http.MethodPost || request.path != "/v1/responses" {
+				t.Fatalf("request = %s %s", request.method, request.path)
+			}
+			if request.body["model"] != einoadapter.DefaultOpenAIModel || request.body["store"] != false {
+				t.Fatalf("unexpected model/store: %#v", request.body)
+			}
+			if streaming && request.body["stream"] != true {
+				t.Fatal("stream flag missing")
+			}
+		})
+	}
+}
+
 func TestParseProvider(t *testing.T) {
 	tests := map[string]einoadapter.Provider{
 		"":             einoadapter.ProviderOpenAI,

@@ -105,6 +105,14 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("resolve storage configuration: %w", err)
 	}
+	knowledgeConfig, err := bootstrap.ResolveKnowledgeConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve knowledge configuration: %w", err)
+	}
+	knowledgeRetriever, err := bootstrap.NewKnowledgeRetriever(knowledgeConfig)
+	if err != nil {
+		return fmt.Errorf("create knowledge retriever: %w", err)
+	}
 	startupContext, cancelStartup := context.WithTimeout(context.Background(), startupTimeout)
 	defer cancelStartup()
 	repositoryRuntime, err := bootstrap.NewConversationRepository(startupContext, repositoryConfig)
@@ -123,17 +131,23 @@ func run() error {
 	}
 	cancelStartup()
 
+	serviceOptions := []customerservice.Option{
+		customerservice.WithReplyGenerator(replyGenerator),
+		customerservice.WithReplyStreamGenerator(replyGenerator),
+		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
+		customerservice.WithMaxConcurrentReplies(aiRuntimeConfig.MaxConcurrentReplies),
+		customerservice.WithReplyObserver(replyObserver),
+	}
+	if knowledgeRetriever != nil {
+		serviceOptions = append(serviceOptions, customerservice.WithKnowledgeRetriever(knowledgeRetriever))
+	}
 	service, err := customerservice.New(
 		repositoryRuntime.Repository,
 		customerservice.MessageIDGeneratorFunc(func() (string, error) {
 			return uuid.NewString(), nil
 		}),
 		customerservice.ClockFunc(time.Now),
-		customerservice.WithReplyGenerator(replyGenerator),
-		customerservice.WithReplyStreamGenerator(replyGenerator),
-		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
-		customerservice.WithMaxConcurrentReplies(aiRuntimeConfig.MaxConcurrentReplies),
-		customerservice.WithReplyObserver(replyObserver),
+		serviceOptions...,
 	)
 	if err != nil {
 		return fmt.Errorf("create customer-service application: %w", err)

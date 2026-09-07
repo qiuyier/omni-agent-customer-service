@@ -62,6 +62,7 @@ func classifyError(err error) error {
 		return fault.Wrap(fault.CodeResourceExhausted, "reply capacity exhausted", err)
 
 	case errors.Is(err, customerservice.ErrReplyUnavailable),
+		errors.Is(err, customerservice.ErrKnowledgeRetrievalFailed),
 		errors.Is(err, customerservice.ErrReplyGenerationFailed),
 		errors.Is(err, customerservice.ErrEmptyReply):
 		return fault.Wrap(fault.CodeUnavailable, "reply service unavailable", err)

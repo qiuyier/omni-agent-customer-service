@@ -45,6 +45,10 @@ var (
 	// ErrReplyCapacityExceeded indicates that all model-generation slots on
 	// this service instance are currently in use. Callers should retry later.
 	ErrReplyCapacityExceeded = errors.New("customer service: reply capacity exceeded")
+
+	// ErrKnowledgeRetrievalFailed distinguishes missing reference infrastructure
+	// from a successful search with no matches. Its cause is internal-only.
+	ErrKnowledgeRetrievalFailed = errors.New("customer service: knowledge retrieval failed")
 )
 
 func invalidInput(field, reason string) error {

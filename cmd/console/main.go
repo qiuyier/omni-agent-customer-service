@@ -43,6 +43,14 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("resolve AI configuration: %w", err)
 	}
+	knowledgeConfig, err := bootstrap.ResolveKnowledgeConfig(os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("resolve knowledge configuration: %w", err)
+	}
+	knowledgeRetriever, err := bootstrap.NewKnowledgeRetriever(knowledgeConfig)
+	if err != nil {
+		return fmt.Errorf("create knowledge retriever: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
@@ -51,12 +59,18 @@ func run() error {
 		return err
 	}
 
+	serviceOptions := []customerservice.Option{
+		customerservice.WithReplyGenerator(generator),
+		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
+	}
+	if knowledgeRetriever != nil {
+		serviceOptions = append(serviceOptions, customerservice.WithKnowledgeRetriever(knowledgeRetriever))
+	}
 	service, err := customerservice.New(
 		conversation.NewMemoryRepository(),
 		&sequenceIDGenerator{},
 		customerservice.ClockFunc(time.Now),
-		customerservice.WithReplyGenerator(generator),
-		customerservice.WithReplyGenerationTimeout(bootstrap.DefaultAIReplyTimeout),
+		serviceOptions...,
 	)
 	if err != nil {
 		return err

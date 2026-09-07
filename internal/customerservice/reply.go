@@ -31,6 +31,7 @@ type ReplyRequest struct {
 	ConversationID   string
 	TriggerMessageID string
 	History          []ReplyTurn
+	Knowledge        *ReplyKnowledge
 }
 
 // Reply is provider-independent generated content.
@@ -132,6 +133,10 @@ func (s *Service) GenerateBotReply(
 	}
 	if s.replies == nil {
 		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrReplyUnavailable)
+	}
+	prepared.snapshot.request, err = s.prepareReplyKnowledge(ctx, prepared.snapshot.request)
+	if err != nil {
+		return GenerateBotReplyResult{}, err
 	}
 
 	generated, attempt, err := s.invokeReplyGenerator(ctx, prepared.snapshot.request)

@@ -5,10 +5,9 @@ import (
 	"time"
 )
 
-// DefaultOpenAIModel balances response quality, latency, and cost for the
-// customer-service default. Deployments can override it with AI_MODEL; the
-// legacy OPENAI_MODEL variable remains supported by the console entry point.
-const DefaultOpenAIModel = "gpt-5.6-terra"
+// DefaultOpenAIModel is the OpenAI model used when no deployment override is
+// supplied. AI_MODEL and the legacy OPENAI_MODEL can select another model.
+const DefaultOpenAIModel = "gpt-6-astra"
 
 // OpenAIResponsesConfig contains the composition-time settings for OpenAI's
 // Responses API. APIKey must come from a secret source such as an environment

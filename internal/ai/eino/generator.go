@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
@@ -64,21 +63,15 @@ func (g *Generator) Generate(
 		return customerservice.Reply{}, err
 	}
 
-	capacity := len(request.History)
-	if strings.TrimSpace(g.systemPrompt) != "" {
-		capacity++
+	turns, err := replyPromptTurns(g.systemPrompt, request)
+	if err != nil {
+		return customerservice.Reply{}, err
 	}
-	messages := make([]*schema.Message, 0, capacity)
-	if strings.TrimSpace(g.systemPrompt) != "" {
-		messages = append(messages, &schema.Message{
-			Role:    schema.System,
-			Content: g.systemPrompt,
-		})
-	}
-	for index, turn := range request.History {
+	messages := make([]*schema.Message, 0, len(turns))
+	for _, turn := range turns {
 		role, err := einoRole(turn.Role)
 		if err != nil {
-			return customerservice.Reply{}, fmt.Errorf("history turn %d: %w", index, err)
+			return customerservice.Reply{}, err
 		}
 		messages = append(messages, &schema.Message{Role: role, Content: turn.Content})
 	}

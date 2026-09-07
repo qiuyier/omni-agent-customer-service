@@ -127,18 +127,15 @@ func (g *AgenticGenerator) Stream(
 func (g *AgenticGenerator) agenticMessages(
 	request customerservice.ReplyRequest,
 ) ([]*schema.AgenticMessage, error) {
-	capacity := len(request.History)
-	if strings.TrimSpace(g.systemPrompt) != "" {
-		capacity++
+	turns, err := replyPromptTurns(g.systemPrompt, request)
+	if err != nil {
+		return nil, err
 	}
-	messages := make([]*schema.AgenticMessage, 0, capacity)
-	if strings.TrimSpace(g.systemPrompt) != "" {
-		messages = append(messages, schema.SystemAgenticMessage(g.systemPrompt))
-	}
-	for index, turn := range request.History {
+	messages := make([]*schema.AgenticMessage, 0, len(turns))
+	for _, turn := range turns {
 		message, err := agenticMessage(turn)
 		if err != nil {
-			return nil, fmt.Errorf("history turn %d: %w", index, err)
+			return nil, err
 		}
 		messages = append(messages, message)
 	}

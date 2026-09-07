@@ -55,6 +55,8 @@ type Service struct {
 	replyGenerationTimeout time.Duration
 	replyCapacity          *replyCapacityLimiter
 	replyObserver          ReplyObserver
+	knowledgeRetriever     KnowledgeRetriever
+	knowledgeTimeout       time.Duration
 }
 
 // New creates a customer-service application service.
@@ -74,10 +76,11 @@ func New(
 		return nil, fmt.Errorf("%w: clock is nil", ErrInvalidDependency)
 	}
 	service := &Service{
-		repository:    repository,
-		ids:           ids,
-		clock:         clock,
-		replyObserver: nopReplyObserver{},
+		repository:       repository,
+		ids:              ids,
+		clock:            clock,
+		replyObserver:    nopReplyObserver{},
+		knowledgeTimeout: DefaultKnowledgeRetrievalTimeout,
 	}
 	for index, option := range options {
 		if option == nil {

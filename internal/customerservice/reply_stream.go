@@ -99,6 +99,10 @@ func (s *Service) StreamBotReply(
 			ErrReplyUnavailable,
 		)
 	}
+	prepared.snapshot.request, err = s.prepareReplyKnowledge(ctx, prepared.snapshot.request)
+	if err != nil {
+		return nil, err
+	}
 	attempt, err := s.beginReplyAttempt(ctx, ReplyModeStream, prepared.snapshot.request)
 	if err != nil {
 		return nil, err

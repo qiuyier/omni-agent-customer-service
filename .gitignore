@@ -5,3 +5,6 @@ bin/
 coverage.out
 .env
 .env.local
+
+# Instance-local enterprise knowledge; keep curated demo fixtures tracked.
+knowledge.local/
