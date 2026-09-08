@@ -1,0 +1,122 @@
+[
+  {
+    "id": "direct_support_hours",
+    "query": "演示商店的人工客服时间是什么时候？",
+    "expected_ids": ["demo-support-hours"],
+    "note": "直问人工服务时段；其他资料提到联系客服，不代表与时段问题相关。"
+  },
+  {
+    "id": "direct_password_reset",
+    "query": "演示商店忘记密码以后怎么重新设置？",
+    "expected_ids": ["demo-password-reset"],
+    "note": "直问忘记登录密码后的处理步骤。"
+  },
+  {
+    "id": "direct_invoice_entry",
+    "query": "演示商店已支付订单的开票入口在哪里？",
+    "expected_ids": ["demo-invoice"],
+    "note": "直问已支付订单的发票申请入口。"
+  },
+  {
+    "id": "uppercase_password",
+    "query": "演示商店账号该怎么 RESET PASSWORD？",
+    "expected_ids": ["demo-password-reset"],
+    "note": "英文关键词全大写，仍为重置登录密码。"
+  },
+  {
+    "id": "mixed_case_invoice",
+    "query": "演示商店付款后申请 InVoIcE 的入口在哪？",
+    "expected_ids": ["demo-invoice"],
+    "note": "英文关键词混合大小写，仍为申请订单发票。"
+  },
+  {
+    "id": "paraphrase_support_hours",
+    "query": "演示商店的真人坐席周几在岗，每天什么时候能接待？",
+    "expected_ids": ["demo-support-hours"],
+    "note": "用真人坐席、在岗和接待表达人工服务时段。"
+  },
+  {
+    "id": "paraphrase_password",
+    "query": "演示商店的登录口令想不起来了，怎么换一个新的？",
+    "expected_ids": ["demo-password-reset"],
+    "note": "用口令想不起来表达忘记密码，不以现有关键词决定标签。"
+  },
+  {
+    "id": "paraphrase_invoice",
+    "query": "演示商店订单已经付款，报销用的票据从哪个页面申请？",
+    "expected_ids": ["demo-invoice"],
+    "note": "已付款订单、报销票据和申请页面共同指向发票申请入口。"
+  },
+  {
+    "id": "password_email_troubleshooting",
+    "query": "演示商店改登录口令时一直收不到验证邮件，该先检查哪里？",
+    "expected_ids": ["demo-password-reset"],
+    "note": "密码资料正文包含验证邮件收不到时的检查建议。"
+  },
+  {
+    "id": "multi_support_password",
+    "query": "演示商店忘记密码怎么办？另外人工客服几点上班？",
+    "expected_ids": ["demo-support-hours", "demo-password-reset"],
+    "note": "两个明确子问题分别询问密码处理与人工服务时段。"
+  },
+  {
+    "id": "multi_password_invoice",
+    "query": "演示商店怎么重置密码？已付款订单又从哪里申请发票？",
+    "expected_ids": ["demo-password-reset", "demo-invoice"],
+    "note": "两个明确主题分别需要密码资料和开票入口资料。"
+  },
+  {
+    "id": "multi_all_topics",
+    "query": "请介绍演示商店的客服时间、找回密码步骤，以及已支付订单的开票入口。",
+    "expected_ids": ["demo-support-hours", "demo-password-reset", "demo-invoice"],
+    "note": "三个明确子问题；相关集合不规定相关资料之间的排序。"
+  },
+  {
+    "id": "relevant_incomplete_holiday",
+    "query": "演示商店下一个节假日的人工客服具体几点值班？",
+    "expected_ids": ["demo-support-hours"],
+    "note": "时段资料相关，但只说明节假日另行公告，不能据此确定具体排班。"
+  },
+  {
+    "id": "relevant_incomplete_invoice_status",
+    "query": "演示商店申请发票的入口在哪？你能确认已经替我开好了吗？",
+    "expected_ids": ["demo-invoice"],
+    "note": "资料支持入口说明，不能证明实际办理结果；相关不等于足够回答。"
+  },
+  {
+    "id": "ambiguous_service_time",
+    "query": "排队模型里的服务时间是怎样定义的？",
+    "expected_ids": [],
+    "note": "排队模型的服务时间不是商店人工接待时段。"
+  },
+  {
+    "id": "literal_invoice_identifier",
+    "query": "请把程序变量名 invoice 改成 receipt，其他代码不动。",
+    "expected_ids": [],
+    "note": "代码标识符 invoice 与商店开票资料无关。"
+  },
+  {
+    "id": "negated_password_positive_invoice",
+    "query": "不用介绍忘记密码的处理方法，我只想知道演示商店开票入口在哪。",
+    "expected_ids": ["demo-invoice"],
+    "note": "密码主题被明确排除；当前有效需求只有开票入口。"
+  },
+  {
+    "id": "negated_topics_unknown_returns",
+    "query": "我不是来问发票或客服时间的，只想知道演示商店退货要怎么操作。",
+    "expected_ids": [],
+    "note": "发票和客服时间均被排除，资料库没有退货操作说明。"
+  },
+  {
+    "id": "unknown_inventory",
+    "query": "演示商店的蓝色保温杯现在还有库存吗？",
+    "expected_ids": [],
+    "note": "资料库没有库存信息，同属一家商店不等于参考资料相关。"
+  },
+  {
+    "id": "outside_knowledge_arithmetic",
+    "query": "12 加 35 等于多少？",
+    "expected_ids": [],
+    "note": "没有相关 FAQ，不代表这个问题无法回答。"
+  }
+]

@@ -6,6 +6,15 @@
 
 ## 当前进度
 
+第七阶段第二小步已经加入模型无关的离线 FAQ 检索评测：
+
+- `cmd/knowledge-eval` 直接组装本地 FAQ 与 `internal/knowledge/evaluation`，不加载
+  AI 配置、不调用模型、不需要数据库，不改变 server/console 的回复链路；
+- 提供 20 条人工相关性标注，覆盖直问、口语改写、多主题、否定与歧义关键词；
+- 输出首条命中、正确无命中、集合完全匹配、Top-K 内漏检和无关命中的逐条结果；
+- 质量差异正常生成报告；数据错误、检索执行失败、超时或输出失败返回错误。
+  初始成绩与输入指纹见 `examples/knowledge/eval_baseline.md`，不改算法来掩盖差异。
+
 第七阶段第一小步已经加入本地 FAQ RAG 最小闭环：
 
 - 业务层定义 `KnowledgeRetriever`、`KnowledgeSnippet`，不依赖 Eino、向量库或
@@ -149,6 +158,11 @@ cmd/server → internal/bootstrap → 创建 Zap/hlog + 中间件 + Repository +
      └──→ SIGINT/SIGTERM → draining → Hertz Shutdown → completed / forced cancel
 
 cmd/console → internal/bootstrap → 单轮 AI 链路
+
+离线评测流（不调用模型）：
+cmd/knowledge-eval → FAQ 文件 + 标注文件 → internal/knowledge/evaluation
+                                             └── KnowledgeRetriever → internal/knowledge/faq
+                   ← 文本 / JSON 报告
 ~~~
 
 业务层只认识 `ReplyGenerator`：
@@ -313,6 +327,71 @@ Top 3；去重后按结果顺序选择资料，`id/title/source/content` 的总�
 当前是每个服务实例一份受控 FAQ，不是多租户知识库。不要把互相隔离的企业资料
 混在同一文件中。更换检索实现只需替换 `KnowledgeRetriever` 的适配器；租户身份、
 访问权限和检索范围需要在后续多租户阶段显式设计。
+
+## 离线 FAQ 检索评测
+
+从项目根目录运行，不需要启动 HTTP 服务、加载 `.env` 或提供 API Key：
+
+~~~bash
+go run ./cmd/knowledge-eval
+go run ./cmd/knowledge-eval -format json
+go run ./cmd/knowledge-eval -top-k 1
+~~~
+
+默认使用 `examples/knowledge/faq.json` 和 `examples/knowledge/eval_cases.json`，
+Top K 为 3；可通过 `-faq`、`-cases` 指定成对的本地文件，`-top-k` 允许 1–3，
+`-format` 允许 `text` / `json`。相对路径从进程工作目录解析。命令只使用本地 FAQ，
+不读取 `AI_*` 或 `KNOWLEDGE_FAQ_PATH`。Go 首次运行仍可能需要下载项目编译依赖，
+但评测过程不发出模型或其他服务请求。
+
+标注文件是 JSON 数组，每项包含 `id`、`query`、`expected_ids` 和可选 `note`。
+`expected_ids` 是人工判断的**相关参考资料无序集合**，不是当前算法的返回结果，
+也不保证这些资料足够回答问题。无相关资料必须明确写 `[]`，不能省略或写 `null`。
+问题能否凭常识回答、资料能否证明订单实际状态，都不属于这一阶段的判分范围。
+
+文件最多 1 MiB / 1000 条，单个问题最多 512 个 Unicode 字符，不静默截断问题。
+加载时拒绝重复字段、未知字段、重复样例 ID、重复参考 ID、非法文本、尾随 JSON；
+命令还校验标签 ID 存在于本次 FAQ 中，避免把标注错字误算成算法漏检。
+FAQ 只新增返回 ID 副本的只读方法，现有关键词匹配、排序和资料正文保持不变。
+
+### 指标定义
+
+| 指标 | 计算口径 |
+| --- | --- |
+| 首条命中率 `top1` | 第一条结果属于预期集合的样例数 / 预期集合非空的样例数 |
+| 正确无命中率 `no_match` | 实际返回空结果的负例数 / 预期集合为空的样例数 |
+| 集合完全匹配率 `exact_set` | 实际 ID 集合等于预期集合的样例数 / 全部样例数；不比较相关结果之间的顺序 |
+| 漏检问题数 `missing_cases` | Top-K 中缺少至少一个预期 ID 的样例数 |
+| 无关命中问题数 `unexpected_cases` | Top-K 中含至少一个预期集合外 ID 的样例数 |
+
+漏检和无关命中可在同一个问题中同时发生，不应把两者相加当作失败问题总数。
+相关资料数超过 K 时，即使第一条正确也会存在 Top-K 内漏检；调整 K 的结果必须
+注明 K，不能直接声称算法变好了。首条命中不代表所有子问题都检索完整。
+分母为 0 时 JSON 的 `rate` 为 `null`，文本显示 `N/A`。JSON 的 rate 使用 0–1，
+文本显示百分比；空 ID 集合统一输出 `[]`，无相关资料样例的 `top1_hit` 为 `null`。
+
+JSON 报告含 `schema_version`、`top_k`、`summary` 和保持输入顺序的 `results`。
+每项结果包含查询、预期 ID、实际排序、漏检 ID、无关 ID 和标注说明，不包含资料正文。
+**报告仍含完整问题文本**，私有评测集和输出应保存在 `knowledge.local/` 或仓库外，
+不要提交真实客户问题或把报告当成已脱敏日志。
+
+### 基线与退出语义
+
+初始 Top-3 基线：首条命中 10/15（66.7%）、正确无命中 2/5（40.0%）、集合完全
+匹配 12/20（60.0%），4 条问题漏检、4 条问题含无关命中。逐条差异与文件 SHA-256
+见 [初始评测基线](examples/knowledge/eval_baseline.md)。这仅是小型虚构样例集，
+不代表真实客服准确率。以后比较时应固定同一份 FAQ、标签集与 K；调整标注必须
+说明原因，不得用当前错误输出替换人工预期来让分数提高。
+
+质量差异不会使命令失败：即使全部漏检，只要评测完整完成且报告成功写出，
+程序退出码仍是 0。参数、文件、引用 ID、检索或输出错误为 1；`-help` 为 0。
+这里不是 CI 质量门禁，普通 `go test` 验证的是计分逻辑与适配行为，不要求当前
+关键词检索答对所有评测题，也不会将已知误检写死成必须保留的测试断言。
+
+评测按样例顺序调用 `KnowledgeRetriever`，每条采用现有 2 秒检索预算，整轮 30 秒，
+Ctrl+C 可以取消。错误立即终止，不生成把错误当作无命中的部分报告。它直接测量
+检索器 Top-K，**不经过 Service 的 6000 字符资料预算、提示词或模型回复链路**；
+检索结果相关性与最终回答质量需要分别验证。
 
 ## 模型供应商与协议适配
 
@@ -892,6 +971,10 @@ Problem 错误响应、HTTP 回复幂等和过期 Trigger 等情况。协议
 查询与完整片段预算、不可变快照、取消/超时、重放跳过检索、检索期间新增消息、
 资料不进入系统角色或数据库，以及 FAQ → Service → Eino 的普通/流式接线。
 
+离线评测测试覆盖指标分母、缺失/无关集合、第二名命中、Top-K 预算、正负样例
+类别为空、报告不可变切片、严格标注读取、FAQ 标签引用完整性、检索错误与取消、
+文本/JSON 输出、输出失败，以及质量全未命中仍成功生成报告。它们不调用模型。
+
 修改 IDL 后，固定生成器版本并重新生成 DTO：
 
 ~~~bash
@@ -913,8 +996,9 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
 AI 回复共享并发上限、Zap 结构化日志、Prometheus 指标与可控优雅停机已经完成。
-第七阶段第一小步已完成可选本地 FAQ RAG。下一步可以先用一组代表性问题验证
-检索命中与无命中行为，再扩展文档切分、语义检索或可审计的结构化来源引用。
+第七阶段已完成可选本地 FAQ RAG 和 20 条离线检索评测基线。下一步可以根据
+评测差异选择改进关键词维护或增加语义检索，使用同一份标注比较漏检和误检，
+再扩展文档切分或可审计的结构化来源引用。
 后续也可以让 `ReplyObserver` 输出 OpenTelemetry Trace，或继续增加
 多调用方身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器
 SSE 客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在
