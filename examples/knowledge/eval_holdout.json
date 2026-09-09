@@ -1,0 +1,8 @@
+[
+  {"id":"holdout_hours","query":"演示商店星期六也有真人接待吗？","expected_ids":["demo-support-hours"],"note":"时段资料相关，节假日特殊安排仍须公告。"},
+  {"id":"holdout_mail","query":"演示商店修改登录密码时验证邮件没收到，垃圾邮件夹要看吗？","expected_ids":["demo-password-reset"],"note":"正文包含邮件检查建议。"},
+  {"id":"holdout_receipt","query":"演示商店付完款，要报销的凭证在哪个订单页面申请？","expected_ids":["demo-invoice"],"note":"申请已付款订单报销凭证指向发票入口。"},
+  {"id":"holdout_negation","query":"演示商店不用再讲发票了，我只需要找回密码的方法。","expected_ids":["demo-password-reset"],"note":"开票主题被明确排除。"},
+  {"id":"holdout_parcel","query":"演示商店包裹的快递单号是什么？","expected_ids":[],"note":"没有物流或订单实时信息。"},
+  {"id":"holdout_translation","query":"请把英文短语 reset password 翻译成中文。","expected_ids":[],"note":"翻译请求不需要商店密码处理政策。"}
+]

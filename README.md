@@ -6,6 +6,15 @@
 
 ## 当前进度
 
+第七阶段第三小步已加入可选的内存语义检索：
+
+- 保留 `keyword` 为默认；显式选择 `semantic` 后，使用独立的 `EMBEDDING_*`
+  配置生成 FAQ/问题向量，通过 Eino Embedder 接口接入通用 embeddings 协议；
+- 内存索引分批初始化，按余弦相似度和阈值检索，允许无命中；错误不降级成空结果；
+- 资料与问题使用同一模型，校验返回索引、向量维度和有限非零值；不引入向量数据库；
+- 普通回复/SSE 继续复用 `KnowledgeRetriever`；评测要求显式联网许可，记录模型、
+  阈值、维度和输入快照。自动化测试仅用模拟向量，不代表真实语义质量已验证。
+
 第七阶段第二小步已经加入模型无关的离线 FAQ 检索评测：
 
 - `cmd/knowledge-eval` 直接组装本地 FAQ 与 `internal/knowledge/evaluation`，不加载
@@ -229,7 +238,7 @@ type ReplyGenerator interface {
 ## 本地 FAQ 知识检索（RAG）
 
 RAG 在这里是“先找参考资料，再交给模型回答”，不是重新训练模型。当前检索器是
-确定性的关键词子串匹配，不具备语义向量检索或自动理解同义词的能力。
+默认采用确定性的关键词子串匹配，不自动理解同义词；可选语义检索见下文。
 
 ### 启用与演示
 
@@ -299,7 +308,8 @@ directory 应设置为项目根目录，也可以配置绝对路径。文件只�
 HTTP 层将普通检索故障映射成安全的 503 Problem，超时为 504、取消为 408；SSE
 尚未开始时也返回 Problem，而不是伪装成已开始的成功流。
 
-默认检索预算为 2 秒，调用方更早的 deadline 优先；Go 调用者可使用
+关键词模式默认检索预算为 2 秒，语义模式为 10 秒，可通过
+`KNOWLEDGE_RETRIEVAL_TIMEOUT` 调整；调用方更早的 deadline 优先。Go 调用者可使用
 `WithKnowledgeRetrievalTimeout` 调整。实现必须遵守 Context，程序不会为不合作
 的检索器创建可能泄漏的后台 goroutine。这个预算独立于原有的 75 秒模型生成预算。
 
@@ -340,9 +350,10 @@ go run ./cmd/knowledge-eval -top-k 1
 
 默认使用 `examples/knowledge/faq.json` 和 `examples/knowledge/eval_cases.json`，
 Top K 为 3；可通过 `-faq`、`-cases` 指定成对的本地文件，`-top-k` 允许 1–3，
-`-format` 允许 `text` / `json`。相对路径从进程工作目录解析。命令只使用本地 FAQ，
-不读取 `AI_*` 或 `KNOWLEDGE_FAQ_PATH`。Go 首次运行仍可能需要下载项目编译依赖，
-但评测过程不发出模型或其他服务请求。
+`-format` 允许 `text` / `json`。相对路径从进程工作目录解析。默认 `-retriever keyword`
+只使用本地 FAQ，不读取 AI/Embedding 配置，环境中的 `KNOWLEDGE_RETRIEVER=semantic`
+不能改变这个默认值。Go 首次运行仍可能需要下载编译依赖，但默认评测不发服务请求。
+语义模式及其明确的联网许可见下节。
 
 标注文件是 JSON 数组，每项包含 `id`、`query`、`expected_ids` 和可选 `note`。
 `expected_ids` 是人工判断的**相关参考资料无序集合**，不是当前算法的返回结果，
@@ -352,7 +363,7 @@ Top K 为 3；可通过 `-faq`、`-cases` 指定成对的本地文件，`-top-k`
 文件最多 1 MiB / 1000 条，单个问题最多 512 个 Unicode 字符，不静默截断问题。
 加载时拒绝重复字段、未知字段、重复样例 ID、重复参考 ID、非法文本、尾随 JSON；
 命令还校验标签 ID 存在于本次 FAQ 中，避免把标注错字误算成算法漏检。
-FAQ 只新增返回 ID 副本的只读方法，现有关键词匹配、排序和资料正文保持不变。
+FAQ 提供 ID 和资料快照的只读副本，现有关键词匹配、排序和资料正文保持不变。
 
 ### 指标定义
 
@@ -370,7 +381,8 @@ FAQ 只新增返回 ID 副本的只读方法，现有关键词匹配、排序和
 分母为 0 时 JSON 的 `rate` 为 `null`，文本显示 `N/A`。JSON 的 rate 使用 0–1，
 文本显示百分比；空 ID 集合统一输出 `[]`，无相关资料样例的 `top1_hit` 为 `null`。
 
-JSON 报告含 `schema_version`、`top_k`、`summary` 和保持输入顺序的 `results`。
+JSON 报告含 `schema_version`、`top_k`、`summary` 和保持输入顺序的 `results`，
+命令还添加 `retrieval` 参数与快照信息，方便区分关键词/语义实验。
 每项结果包含查询、预期 ID、实际排序、漏检 ID、无关 ID 和标注说明，不包含资料正文。
 **报告仍含完整问题文本**，私有评测集和输出应保存在 `knowledge.local/` 或仓库外，
 不要提交真实客户问题或把报告当成已脱敏日志。
@@ -388,10 +400,94 @@ JSON 报告含 `schema_version`、`top_k`、`summary` 和保持输入顺序的 `
 这里不是 CI 质量门禁，普通 `go test` 验证的是计分逻辑与适配行为，不要求当前
 关键词检索答对所有评测题，也不会将已知误检写死成必须保留的测试断言。
 
-评测按样例顺序调用 `KnowledgeRetriever`，每条采用现有 2 秒检索预算，整轮 30 秒，
+关键词评测按样例顺序调用 `KnowledgeRetriever`，每条 2 秒预算，整轮默认 30 秒，
 Ctrl+C 可以取消。错误立即终止，不生成把错误当作无命中的部分报告。它直接测量
 检索器 Top-K，**不经过 Service 的 6000 字符资料预算、提示词或模型回复链路**；
 检索结果相关性与最终回答质量需要分别验证。
+
+## 可选内存语义检索
+
+流程是：启动时将 FAQ 的 `title + 换行 + content` 转为向量；收到问题时，生成问题
+向量，计算余弦相似度，按得分选择超过阈值的 Top-K，再把原始资料传给客服模型。
+资料 ID、source 和人工 keywords 不加入向量化文本，避免关键词标签主导语义表征。
+实现遵循[官方 Embeddings 文档](https://platform.openai.com/docs/guides/embeddings)
+的批量输入、float 向量输出格式；兼容端点必须提供同样的 `/embeddings` JSON 协议。
+
+### 分层与安全边界
+
+- `internal/knowledge/semantic` 只依赖中性的 `Embedder.Embed` 接口和业务资料类型。
+- `internal/ai/eino/embedding.go` 将 Eino `embedding.Embedder` 接口接到现有 SDK，
+  不需要增加厂商专用检索器。当前协议组件校验 response index 并恢复输入顺序，
+  拒绝缺失/重复 index、维度异常、零向量和非有限数，防止资料与向量错位。
+- `internal/bootstrap` 选择关键词/语义实现。业务服务、Hertz DTO、SSE 事件与数据库
+  结构不变；查询仍来自原 Trigger，幂等与过期回复保护不变。
+- Embedding 配置不继承 `AI_*` / `OPENAI_*`，不默认选择模型或地址。客服回复模型
+  与 Embedding 模型是不同职责，不要把 `AI_MODEL` 的值直接复制过来。
+- 只发送资料标题、正文或当前检索问题，不发送聊天历史。启用语义检索意味着这些
+  数据也会发送给 Embedding 供应商，可能与客服模型供应商不同，需单独确认授权。
+- API root 必须 HTTPS（回环测试地址可 HTTP），不能含凭据、query 或 fragment；
+  拒绝重定向，不自动重试。协议响应最多 8 MiB，错误不输出供应商原文或密钥。
+
+### 开启方式
+
+在你实际加载的本地环境中配置（以下模型、地址、密钥为占位说明）：
+
+~~~dotenv
+KNOWLEDGE_FAQ_PATH=examples/knowledge/faq.json
+KNOWLEDGE_RETRIEVER=semantic
+KNOWLEDGE_MIN_SCORE=0.7
+KNOWLEDGE_RETRIEVAL_TIMEOUT=10s
+KNOWLEDGE_INDEX_TIMEOUT=2m
+EMBEDDING_BASE_URL=你的兼容服务API根地址
+EMBEDDING_MODEL=该服务支持的Embedding模型ID
+EMBEDDING_API_KEY=你的Embedding服务密钥
+~~~
+
+加载环境后按原方式启动 `cmd/server` 或 `cmd/console`。`.env.example` 不自动加载。
+`KNOWLEDGE_RETRIEVER=keyword` 可切回本地关键词检索；此时忽略 Embedding 配置。
+FAQ 路径留空且使用 keyword 时仍关闭 RAG；显式 semantic 却没有 FAQ 路径会报配置错误。
+
+`0.7` 只是未校准的初始候选，不是概率、置信度或通用最佳阈值。阈值允许 -1 到 1，
+得分等于阈值也保留；同分保持资料顺序。不同模型的得分分布可能不同，换模型后需要
+重建全部向量并重新评测阈值。只有文档/问题使用同一模型和维度，比较才有意义。
+
+索引最多 1000 条、每批 16 条，向量最多 16384 维；所有文档必须先通过现有 FAQ
+校验。初始化单独受 `KNOWLEDGE_INDEX_TIMEOUT` 约束，失败则阻止启动，不部分上线。
+文档应用层字符上限并不保证满足每个供应商的 token 上限；拒绝过长文本时，应调整
+资料或模型，本步不会静默截断政策。索引只有内存副本，重启/换配置都会重新请求
+全部文档向量，可能重复计费；没有落盘缓存、热更新、文档上传或向量数据库。
+
+每个索引同时只进行一次查询 Embedding 调用，等待名额也计入检索超时；这避免
+请求洪峰直接转成大量向量调用。该名额独立于 AI 回复槽，且仅限当前进程/索引。
+HTTP 超时采用检索预算；更早的 Context deadline 优先。所有配置时长要求大于 0
+且最多 10 分钟，默认 keyword 2 秒、semantic 10 秒、建索引 2 分钟。
+
+### 语义评测与真实验证
+
+原命令继续完全离线。以下命令则**明确允许发送 FAQ 和问题、可能产生费用**，需先
+加载上面的真实 Embedding 配置，不需要启动客服服务器或配置客服回复模型：
+
+~~~bash
+go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -timeout 5m -format json
+go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -cases examples/knowledge/eval_holdout.json -timeout 5m -format json
+~~~
+
+`-retriever semantic` 与 `-allow-embedding-api` 缺一不可；标签/FAQ 校验在任何联网前
+完成。`-timeout` 控制整个评测循环（默认 30 秒、最多 30 分钟），不包含另行受限的
+初始化。每条采用环境中的检索超时；联网故障不是“无命中”，会终止本轮且不输出
+部分成绩。有效完成但质量差仍退出 0，和离线评测一致。
+
+报告记录 backend、embedding_model、min_score、dimensions、document_format、
+query_timeout 和语料/标注 SHA-256；不含密钥或 endpoint。这里的快照摘要基于加载后
+资料/样例的规范 JSON，并非初始基线文档中的原始文件摘要。比较时固定 K、资料、
+标签、文档格式，记录模型版本与参数；模型服务端别名更新也可能导致效果变化。
+报告仍含问题原文和配置模型名，不能当作已脱敏公开日志。
+
+原 20 条基线及 FAQ 不改动；新增 6 条 `eval_holdout.json` 可作为小型独立验证题，
+不要一边看验证题结果一边调阈值，再把它当作未见数据成绩。需要同时看漏检、无关
+命中及排序，不能只看召回。语义相似度也可能不理解否定、代码标识符或回答充分性。
+目前仅完成模拟向量/本地 HTTP/SSE 业务接线验证，**尚未运行真实 Embedding 评测，
+不能声称语义检索比 66.7% 的关键词首条命中基线更好**。
 
 ## 模型供应商与协议适配
 
@@ -996,9 +1092,9 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 
 当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
 AI 回复共享并发上限、Zap 结构化日志、Prometheus 指标与可控优雅停机已经完成。
-第七阶段已完成可选本地 FAQ RAG 和 20 条离线检索评测基线。下一步可以根据
-评测差异选择改进关键词维护或增加语义检索，使用同一份标注比较漏检和误检，
-再扩展文档切分或可审计的结构化来源引用。
+第七阶段已完成本地 FAQ RAG、20 条离线基线和可切换内存语义检索。下一步应选择
+可用的 Embedding 服务，以非敏感数据运行基线和独立验证题，记录真实效果与延迟，
+再决定阈值调整、混合检索、文档切分或可审计来源引用是否必要。
 后续也可以让 `ReplyObserver` 输出 OpenTelemetry Trace，或继续增加
 多调用方身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器
 SSE 客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在

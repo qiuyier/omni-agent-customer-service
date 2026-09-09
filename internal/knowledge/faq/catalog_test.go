@@ -15,4 +15,9 @@ func TestReferenceIDsOwnsCopy(t *testing.T) {
 	if r.ReferenceIDs()[0] != "one" {
 		t.Fatal("returned IDs mutate retriever")
 	}
+	refs := r.Snippets()
+	refs[0].Content = "changed"
+	if r.Snippets()[0].Content == "changed" {
+		t.Fatal("returned snippets mutate retriever")
+	}
 }

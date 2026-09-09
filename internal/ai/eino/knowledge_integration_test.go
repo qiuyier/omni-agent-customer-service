@@ -10,22 +10,59 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/schema"
 
 	einoadapter "github.com/qiuyier/omni-agent-customer-service/internal/ai/eino"
 	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/faq"
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/semantic"
 )
 
 func TestKnowledgeFAQServiceAndEinoIntegration(t *testing.T) {
+	testKnowledgeServiceIntegration(t, false)
+}
+
+func TestKnowledgeSemanticServiceAndEinoIntegration(t *testing.T) {
+	testKnowledgeServiceIntegration(t, true)
+}
+
+// Mock vectors test the semantic -> service -> Eino wiring, not language quality.
+type integrationEmbedding func(context.Context, []string) ([][]float64, error)
+
+func (f integrationEmbedding) EmbedStrings(ctx context.Context, texts []string, _ ...embedding.Option) ([][]float64, error) {
+	return f(ctx, texts)
+}
+
+func testKnowledgeServiceIntegration(t *testing.T, semanticMode bool) {
 	entries := []faq.Entry{
 		{ID: "returns", Title: "退货条件", Source: "faq://returns", Content: "示例退货需要保持包装完整。", Keywords: []string{"退货"}},
 		{ID: "invoice", Title: "开票说明", Source: "faq://invoice", Content: "示例发票需要提供开票抬头。", Keywords: []string{"发票"}},
 	}
-	retriever, err := faq.New(entries)
+	keyword, err := faq.New(entries)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var retriever customerservice.KnowledgeRetriever = keyword
+	if semanticMode {
+		embedder, err := einoadapter.NewEmbeddingAdapter(integrationEmbedding(func(_ context.Context, texts []string) ([][]float64, error) {
+			vectors := make([][]float64, len(texts))
+			for i, text := range texts {
+				vectors[i] = []float64{1, 0}
+				if strings.Contains(text, "开票") || text == "我需要报销凭证" {
+					vectors[i] = []float64{0, 1}
+				}
+			}
+			return vectors, nil
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		retriever, err = semantic.New(context.Background(), keyword.Snippets(), embedder, semantic.Config{MinScore: 0.8})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	var retrievalCalls, nextID atomic.Int64
 	model := &recordingAgenticModel{
@@ -64,6 +101,9 @@ func TestKnowledgeFAQServiceAndEinoIntegration(t *testing.T) {
 	for index, mode := range []string{"generate", "stream"} {
 		t.Run(mode, func(t *testing.T) {
 			question := "请说明" + entries[index].Keywords[0] + "的要求"
+			if semanticMode {
+				question = []string{"我想把商品退回去", "我需要报销凭证"}[index]
+			}
 			received, err := service.ReceiveMessage(ctx, customerservice.ReceiveMessageCommand{
 				ConversationID: "conversation-" + mode, CustomerID: "customer-" + mode,
 				Channel: "web", ExternalMessageID: "external-" + mode, Content: question,

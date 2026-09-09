@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/evaluation"
@@ -23,6 +26,8 @@ func TestRunOfflineReport(t *testing.T) {
 	t.Setenv("AI_PROVIDER", "not-a-provider")
 	t.Setenv("AI_API_KEY", "")
 	t.Setenv("OPENAI_API_KEY", "")
+	t.Setenv("KNOWLEDGE_RETRIEVER", "semantic")
+	t.Setenv("EMBEDDING_BASE_URL", "http://invalid.invalid")
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			var out, stderr bytes.Buffer
@@ -45,6 +50,54 @@ func TestRunOfflineReport(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSemanticEvaluationRequiresOptInAndRecordsConfiguration(t *testing.T) {
+	var calls atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		var body struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		data := make([]map[string]any, len(body.Input))
+		for i := range data {
+			data[i] = map[string]any{"index": i, "embedding": []float64{1, 0}}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"data": data})
+	}))
+	defer s.Close()
+	t.Setenv("EMBEDDING_BASE_URL", s.URL+"/v1")
+	t.Setenv("EMBEDDING_API_KEY", "private-test-key")
+	t.Setenv("EMBEDDING_MODEL", "test-vectors")
+	t.Setenv("KNOWLEDGE_MIN_SCORE", "0.8")
+	args := append(exampleArgs(), "-retriever", "semantic", "-format", "json")
+	var out bytes.Buffer
+	if err := run(context.Background(), args, &out, io.Discard); err == nil || calls.Load() != 0 || out.Len() != 0 {
+		t.Fatal("semantic call without opt-in")
+	}
+	if err := run(context.Background(), append(args, "-allow-embedding-api"), &out, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	var report evaluation.Report
+	if err := json.Unmarshal(out.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	info := report.Retrieval
+	if info == nil || info.Backend != "semantic" || info.EmbeddingModel != "test-vectors" || info.Dimensions != 2 || *info.MinScore != 0.8 || len(info.CorpusSHA256) != 64 || len(info.CasesSHA256) != 64 {
+		t.Fatalf("metadata=%+v", info)
+	}
+	if calls.Load() != 21 {
+		t.Fatalf("calls=%d, want one index batch and 20 queries", calls.Load())
+	}
+	if strings.Contains(out.String(), "private-test-key") || strings.Contains(out.String(), s.URL) {
+		t.Fatal("report leaks endpoint or credentials")
+	}
+	// This is a wiring test using deliberately uninformative vectors, not an
+	// assertion that semantic retrieval improves the real FAQ quality baseline.
 }
 
 func TestRunAllQualityMissesStillSucceeds(t *testing.T) {

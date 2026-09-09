@@ -140,6 +140,7 @@ func run() error {
 	}
 	if knowledgeRetriever != nil {
 		serviceOptions = append(serviceOptions, customerservice.WithKnowledgeRetriever(knowledgeRetriever))
+		serviceOptions = append(serviceOptions, customerservice.WithKnowledgeRetrievalTimeout(knowledgeConfig.RetrievalTimeout))
 	}
 	service, err := customerservice.New(
 		repositoryRuntime.Repository,

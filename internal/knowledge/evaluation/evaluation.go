@@ -49,15 +49,36 @@ type Result struct {
 }
 
 type Report struct {
-	SchemaVersion int      `json:"schema_version"`
-	TopK          int      `json:"top_k"`
-	Summary       Summary  `json:"summary"`
-	Results       []Result `json:"results"`
+	Retrieval     *RetrievalInfo `json:"retrieval,omitempty"`
+	SchemaVersion int            `json:"schema_version"`
+	TopK          int            `json:"top_k"`
+	Summary       Summary        `json:"summary"`
+	Results       []Result       `json:"results"`
+}
+
+// RetrievalInfo records comparison settings, never credentials or endpoint URLs.
+type RetrievalInfo struct {
+	Backend        string   `json:"backend"`
+	EmbeddingModel string   `json:"embedding_model,omitempty"`
+	MinScore       *float64 `json:"min_score,omitempty"`
+	Dimensions     int      `json:"dimensions,omitempty"`
+	DocumentFormat string   `json:"document_format,omitempty"`
+	QueryTimeout   string   `json:"query_timeout"`
+	CorpusSHA256   string   `json:"corpus_sha256"`
+	CasesSHA256    string   `json:"cases_sha256"`
 }
 
 // Run is sequential and deterministic: case order and retriever ranking are
 // preserved. Retrieval failures abort the run; they are never scored as misses.
 func Run(ctx context.Context, retriever customerservice.KnowledgeRetriever, cases []Case, topK int) (Report, error) {
+	return RunWithTimeout(ctx, retriever, cases, topK, customerservice.DefaultKnowledgeRetrievalTimeout)
+}
+
+// RunWithTimeout permits the same explicit remote retrieval budget as the app.
+func RunWithTimeout(ctx context.Context, retriever customerservice.KnowledgeRetriever, cases []Case, topK int, queryTimeout time.Duration) (Report, error) {
+	if queryTimeout <= 0 {
+		return Report{}, fmt.Errorf("evaluation: query timeout must be positive")
+	}
 	if ctx == nil || retriever == nil {
 		return Report{}, fmt.Errorf("evaluation: context and retriever are required")
 	}
@@ -72,7 +93,7 @@ func Run(ctx context.Context, retriever customerservice.KnowledgeRetriever, case
 		if err := ctx.Err(); err != nil {
 			return Report{}, err
 		}
-		queryCtx, cancel := context.WithTimeout(ctx, customerservice.DefaultKnowledgeRetrievalTimeout)
+		queryCtx, cancel := context.WithTimeout(ctx, queryTimeout)
 		snippets, err := retriever.Retrieve(queryCtx, customerservice.KnowledgeQuery{Text: c.Query, Limit: topK})
 		if contextErr := queryCtx.Err(); contextErr != nil {
 			err = contextErr

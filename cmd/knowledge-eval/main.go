@@ -1,9 +1,10 @@
-// Command knowledge-eval evaluates the local FAQ retriever without an AI model,
-// network service, environment credentials, or database.
+// Command knowledge-eval is offline by default. Semantic evaluation requires
+// both a backend flag and explicit permission to call the embedding endpoint.
 package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -12,10 +13,13 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
+	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/evaluation"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/faq"
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/semantic"
 )
 
 func main() {
@@ -34,6 +38,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	casesPath := flags.String("cases", "examples/knowledge/eval_cases.json", "human-labelled relevance cases")
 	topK := flags.Int("top-k", customerservice.MaxKnowledgeSnippets, "maximum references per query (1-3)")
 	format := flags.String("format", "text", "report format: text or json")
+	backend := flags.String("retriever", "keyword", "retriever: keyword or semantic")
+	allowEmbedding := flags.Bool("allow-embedding-api", false, "allow sending FAQ and queries to EMBEDDING_BASE_URL; may incur charges")
+	timeout := flags.Duration("timeout", evaluation.DefaultTimeout, "evaluation timeout, excluding index initialization")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -42,6 +49,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	}
 	if flags.NArg() != 0 || (*format != "text" && *format != "json") || *topK < 1 || *topK > customerservice.MaxKnowledgeSnippets {
 		return fmt.Errorf("expected named flags, format text/json and top-k between 1 and %d", customerservice.MaxKnowledgeSnippets)
+	}
+	if (*backend != "keyword" && *backend != "semantic") || *timeout <= 0 || *timeout > 30*time.Minute {
+		return fmt.Errorf("retriever must be keyword/semantic and timeout must be positive, at most 30m")
+	}
+	if *backend == "semantic" && !*allowEmbedding {
+		return fmt.Errorf("semantic evaluation requires -allow-embedding-api; FAQ and queries will be sent to the configured embedding service")
 	}
 	retriever, err := faq.Load(*faqPath)
 	if err != nil {
@@ -62,12 +75,45 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 			}
 		}
 	}
-	ctx, cancel := context.WithTimeout(ctx, evaluation.DefaultTimeout)
+	var selected customerservice.KnowledgeRetriever = retriever
+	queryTimeout := customerservice.DefaultKnowledgeRetrievalTimeout
+	info := &evaluation.RetrievalInfo{Backend: *backend, CorpusSHA256: fingerprint(retriever.Snippets()), CasesSHA256: fingerprint(cases)}
+	if *backend == "semantic" {
+		// The command-line backend choice is authoritative; an environment file
+		// cannot silently make a default keyword evaluation access the network.
+		lookup := func(name string) (string, bool) {
+			switch name {
+			case "KNOWLEDGE_RETRIEVER":
+				return "semantic", true
+			case "KNOWLEDGE_FAQ_PATH":
+				return *faqPath, true
+			default:
+				return os.LookupEnv(name)
+			}
+		}
+		config, err := bootstrap.ResolveKnowledgeConfig(lookup)
+		if err != nil {
+			return err
+		}
+		index, err := bootstrap.NewSemanticKnowledgeRetriever(ctx, config, retriever.Snippets())
+		if err != nil {
+			return err
+		}
+		selected = index
+		queryTimeout = config.RetrievalTimeout
+		info.EmbeddingModel = config.Embedding.Model
+		info.MinScore = &config.MinScore
+		info.Dimensions = index.Dimensions()
+		info.DocumentFormat = semantic.DocumentFormat
+	}
+	info.QueryTimeout = queryTimeout.String()
+	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
-	report, err := evaluation.Run(ctx, retriever, cases, *topK)
+	report, err := evaluation.RunWithTimeout(ctx, selected, cases, *topK, queryTimeout)
 	if err != nil {
 		return err
 	}
+	report.Retrieval = info
 	if *format == "json" {
 		encoder := json.NewEncoder(stdout)
 		encoder.SetIndent("", "  ")
@@ -76,9 +122,20 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	return writeText(stdout, report)
 }
 
+func fingerprint(value any) string {
+	data, _ := json.Marshal(value) // Only JSON-serializable reference/case structs.
+	return fmt.Sprintf("%x", sha256.Sum256(data))
+}
+
 func writeText(w io.Writer, report evaluation.Report) error {
 	var b strings.Builder
 	fmt.Fprintf(&b, "FAQ 检索评测：%d 条，Top K = %d（仅检索，不评价模型回答）\n", report.Summary.Cases, report.TopK)
+	if info := report.Retrieval; info != nil {
+		fmt.Fprintf(&b, "检索器：%s；查询超时：%s\n资料快照：%s\n标注快照：%s\n", info.Backend, info.QueryTimeout, info.CorpusSHA256, info.CasesSHA256)
+		if info.MinScore != nil {
+			fmt.Fprintf(&b, "Embedding 模型：%q；维度：%d；阈值：%.4f；文档格式：%s\n", info.EmbeddingModel, info.Dimensions, *info.MinScore, info.DocumentFormat)
+		}
+	}
 	for _, item := range []struct {
 		name  string
 		value evaluation.Metric
