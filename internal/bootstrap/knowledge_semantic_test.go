@@ -26,7 +26,7 @@ func TestSemanticKnowledgeConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if config.RetrievalTimeout != 10*time.Second || config.IndexTimeout != 2*time.Minute || config.MinScore != 0.8 || config.Embedding.Model != "test-vectors" {
+	if config.RetrievalTimeout != 10*time.Second || config.IndexTimeout != 2*time.Minute || config.MinScore != 0.8 || config.Embedding.Model != "test-vectors" || config.Embedding.BatchSize != 16 {
 		t.Fatal("defaults")
 	}
 	for _, item := range [][2]string{{"EMBEDDING_API_KEY", ""}, {"EMBEDDING_MODEL", ""}, {"EMBEDDING_BASE_URL", "http://example.test"}, {"KNOWLEDGE_MIN_SCORE", "NaN"}, {"KNOWLEDGE_MIN_SCORE", "2"}, {"KNOWLEDGE_RETRIEVAL_TIMEOUT", "0s"}, {"KNOWLEDGE_INDEX_TIMEOUT", "bad"}, {"KNOWLEDGE_FAQ_PATH", ""}} {
@@ -46,8 +46,36 @@ func TestSemanticKnowledgeConfiguration(t *testing.T) {
 	}
 }
 
+func TestKnowledgeEmbeddingBatchConfiguration(t *testing.T) {
+	for value, want := range map[string]int{"": 16, "  ": 16, "1": 1, " 2 ": 2, "10": 10, "16": 16} {
+		values := semanticSettings("https://example.test/v1")
+		values["EMBEDDING_BATCH_SIZE"] = value
+		config, err := bootstrap.ResolveKnowledgeConfig(environment(values))
+		if err != nil || config.Embedding.BatchSize != want {
+			t.Fatal(value, config.Embedding.BatchSize, err)
+		}
+	}
+	for _, value := range []string{"0", "-1", "17", "1.5", "sensitive-marker", "99999999999999999999999999999"} {
+		values := semanticSettings("https://example.test/v1")
+		values["EMBEDDING_BATCH_SIZE"] = value
+		_, err := bootstrap.ResolveKnowledgeConfig(environment(values))
+		if !errors.Is(err, bootstrap.ErrInvalidKnowledgeConfiguration) || !strings.Contains(err.Error(), "EMBEDDING_BATCH_SIZE") || strings.Contains(err.Error(), "sensitive-marker") {
+			t.Fatal(value, err)
+		}
+		values["KNOWLEDGE_RETRIEVER"] = "keyword"
+		if _, err := bootstrap.ResolveKnowledgeConfig(environment(values)); err != nil {
+			t.Fatal("keyword must ignore batch settings", err)
+		}
+		values["KNOWLEDGE_FAQ_PATH"] = ""
+		if _, err := bootstrap.ResolveKnowledgeConfig(environment(values)); err != nil {
+			t.Fatal("disabled knowledge must ignore batch settings", err)
+		}
+	}
+}
+
 func TestSemanticKnowledgeLocalEndpoint(t *testing.T) {
 	var calls atomic.Int32
+	batches := make(chan int, 8)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		var body struct {
@@ -55,6 +83,14 @@ func TestSemanticKnowledgeLocalEndpoint(t *testing.T) {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
+		}
+		select {
+		case batches <- len(body.Input):
+		default:
+			t.Error("unexpected extra embedding request")
+		}
+		if len(body.Input) > 2 {
+			t.Error("configured batch limit exceeded")
 		}
 		data := make([]map[string]any, len(body.Input))
 		for i, text := range body.Input {
@@ -70,7 +106,9 @@ func TestSemanticKnowledgeLocalEndpoint(t *testing.T) {
 		json.NewEncoder(w).Encode(map[string]any{"data": data})
 	}))
 	defer s.Close()
-	c, err := bootstrap.ResolveKnowledgeConfig(environment(semanticSettings(s.URL + "/v1")))
+	values := semanticSettings(s.URL + "/v1")
+	values["EMBEDDING_BATCH_SIZE"] = "2"
+	c, err := bootstrap.ResolveKnowledgeConfig(environment(values))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,15 +116,20 @@ func TestSemanticKnowledgeLocalEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if calls.Load() != 1 {
-		t.Fatal("index must be built once", calls.Load())
+	if calls.Load() != 2 {
+		t.Fatal("three documents must use two index batches", calls.Load())
 	}
 	got, err := r.Retrieve(context.Background(), customerservice.KnowledgeQuery{Text: "口令忘了", Limit: 3})
 	if err != nil || len(got) != 1 || got[0].ID != "demo-password-reset" {
 		t.Fatal(got, err)
 	}
-	if calls.Load() != 2 {
+	if calls.Load() != 3 {
 		t.Fatal("query should only embed itself")
+	}
+	for _, want := range []int{2, 1, 1} {
+		if got := <-batches; got != want {
+			t.Fatal("incorrect batch size", got, want)
+		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

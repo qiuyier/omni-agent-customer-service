@@ -18,10 +18,17 @@ import (
 
 var ErrEmbeddingRequest = errors.New("embedding: request or response failed")
 
+const DefaultEmbeddingBatchSize = 16
+
+// MaxEmbeddingBatchSize bounds request resources independently of a provider's limit.
+const MaxEmbeddingBatchSize = 16
+
 // EmbeddingConfig Embedding settings are deliberately independent of chat provider settings.
 type EmbeddingConfig struct {
 	APIKey, Model, BaseURL string
 	Timeout                time.Duration
+	// Zero keeps the default; otherwise use 1..MaxEmbeddingBatchSize.
+	BatchSize int
 }
 type EmbeddingAdapter struct{ model embedding.Embedder }
 
@@ -57,7 +64,7 @@ func (e *EmbeddingAdapter) Embed(ctx context.Context, texts []string) ([][]float
 
 // ValidateEmbeddingConfig performs no network requests and never prints secrets.
 func ValidateEmbeddingConfig(c EmbeddingConfig) error {
-	if strings.TrimSpace(c.APIKey) == "" || strings.TrimSpace(c.Model) == "" || c.Timeout <= 0 {
+	if strings.TrimSpace(c.APIKey) == "" || strings.TrimSpace(c.Model) == "" || c.Timeout <= 0 || c.BatchSize < 0 || c.BatchSize > MaxEmbeddingBatchSize {
 		return ErrInvalidConfiguration
 	}
 	base := strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
@@ -86,18 +93,23 @@ func NewCompatibleEmbedder(ctx context.Context, c EmbeddingConfig) (*EmbeddingAd
 	client := &http.Client{Timeout: c.Timeout, Transport: boundedEmbeddingTransport{}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	// Unlike NewClient, this service constructor does not read OPENAI_* env vars.
 	service := openai.NewEmbeddingService(option.WithAPIKey(strings.TrimSpace(c.APIKey)), option.WithBaseURL(strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")+"/"), option.WithHTTPClient(client), option.WithMaxRetries(0))
-	return NewEmbeddingAdapter(&compatibleEmbedding{service: service, model: strings.TrimSpace(c.Model)})
+	batchSize := c.BatchSize
+	if batchSize == 0 {
+		batchSize = DefaultEmbeddingBatchSize
+	}
+	return NewEmbeddingAdapter(&compatibleEmbedding{service: service, model: strings.TrimSpace(c.Model), batchSize: batchSize})
 }
 
 type compatibleEmbedding struct {
-	service openai.EmbeddingService
-	model   string
+	service   openai.EmbeddingService
+	model     string
+	batchSize int
 }
 
 var _ embedding.Embedder = (*compatibleEmbedding)(nil)
 
 func (e *compatibleEmbedding) EmbedStrings(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error) {
-	if ctx == nil || len(texts) < 1 || len(texts) > 16 {
+	if ctx == nil || len(texts) < 1 || len(texts) > e.batchSize {
 		return nil, ErrInvalidConfiguration
 	}
 	selected := embedding.GetCommonOptions(nil, opts...)

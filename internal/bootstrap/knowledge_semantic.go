@@ -47,7 +47,14 @@ func resolveKnowledgeSettings(lookup LookupEnv) (KnowledgeConfig, error) {
 			return KnowledgeConfig{}, fmt.Errorf("%w: KNOWLEDGE_MIN_SCORE must be finite and between -1 and 1", ErrInvalidKnowledgeConfiguration)
 		}
 	}
-	c.Embedding = einoadapter.EmbeddingConfig{APIKey: strings.TrimSpace(environmentValue(lookup, "EMBEDDING_API_KEY")), Model: strings.TrimSpace(environmentValue(lookup, "EMBEDDING_MODEL")), BaseURL: strings.TrimSpace(environmentValue(lookup, "EMBEDDING_BASE_URL")), Timeout: c.RetrievalTimeout}
+	batchSize := einoadapter.DefaultEmbeddingBatchSize
+	if value := strings.TrimSpace(environmentValue(lookup, "EMBEDDING_BATCH_SIZE")); value != "" {
+		batchSize, err = strconv.Atoi(value)
+		if err != nil || batchSize < 1 || batchSize > einoadapter.MaxEmbeddingBatchSize {
+			return KnowledgeConfig{}, fmt.Errorf("%w: EMBEDDING_BATCH_SIZE must be an integer between 1 and %d", ErrInvalidKnowledgeConfiguration, einoadapter.MaxEmbeddingBatchSize)
+		}
+	}
+	c.Embedding = einoadapter.EmbeddingConfig{APIKey: strings.TrimSpace(environmentValue(lookup, "EMBEDDING_API_KEY")), Model: strings.TrimSpace(environmentValue(lookup, "EMBEDDING_MODEL")), BaseURL: strings.TrimSpace(environmentValue(lookup, "EMBEDDING_BASE_URL")), Timeout: c.RetrievalTimeout, BatchSize: batchSize}
 	if err := einoadapter.ValidateEmbeddingConfig(c.Embedding); err != nil {
 		return KnowledgeConfig{}, fmt.Errorf("%w: semantic mode requires EMBEDDING_API_KEY, EMBEDDING_MODEL and a safe EMBEDDING_BASE_URL API root", ErrInvalidKnowledgeConfiguration)
 	}
@@ -77,7 +84,7 @@ func NewSemanticKnowledgeRetriever(ctx context.Context, c KnowledgeConfig, snipp
 	embedder, err := einoadapter.NewCompatibleEmbedder(ctx, c.Embedding)
 	if err == nil {
 		var r *semantic.Retriever
-		r, err = semantic.New(ctx, snippets, embedder, semantic.Config{MinScore: c.MinScore})
+		r, err = semantic.New(ctx, snippets, embedder, semantic.Config{MinScore: c.MinScore, BatchSize: c.Embedding.BatchSize})
 		if err == nil {
 			return r, nil
 		}

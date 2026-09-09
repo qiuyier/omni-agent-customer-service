@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -80,7 +81,7 @@ func TestVectorAndInputValidation(t *testing.T) {
 	if _, err := r.Retrieve(context.Background(), customerservice.KnowledgeQuery{Text: "q", Limit: 1}); err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range []Config{{-2}, {2}, {math.NaN()}} {
+	for _, c := range []Config{{MinScore: -2}, {MinScore: 2}, {MinScore: math.NaN()}} {
 		if _, err := New(context.Background(), []customerservice.KnowledgeSnippet{doc("a")}, e, c); !errors.Is(err, ErrInvalidConfig) {
 			t.Fatal(err)
 		}
@@ -98,6 +99,67 @@ func TestVectorAndInputValidation(t *testing.T) {
 	r.embedder = embedFunc(func(context.Context, []string) ([][]float64, error) { return [][]float64{{1}}, nil })
 	if _, err := r.Retrieve(context.Background(), customerservice.KnowledgeQuery{Text: "q", Limit: 1}); !errors.Is(err, ErrInvalidData) {
 		t.Fatal(err)
+	}
+}
+
+func TestConfigurableIndexBatches(t *testing.T) {
+	for _, batchSize := range []int{0, 1, 2, 10, 16} {
+		t.Run(fmt.Sprint(batchSize), func(t *testing.T) {
+			docs := make([]customerservice.KnowledgeSnippet, 33)
+			wantTexts := make([]string, len(docs))
+			for i := range docs {
+				docs[i] = doc(fmt.Sprint(i))
+				wantTexts[i] = DocumentText(docs[i])
+			}
+			var batches []int
+			var gotTexts []string
+			e := embedFunc(func(_ context.Context, texts []string) ([][]float64, error) {
+				batches = append(batches, len(texts))
+				gotTexts = append(gotTexts, texts...)
+				vectors := make([][]float64, len(texts))
+				for i := range vectors {
+					vectors[i] = []float64{1, 0}
+				}
+				return vectors, nil
+			})
+			r, err := New(context.Background(), docs, e, Config{BatchSize: batchSize})
+			if err != nil {
+				t.Fatal(err)
+			}
+			effective := batchSize
+			if effective == 0 {
+				effective = 16
+			}
+			var wantBatches []int
+			for remaining := len(docs); remaining > 0; remaining -= effective {
+				wantBatches = append(wantBatches, min(remaining, effective))
+			}
+			if !slices.Equal(batches, wantBatches) || !slices.Equal(gotTexts, wantTexts) {
+				t.Fatalf("batches=%v want=%v, text order preserved=%t", batches, wantBatches, slices.Equal(gotTexts, wantTexts))
+			}
+			if _, err := r.Retrieve(context.Background(), customerservice.KnowledgeQuery{Text: "query", Limit: 1}); err != nil {
+				t.Fatal(err)
+			}
+			if len(batches) != len(wantBatches)+1 || batches[len(batches)-1] != 1 || gotTexts[len(gotTexts)-1] != "query" {
+				t.Fatal("query must embed only itself", batches)
+			}
+		})
+	}
+}
+
+func TestInvalidBatchSizeFailsBeforeEmbedding(t *testing.T) {
+	calls := 0
+	e := embedFunc(func(context.Context, []string) ([][]float64, error) {
+		calls++
+		return nil, nil
+	})
+	for _, batchSize := range []int{-1, 17} {
+		if _, err := New(context.Background(), []customerservice.KnowledgeSnippet{doc("a")}, e, Config{BatchSize: batchSize}); !errors.Is(err, ErrInvalidConfig) {
+			t.Fatal(batchSize, err)
+		}
+	}
+	if calls != 0 {
+		t.Fatal("invalid batch size called embedder")
 	}
 }
 

@@ -28,6 +28,7 @@ func TestRunOfflineReport(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "")
 	t.Setenv("KNOWLEDGE_RETRIEVER", "semantic")
 	t.Setenv("EMBEDDING_BASE_URL", "http://invalid.invalid")
+	t.Setenv("EMBEDDING_BATCH_SIZE", "not-a-number")
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			var out, stderr bytes.Buffer
@@ -54,6 +55,7 @@ func TestRunOfflineReport(t *testing.T) {
 
 func TestSemanticEvaluationRequiresOptInAndRecordsConfiguration(t *testing.T) {
 	var calls atomic.Int32
+	batches := make(chan int, 32)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		var body struct {
@@ -61,6 +63,11 @@ func TestSemanticEvaluationRequiresOptInAndRecordsConfiguration(t *testing.T) {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
+		}
+		select {
+		case batches <- len(body.Input):
+		default:
+			t.Error("unexpected extra embedding request")
 		}
 		data := make([]map[string]any, len(body.Input))
 		for i := range data {
@@ -73,12 +80,18 @@ func TestSemanticEvaluationRequiresOptInAndRecordsConfiguration(t *testing.T) {
 	t.Setenv("EMBEDDING_BASE_URL", s.URL+"/v1")
 	t.Setenv("EMBEDDING_API_KEY", "private-test-key")
 	t.Setenv("EMBEDDING_MODEL", "test-vectors")
+	t.Setenv("EMBEDDING_BATCH_SIZE", "2")
 	t.Setenv("KNOWLEDGE_MIN_SCORE", "0.8")
 	args := append(exampleArgs(), "-retriever", "semantic", "-format", "json")
 	var out bytes.Buffer
 	if err := run(context.Background(), args, &out, io.Discard); err == nil || calls.Load() != 0 || out.Len() != 0 {
 		t.Fatal("semantic call without opt-in")
 	}
+	t.Setenv("EMBEDDING_BATCH_SIZE", "0")
+	if err := run(context.Background(), append(args, "-allow-embedding-api"), &out, io.Discard); err == nil || calls.Load() != 0 || out.Len() != 0 {
+		t.Fatal("invalid batch size must fail before network or reporting")
+	}
+	t.Setenv("EMBEDDING_BATCH_SIZE", "2")
 	if err := run(context.Background(), append(args, "-allow-embedding-api"), &out, io.Discard); err != nil {
 		t.Fatal(err)
 	}
@@ -87,11 +100,24 @@ func TestSemanticEvaluationRequiresOptInAndRecordsConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	info := report.Retrieval
-	if info == nil || info.Backend != "semantic" || info.EmbeddingModel != "test-vectors" || info.Dimensions != 2 || *info.MinScore != 0.8 || len(info.CorpusSHA256) != 64 || len(info.CasesSHA256) != 64 {
+	if info == nil || info.Backend != "semantic" || info.EmbeddingModel != "test-vectors" || info.EmbeddingBatchSize != 2 || info.Dimensions != 2 || info.MinScore == nil || *info.MinScore != 0.8 || len(info.CorpusSHA256) != 64 || len(info.CasesSHA256) != 64 {
 		t.Fatalf("metadata=%+v", info)
 	}
-	if calls.Load() != 21 {
-		t.Fatalf("calls=%d, want one index batch and 20 queries", calls.Load())
+	if calls.Load() != 22 {
+		t.Fatalf("calls=%d, want two index batches and 20 queries", calls.Load())
+	}
+	for i := 0; i < 22; i++ {
+		want := 1
+		if i == 0 {
+			want = 2
+		}
+		if got := <-batches; got != want {
+			t.Fatalf("request %d sent %d texts, want %d", i, got, want)
+		}
+	}
+	var formatted bytes.Buffer
+	if err := writeText(&formatted, report); err != nil || !strings.Contains(formatted.String(), "索引批量：2") {
+		t.Fatal("text report missing batch configuration", err)
 	}
 	if strings.Contains(out.String(), "private-test-key") || strings.Contains(out.String(), s.URL) {
 		t.Fatal("report leaks endpoint or credentials")

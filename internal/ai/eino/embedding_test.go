@@ -4,14 +4,84 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestEmbeddingConfiguredBatchLimit(t *testing.T) {
+	for _, batchSize := range []int{0, 1, 2, 10, 16} {
+		t.Run(fmt.Sprint(batchSize), func(t *testing.T) {
+			effective := batchSize
+			if effective == 0 {
+				effective = 16
+			}
+			var calls atomic.Int32
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				var body struct {
+					Input []string `json:"input"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Error(err)
+					return
+				}
+				if len(body.Input) != effective {
+					t.Errorf("input count=%d want=%d", len(body.Input), effective)
+				}
+				// Return reversed rows to ensure ordering validation remains active.
+				data := make([]map[string]any, len(body.Input))
+				for i := range data {
+					data[len(data)-1-i] = map[string]any{"index": i, "embedding": []float64{float64(i + 1), 1}}
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]any{"data": data})
+			}))
+			defer s.Close()
+			config := EmbeddingConfig{APIKey: "key", Model: "test-vectors", BaseURL: s.URL, Timeout: time.Second, BatchSize: batchSize}
+			e, err := NewCompatibleEmbedder(context.Background(), config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			texts := make([]string, effective)
+			for i := range texts {
+				texts[i] = fmt.Sprint(i)
+			}
+			vectors, err := e.Embed(context.Background(), texts)
+			if err != nil || len(vectors) != effective {
+				t.Fatal(vectors, err)
+			}
+			for i, vector := range vectors {
+				if !slices.Equal(vector, []float64{float64(i + 1), 1}) {
+					t.Fatal("incorrect vector order", vectors)
+				}
+			}
+			for _, invalid := range [][]string{nil, append(texts, "too many")} {
+				if _, err := e.Embed(context.Background(), invalid); err == nil {
+					t.Fatal("accepted invalid input count")
+				}
+			}
+			for _, invalid := range []int{-1, 17} {
+				config.BatchSize = invalid
+				if err := ValidateEmbeddingConfig(config); !errors.Is(err, ErrInvalidConfiguration) {
+					t.Fatal(invalid, err)
+				}
+				if _, err := NewCompatibleEmbedder(context.Background(), config); !errors.Is(err, ErrInvalidConfiguration) {
+					t.Fatal(invalid, err)
+				}
+			}
+			if calls.Load() != 1 {
+				t.Fatal("invalid input/configuration made a network request", calls.Load())
+			}
+		})
+	}
+}
 
 func TestEmbeddingWireOrderAndIndependentConfiguration(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "wrong-key")

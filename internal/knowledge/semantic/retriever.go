@@ -15,7 +15,10 @@ import (
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 )
 
-const BatchSize = 16
+const DefaultBatchSize = 16
+
+// MaxBatchSize is an application resource ceiling, not a provider limit.
+const MaxBatchSize = 16
 const MaxDimensions = 16384
 const DocumentFormat = "title-newline-content-v1"
 
@@ -26,12 +29,16 @@ var (
 	ErrEmbeddingFailed = errors.New("semantic: embedding failed")
 )
 
-// Embed returns one vector per input in input order, using one fixed model.
+// Embedder Embed returns one vector per input in input order, using one fixed model.
 // Implementations must respect cancellation. Calls are serialized per index.
 type Embedder interface {
 	Embed(context.Context, []string) ([][]float64, error)
 }
-type Config struct{ MinScore float64 }
+type Config struct {
+	MinScore float64
+	// Zero keeps the default; otherwise use 1..MaxBatchSize.
+	BatchSize int
+}
 type Retriever struct {
 	snippets   []customerservice.KnowledgeSnippet
 	vectors    [][]float64
@@ -44,7 +51,11 @@ type Retriever struct {
 func DocumentText(s customerservice.KnowledgeSnippet) string { return s.Title + "\n" + s.Content }
 
 func New(ctx context.Context, snippets []customerservice.KnowledgeSnippet, embedder Embedder, config Config) (*Retriever, error) {
-	if ctx == nil || embedder == nil || !finite(config.MinScore) || config.MinScore < -1 || config.MinScore > 1 {
+	batchSize := config.BatchSize
+	if batchSize == 0 {
+		batchSize = DefaultBatchSize
+	}
+	if ctx == nil || embedder == nil || !finite(config.MinScore) || config.MinScore < -1 || config.MinScore > 1 || batchSize < 1 || batchSize > MaxBatchSize {
 		return nil, ErrInvalidConfig
 	}
 	if err := ctx.Err(); err != nil {
@@ -64,8 +75,8 @@ func New(ctx context.Context, snippets []customerservice.KnowledgeSnippet, embed
 		seen[s.ID] = true
 		r.snippets[i] = s
 	}
-	for start := 0; start < len(r.snippets); start += BatchSize {
-		end := min(start+BatchSize, len(r.snippets))
+	for start := 0; start < len(r.snippets); start += batchSize {
+		end := min(start+batchSize, len(r.snippets))
 		texts := make([]string, end-start)
 		for i, s := range r.snippets[start:end] {
 			texts[i] = DocumentText(s)

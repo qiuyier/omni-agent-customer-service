@@ -102,6 +102,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		selected = index
 		queryTimeout = config.RetrievalTimeout
 		info.EmbeddingModel = config.Embedding.Model
+		info.EmbeddingBatchSize = config.Embedding.BatchSize
 		info.MinScore = &config.MinScore
 		info.Dimensions = index.Dimensions()
 		info.DocumentFormat = semantic.DocumentFormat
@@ -133,7 +134,7 @@ func writeText(w io.Writer, report evaluation.Report) error {
 	if info := report.Retrieval; info != nil {
 		fmt.Fprintf(&b, "检索器：%s；查询超时：%s\n资料快照：%s\n标注快照：%s\n", info.Backend, info.QueryTimeout, info.CorpusSHA256, info.CasesSHA256)
 		if info.MinScore != nil {
-			fmt.Fprintf(&b, "Embedding 模型：%q；维度：%d；阈值：%.4f；文档格式：%s\n", info.EmbeddingModel, info.Dimensions, *info.MinScore, info.DocumentFormat)
+			fmt.Fprintf(&b, "Embedding 模型：%q；索引批量：%d；维度：%d；阈值：%.4f；文档格式：%s\n", info.EmbeddingModel, info.EmbeddingBatchSize, info.Dimensions, *info.MinScore, info.DocumentFormat)
 		}
 	}
 	for _, item := range []struct {

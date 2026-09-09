@@ -58,14 +58,15 @@ type Report struct {
 
 // RetrievalInfo records comparison settings, never credentials or endpoint URLs.
 type RetrievalInfo struct {
-	Backend        string   `json:"backend"`
-	EmbeddingModel string   `json:"embedding_model,omitempty"`
-	MinScore       *float64 `json:"min_score,omitempty"`
-	Dimensions     int      `json:"dimensions,omitempty"`
-	DocumentFormat string   `json:"document_format,omitempty"`
-	QueryTimeout   string   `json:"query_timeout"`
-	CorpusSHA256   string   `json:"corpus_sha256"`
-	CasesSHA256    string   `json:"cases_sha256"`
+	Backend            string   `json:"backend"`
+	EmbeddingModel     string   `json:"embedding_model,omitempty"`
+	EmbeddingBatchSize int      `json:"embedding_batch_size,omitempty"`
+	MinScore           *float64 `json:"min_score,omitempty"`
+	Dimensions         int      `json:"dimensions,omitempty"`
+	DocumentFormat     string   `json:"document_format,omitempty"`
+	QueryTimeout       string   `json:"query_timeout"`
+	CorpusSHA256       string   `json:"corpus_sha256"`
+	CasesSHA256        string   `json:"cases_sha256"`
 }
 
 // Run is sequential and deterministic: case order and retriever ranking are
