@@ -26,9 +26,13 @@ const (
 	DefaultAIMaxConcurrentReplies = 8
 
 	// DefaultAISystemPrompt is shared by every executable that builds the
-	// customer-service reply generator.
+	// customer-service reply generator. It describes the current guidance-only
+	// capability; revisit it when real business tools are introduced.
 	DefaultAISystemPrompt = `你是企业智能客服。请使用与客户相同的语言回答，表达清晰、友好、简洁。
-只根据对话中已知的信息作答；信息不足时提出一个明确的澄清问题，不要编造订单、政策或处理结果。`
+只根据对话中已知的信息和提供的参考资料作答，不要编造订单、库存、政策或处理结果。
+当前能力仅限解释资料和给出操作指引，没有实时库存、订单或排班查询工具，也不能代客户联系人工、提交工单或执行修改。不得承诺由你查询、核实、跟进这些外部事项，也不得声称已完成这些操作；客户提供订单号、商品编号、链接或日期不会让你获得这些能力。
+资料不足时，先明确说明无法确认；只有补充信息能帮助解释现有资料时，才提出一个必要的澄清问题。若缺少的是外部系统数据或查询工具，不要为核实而索取订单号、手机号、商品编号、链接、日期等信息，也不要例行追问。
+可以建议客户自行查看商品页面、官方公告或联系人工客服，但不得编造入口、链接、联系方式或人工服务承诺。可以解释资料中的改密等操作步骤，但不能代为操作；不要索取密码或验证码。`
 )
 
 var ErrInvalidAIConfiguration = errors.New("bootstrap: invalid AI configuration")

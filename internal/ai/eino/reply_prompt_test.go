@@ -10,6 +10,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	einoadapter "github.com/qiuyier/omni-agent-customer-service/internal/ai/eino"
+	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 )
 
@@ -136,6 +137,78 @@ func TestReplyPromptDistinguishesDisabledKnowledgeFromNoHits(t *testing.T) {
 					t.Fatal("knowledge mapping reordered the original history")
 				}
 			})
+		}
+	}
+}
+
+// Inspect the exact trusted instructions sent to each model port. A stub's
+// canned answer cannot establish whether a real model obeys those instructions.
+func TestReplyPromptCapabilityBoundariesAcrossModesAndKnowledgeStates(t *testing.T) {
+	for _, path := range []string{"chat_generate", "agentic_generate", "agentic_stream"} {
+		for _, state := range []struct {
+			name      string
+			knowledge *customerservice.ReplyKnowledge
+		}{
+			{name: "disabled"},
+			{name: "no hits", knowledge: &customerservice.ReplyKnowledge{}},
+			{name: "incomplete references", knowledge: &customerservice.ReplyKnowledge{
+				Snippets: []customerservice.KnowledgeSnippet{{ID: "hours", Title: "Hours", Source: "demo/hours", Content: "节假日安排另行公告。"}},
+			}},
+			{name: "action instructions", knowledge: &customerservice.ReplyKnowledge{
+				Snippets: []customerservice.KnowledgeSnippet{{ID: "reset", Title: "Reset", Source: "demo/reset", Content: "用户可以在登录页选择忘记密码。"}},
+			}},
+		} {
+			for _, configured := range []struct {
+				name   string
+				prompt string
+			}{
+				{name: "default", prompt: bootstrap.DefaultAISystemPrompt},
+				{name: "custom", prompt: "  answer politely from the supplied policy  "},
+			} {
+				t.Run(path+"/"+state.name+"/"+configured.name, func(t *testing.T) {
+					const question = "请帮我查库存，需要我提供订单号吗？"
+					request := customerservice.ReplyRequest{
+						History:   []customerservice.ReplyTurn{{Role: customerservice.ReplyRoleUser, Content: question}},
+						Knowledge: state.knowledge,
+					}
+					prompt := recordedReplyPrompt(t, path, configured.prompt, request)
+					if prompt[0].Role != customerservice.ReplyRoleSystem || prompt[0].Content != configured.prompt {
+						t.Fatal("configured system policy was changed or sent under the wrong role")
+					}
+					if prompt[len(prompt)-1] != request.History[0] {
+						t.Fatal("capability policy replaced the original customer question")
+					}
+					if state.knowledge == nil {
+						if len(prompt) != 2 {
+							t.Fatal("disabled RAG changed custom prompt semantics")
+						}
+						return
+					}
+					if len(prompt) != 4 || prompt[1].Role != customerservice.ReplyRoleSystem || prompt[2].Role != customerservice.ReplyRoleUser {
+						t.Fatal("grounding rules and untrusted references lost their separate roles")
+					}
+					for _, rule := range []string{
+						"no live inventory, order or staff-schedule lookup tools",
+						"Do not promise to look up, verify, follow up on",
+						"Receiving an order number, product identifier, URL or date does not grant those capabilities",
+						"Do not solicit identifiers, contact details",
+						"Ask a clarifying question only when the answer can help explain the available references",
+						"contact human support themselves",
+					} {
+						if !strings.Contains(prompt[1].Content, rule) {
+							t.Errorf("grounding prompt lacks rule %q", rule)
+						}
+					}
+					if strings.Contains(prompt[1].Content, "ask for clarification when helpful") {
+						t.Fatal("vague clarification guidance still competes with the capability boundary")
+					}
+					for _, snippet := range state.knowledge.Snippets {
+						if strings.Contains(prompt[1].Content, snippet.Content) || !strings.Contains(referenceJSON(t, prompt[2].Content), snippet.Content) {
+							t.Fatal("reference content was dropped or promoted into trusted instructions")
+						}
+					}
+				})
+			}
 		}
 	}
 }

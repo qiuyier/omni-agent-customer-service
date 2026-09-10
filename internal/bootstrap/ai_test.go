@@ -219,6 +219,39 @@ func TestResolveAIConfigSupportsSystemPromptOverride(t *testing.T) {
 	}
 }
 
+// These are prompt-contract checks, not assertions about a model's answers.
+func TestDefaultAISystemPromptStatesGuidanceOnlyCapabilities(t *testing.T) {
+	for _, fragment := range []string{
+		"没有实时库存、订单或排班查询工具",
+		"不得承诺由你查询、核实、跟进这些外部事项",
+		"客户提供订单号、商品编号、链接或日期不会让你获得这些能力",
+		"只有补充信息能帮助解释现有资料时",
+		"不要为核实而索取订单号、手机号、商品编号、链接、日期等信息",
+		"可以建议客户自行查看商品页面、官方公告或联系人工客服",
+		"可以解释资料中的改密等操作步骤",
+		"不要索取密码或验证码",
+	} {
+		if !strings.Contains(bootstrap.DefaultAISystemPrompt, fragment) {
+			t.Errorf("default prompt lacks capability boundary %q", fragment)
+		}
+	}
+	if strings.Contains(bootstrap.DefaultAISystemPrompt, "信息不足时提出一个明确的澄清问题") {
+		t.Fatal("default prompt still requires a question for every knowledge gap")
+	}
+	for _, blank := range []string{"", " \t\n "} {
+		config, err := bootstrap.ResolveAIConfig(environment(map[string]string{
+			"AI_PROVIDER": "glm", "AI_MODEL": "fixture-model", "ZHIPUAI_API_KEY": "fixture-key",
+			"AI_SYSTEM_PROMPT": blank,
+		}), bootstrap.AIOverrides{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if config.SystemPrompt != bootstrap.DefaultAISystemPrompt {
+			t.Fatal("blank override did not preserve the default capability policy")
+		}
+	}
+}
+
 func TestResolveAIConfigRequiresExplicitInsecureHTTPOptIn(t *testing.T) {
 	config, err := bootstrap.ResolveAIConfig(environment(map[string]string{
 		"AI_PROVIDER":            "custom",
