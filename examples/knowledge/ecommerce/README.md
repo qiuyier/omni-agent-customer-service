@@ -62,6 +62,11 @@ go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases ex
 GLM运费题普通/SSE和4次重放通过；第二题退货多带入质量问题引用，严格验收失败并停止。
 其余回复尚未执行，完整结果、措辞问题与输入摘要见[真实验收记录](acceptance.md)。
 
+同日新增[开发集候选分数诊断](diagnostics.md)：20题逐题结果与前次一致，仍为12/20。
+双意图题的两条正确资料排第1、2但均被阈值过滤，WiFi题则误选登录密码资料；
+没有候选因Top-K被截断，单一阈值不能同时修好这两题。本轮只做诊断，未改资料、
+标签或检索策略，未调用GLM或重跑保留集。原始分数与 `-diagnostics` 用法见该记录。
+
 这套材料没有改变 `.env.local`、默认 FAQ 路径、已有 Prompt 或原来的 3 条演示 FAQ。
 若要比较语义检索，先安全加载独立 Embedding 配置，再显式允许联网；不要公开密钥。
 以下命令**可能产生费用**：

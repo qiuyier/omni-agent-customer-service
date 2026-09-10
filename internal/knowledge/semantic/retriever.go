@@ -95,31 +95,64 @@ func New(ctx context.Context, snippets []customerservice.KnowledgeSnippet, embed
 
 func (r *Retriever) Dimensions() int { return r.dimensions }
 
+// Candidate is a per-call diagnostic snapshot, not a model-confidence value.
+// It contains no vector or document text. Equal scores retain corpus order.
+type Candidate struct {
+	ReferenceID string  `json:"reference_id"`
+	Score       float64 `json:"score"`
+	Rank        int     `json:"rank"`
+	Decision    string  `json:"decision"`
+}
+
+const (
+	Selected      = "selected"
+	BelowMinScore = "below_min_score"
+	OutsideTopK   = "outside_top_k"
+)
+
 func (r *Retriever) Retrieve(ctx context.Context, q customerservice.KnowledgeQuery) ([]customerservice.KnowledgeSnippet, error) {
+	result, _, err := r.retrieve(ctx, q, false)
+	return result, err
+}
+
+// RetrieveWithDiagnostics uses the same scoring/selection and a single query
+// embedding call. It does not change index state or expose mutable vectors.
+func (r *Retriever) RetrieveWithDiagnostics(ctx context.Context, q customerservice.KnowledgeQuery) ([]customerservice.KnowledgeSnippet, []Candidate, error) {
+	return r.retrieve(ctx, q, true)
+}
+
+func (r *Retriever) retrieve(ctx context.Context, q customerservice.KnowledgeQuery, diagnose bool) ([]customerservice.KnowledgeSnippet, []Candidate, error) {
 	if r == nil || r.embedder == nil || len(r.vectors) == 0 {
-		return nil, ErrInvalidConfig
+		return nil, nil, ErrInvalidConfig
 	}
 	if ctx == nil || !validText(q.Text, customerservice.MaxKnowledgeQueryRunes, true) || q.Limit < 1 || q.Limit > customerservice.MaxKnowledgeSnippets {
-		return nil, ErrInvalidQuery
+		return nil, nil, ErrInvalidQuery
 	}
 	vectors, err := r.embed(ctx, []string{strings.TrimSpace(q.Text)}, r.dimensions)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	type match struct {
 		index int
 		score float64
 	}
 	matches := make([]match, 0, len(r.vectors))
+	var all []match
+	if diagnose {
+		all = make([]match, 0, len(r.vectors))
+	}
 	for i, v := range r.vectors {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		var score float64
 		for j, x := range v {
 			score += x * vectors[0][j]
 		}
 		score = max(-1, min(1, score))
+		if diagnose {
+			all = append(all, match{i, score})
+		}
 		if score >= r.minScore {
 			matches = append(matches, match{i, score})
 		}
@@ -129,10 +162,25 @@ func (r *Retriever) Retrieve(ctx context.Context, q customerservice.KnowledgeQue
 	for _, m := range matches[:min(q.Limit, len(matches))] {
 		result = append(result, r.snippets[m.index])
 	}
-	if err := ctx.Err(); err != nil {
-		return nil, err
+	var candidates []Candidate
+	if diagnose {
+		sort.SliceStable(all, func(i, j int) bool { return all[i].score > all[j].score })
+		candidates = make([]Candidate, len(all))
+		for i, m := range all {
+			decision := BelowMinScore
+			if m.score >= r.minScore {
+				decision = OutsideTopK
+				if i < q.Limit {
+					decision = Selected
+				}
+			}
+			candidates[i] = Candidate{ReferenceID: r.snippets[m.index].ID, Score: m.score, Rank: i + 1, Decision: decision}
+		}
 	}
-	return result, nil
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
+	}
+	return result, candidates, nil
 }
 
 func (r *Retriever) embed(ctx context.Context, texts []string, dimensions int) ([][]float64, error) {

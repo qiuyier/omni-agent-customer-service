@@ -40,6 +40,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	format := flags.String("format", "text", "report format: text or json")
 	backend := flags.String("retriever", "keyword", "retriever: keyword or semantic")
 	allowEmbedding := flags.Bool("allow-embedding-api", false, "allow sending FAQ and queries to EMBEDDING_BASE_URL; may incur charges")
+	diagnostics := flags.Bool("diagnostics", false, "include all candidate cosine scores and selection decisions (semantic JSON only; at most 20 cases)")
 	timeout := flags.Duration("timeout", evaluation.DefaultTimeout, "evaluation timeout, excluding index initialization")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -53,6 +54,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if (*backend != "keyword" && *backend != "semantic") || *timeout <= 0 || *timeout > 30*time.Minute {
 		return fmt.Errorf("retriever must be keyword/semantic and timeout must be positive, at most 30m")
 	}
+	if *diagnostics && (*backend != "semantic" || *format != "json") {
+		return fmt.Errorf("diagnostics requires -retriever semantic and -format json")
+	}
 	if *backend == "semantic" && !*allowEmbedding {
 		return fmt.Errorf("semantic evaluation requires -allow-embedding-api; FAQ and queries will be sent to the configured embedding service")
 	}
@@ -63,6 +67,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	cases, err := evaluation.Load(*casesPath)
 	if err != nil {
 		return err
+	}
+	if *diagnostics && len(cases) > maxDiagnosticCases {
+		return fmt.Errorf("diagnostics supports at most %d cases per run", maxDiagnosticCases)
 	}
 	known := make(map[string]bool)
 	for _, id := range retriever.ReferenceIDs() {
@@ -76,6 +83,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		}
 	}
 	var selected customerservice.KnowledgeRetriever = retriever
+	var diagnostic *diagnosticRetriever
 	queryTimeout := customerservice.DefaultKnowledgeRetrievalTimeout
 	info := &evaluation.RetrievalInfo{Backend: *backend, CorpusSHA256: fingerprint(retriever.Snippets()), CasesSHA256: fingerprint(cases)}
 	if *backend == "semantic" {
@@ -100,6 +108,10 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		selected = index
+		if *diagnostics {
+			diagnostic = &diagnosticRetriever{index: index}
+			selected = diagnostic
+		}
 		queryTimeout = config.RetrievalTimeout
 		info.EmbeddingModel = config.Embedding.Model
 		info.EmbeddingBatchSize = config.Embedding.BatchSize
@@ -118,6 +130,16 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if *format == "json" {
 		encoder := json.NewEncoder(stdout)
 		encoder.SetIndent("", "  ")
+		if diagnostic != nil {
+			if len(diagnostic.snapshots) != len(report.Results) {
+				return fmt.Errorf("diagnostic observation count differs from evaluated cases")
+			}
+			output := diagnosticReport{Report: report, Diagnostics: make([]caseDiagnostics, len(report.Results))}
+			for i, result := range report.Results {
+				output.Diagnostics[i] = caseDiagnostics{CaseID: result.ID, Candidates: diagnostic.snapshots[i]}
+			}
+			return encoder.Encode(output)
+		}
 		return encoder.Encode(report)
 	}
 	return writeText(stdout, report)

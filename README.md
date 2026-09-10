@@ -503,6 +503,14 @@ query_timeout 和语料/标注 SHA-256；不含密钥或 endpoint。这里的快
 标签、文档格式，记录模型版本与参数；模型服务端别名更新也可能导致效果变化。
 报告仍含问题原文和配置模型名，不能当作已脱敏公开日志。
 
+需要定位漏检或多余引用时，可追加 `-diagnostics`（仅 semantic＋JSON，每轮最多20题）。
+它复用实际查询的同一次 Embedding，追加所有候选的 `reference_id`、余弦 `score`、
+稳定排序 `rank` 和 `decision`：`selected`、`below_min_score`、`outside_top_k`。
+低于阈值的候选即使排名靠前也不入选；相似度不是概率或答案置信度。
+开关不改变检索阈值、Top-K、排序和默认报告格式，报告不加入资料正文或向量；
+仍须 `-allow-embedding-api`，可能产生费用，失败不输出部分成绩。
+用法与真实候选证据见[电商开发集诊断](examples/knowledge/ecommerce/diagnostics.md)。
+
 原 20 条基线及 FAQ 不改动；新增 6 条 `eval_holdout.json` 可作为小型独立验证题，
 不要一边看验证题结果一边调阈值，再把它当作未见数据成绩。需要同时看漏检、无关
 命中及排序，不能只看召回。语义相似度也可能不理解否定、代码标识符或回答充分性。
@@ -522,6 +530,8 @@ query_timeout 和语料/标注 SHA-256；不含密钥或 endpoint。这里的快
 关键词离线基线集合匹配17/20、6/10；2026-09-10真实语义评测为12/20、7/10。
 GLM运费题普通/SSE与4次重放通过，但第二题因多余引用停止，整套回复验收未通过。
 失败项和复现方式见[电商验收记录](examples/knowledge/ecommerce/acceptance.md)，不沿用旧3条FAQ的通过结论。
+后续[开发集分数诊断](examples/knowledge/ecommerce/diagnostics.md)复现12/20，发现双意图
+正确资料被阈值过滤、WiFi题对象错配；单一阈值不能同时解决，尚未实施检索修复。
 
 ## 真实回复 HTTP / SSE 验收
 
