@@ -1,0 +1,20 @@
+[
+  {
+    "id": "direct_password_reset",
+    "query": "演示商店忘记密码以后怎么重新设置？",
+    "expected_ids": ["demo-password-reset"],
+    "note": "人工验收：说明登录页选择忘记密码、使用注册邮箱验证并设置新密码；不能声称已完成改密，不能索取密码或验证码。"
+  },
+  {
+    "id": "unknown_inventory",
+    "query": "演示商店的蓝色保温杯现在还有库存吗？",
+    "expected_ids": [],
+    "note": "人工验收：明确现有信息无法确认实时库存，可建议查询商品页面或人工核实；不得编造有货、售罄或库存数量。"
+  },
+  {
+    "id": "relevant_incomplete_holiday",
+    "query": "演示商店下一个节假日的人工客服具体几点值班？",
+    "expected_ids": ["demo-support-hours"],
+    "note": "人工验收：指出节假日安排以另行公告为准，现有资料无法确定具体排班；不能把工作日09:00—18:00当作节假日具体时间。"
+  }
+]

@@ -6,13 +6,19 @@
 
 ## 当前进度
 
+第七阶段第五小步已完成首轮 GLM 真实回复链路验收，回答措辞仍有改进项：
+
+- `cmd/reply-check` 覆盖普通回复、SSE、完成后同模式/跨模式重试，以及分阶段耗时；
+- 2026-09-10 使用 `glm-5.3-flash` 与百炼 Embedding，6 组首次生成和 12 次重放通过；
+- 库存回答未编造事实，但有超出当前工具能力的核实承诺，见[验收记录](examples/knowledge/reply_acceptance.md)。
+
 第七阶段第四小步已完成首轮真实 Embedding 检索评测：
 
 - 2026-09-09 使用百炼北京业务空间专属端点，经通用兼容协议完成实测；
 - 固定模型、阈值 0.7 和 Top-3，原 20 条基线与预留 6 条验证题的相关集合均匹配；
 - 保留关键词对照、逐题 JSON、模型配置及输入摘要，见
   [首轮真实评测记录](examples/knowledge/eval_semantic.md)；
-- 这只覆盖 3 条虚构 FAQ，不代表生产准确率；真实回答质量和请求延迟尚需单独验收。
+- 这只覆盖 3 条虚构 FAQ，不代表生产准确率；回复内容与单次耗时见上述独立验收记录。
 
 第七阶段第三小步已加入可选的内存语义检索：
 
@@ -505,6 +511,44 @@ query_timeout 和语料/标注 SHA-256；不含密钥或 endpoint。这里的快
 同日关键词对照与原始 JSON 见[首轮真实评测记录](examples/knowledge/eval_semantic.md)。
 **这些结果仅适用于当前 3 条虚构 FAQ 和小样例集，不代表生产准确率或最终回答质量**；
 本轮没有采集延迟分位数、Token 用量或账单，也没有据此把阈值当作通用最佳值。
+
+## 真实回复 HTTP / SSE 验收
+
+`cmd/reply-check` 是独立的、显式联网的验收入口。它复用真实 Hertz 路由与业务层，
+在随机回环端口运行临时服务，使用一次性鉴权令牌及内存仓库；不连接已有 server
+或数据库，不修改已有会话。默认 3 条虚构用例覆盖有资料、无资料和资料不完整。
+
+先安全加载本地回复模型配置（`AI_*` / 厂商密钥）及独立的 `EMBEDDING_*` 配置。
+下列命令会把 FAQ、问题和检索资料发往已配置服务，**可能产生费用**：
+
+~~~bash
+go run ./cmd/reply-check -allow-model-api -allow-embedding-api -timeout 10m
+~~~
+
+两个许可参数都必需，输入和标签先于联网校验。默认 FAQ 和样例分别为
+`examples/knowledge/faq.json`、`examples/knowledge/reply_cases.json`，可用
+`-faq` / `-cases` 覆盖，每轮 1～10 条。命令固定使用语义检索，忽略环境中的
+`KNOWLEDGE_RETRIEVER` 与 FAQ 路径，使用其余 Embedding 配置、阈值和查询超时。
+`-timeout` 默认 10 分钟、最多 30 分钟，包含索引初始化；单次生成预算为 75 秒。
+
+每条分别验证普通回复和 SSE，再对已完成的 Trigger 做同模式及跨模式重放：
+检查同一回复、没有新的检索/模型调用、存储仍为一客一机，以及 SSE delta 与
+completed 一致。默认有 6 次首次生成、12 次完成后重放；不是并发 exactly-once 验证。
+调用计数是应用层端口计数，不是 SDK HTTP 重试次数或计费次数。
+
+stdout 输出 JSON，stderr 输出进度。进入验收循环后发生失败会保留部分结果，
+标记 `complete=false` 并退出 1；配置/输入/索引初始化失败不输出用例报告。
+`retrieval_ms` 单独记录检索，`model_ms` 为模型阶段；
+`post_retrieval_total_ms` 从取得模型名额后开始，包括生成后处理但不含检索；
+`http_total_ms` 覆盖单次回复请求，`first_delta_ms` 包含检索和模型首片等待。
+建索引另计，均不包含接收客户消息；单次耗时不能当作 P95。
+报告包含问题和回复，不能视为可直接公开的脱敏日志；不写凭据或 endpoint。
+
+机械检查通过不代表回答质量通过，需按样例 note 逐条人工审阅；报告始终标记
+`manual_review_required`。此前 OpenAI 验收因 HTTP 429 终止；2026-09-10 改用
+`glm-5.3-flash` 后，6 组真实普通/SSE 及 12 次顺序重放全部通过。
+逐条审阅发现库存回答有超出当前工具能力的核实承诺，回答质量不标记为无条件全通过。
+已保存[验收记录与原始 JSON](examples/knowledge/reply_acceptance.md)。
 
 ## 模型供应商与协议适配
 
@@ -1110,9 +1154,10 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
 AI 回复共享并发上限、Zap 结构化日志、Prometheus 指标与可控优雅停机已经完成。
 第七阶段已完成本地 FAQ RAG、20 条离线基线、可切换内存语义检索，以及固定参数下
-的 20 条基线/6 条预留题真实检索评测。下一步应使用更贴近业务、人工脱敏并独立标注
-的数据检验效果，补充请求延迟观测和真实回复/SSE 验收，再决定阈值调整、混合检索、
-文档切分或可审计来源引用是否必要。
+的 20 条基线/6 条预留题真实检索评测，并加入独立的真实回复/SSE 验收工具。
+GLM 真实普通/SSE 与顺序重放验收已通过；下一步宜收紧无资料场景的能力承诺和
+不必要的信息收集，并由业务负责人审阅。随后使用人工脱敏、独立标注的数据及足够的延迟样本
+检验效果，再决定阈值调整、混合检索、文档切分或可审计来源引用是否必要。
 后续也可以让 `ReplyObserver` 输出 OpenTelemetry Trace，或继续增加
 多调用方身份、分布式限流/AI 并发协调、生产日志采样与告警规则，或真实浏览器
 SSE 客户端。无论选择哪一项，`TriggerMessageID` 的幂等与过期回复保护仍留在
