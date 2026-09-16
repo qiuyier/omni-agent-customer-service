@@ -112,7 +112,7 @@ func (a *Adapter) Accept(ctx context.Context, event Event) (Job, error) {
 	if len(a.data.Jobs) >= MaxJobs {
 		return Job{}, ErrFull
 	}
-	j := Job{ID: id, Event: event, State: PendingReceive}
+	j := Job{ID: id, Event: event, State: PendingReceive, Revision: 1}
 	next := a.data
 	next.Jobs = append(append([]Job{}, a.data.Jobs...), j)
 	if err := a.commit(next); err != nil {
@@ -131,7 +131,8 @@ func (a *Adapter) List(ctx context.Context) ([]Job, error) {
 	return append([]Job{}, a.data.Jobs...), nil
 }
 
-// Advance performs at most one external operation. No background goroutine,
+// Advance performs one stage; delivery checks eligibility then calls the sink.
+// No eligibility is cached between attempts. No background goroutine,
 // implicit retry loop, or public inbound endpoint is installed.
 func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 	if err := a.take(ctx); err != nil {
@@ -143,7 +144,7 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 		return Job{}, ErrNotFound
 	}
 	j := a.data.Jobs[index]
-	if j.State == Completed {
+	if j.State == Completed || j.State == Stopped {
 		return j, nil
 	}
 	if j.State == NeedsAttention {
@@ -152,12 +153,26 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 	if a.now().Before(j.NextAttemptAt) {
 		return j, ErrNotReady
 	}
-	if j.Attempts >= a.cfg.MaxAttempts {
+	if j.ManualInFlight {
+		// A crash consumed the single granted call. Never restart an automatic
+		// retry batch, even if startup configuration changed in the meantime.
+		j.ManualInFlight = false
+		j.AttentionFrom, j.State, j.LastFailure = j.State, NeedsAttention, FailureRetryBudget
+		j.RecoveryAllowed = !j.LegacyHistory
+		j.NextAttemptAt = time.Time{}
+		return a.saveJob(index, j, ErrNeedsAttention)
+	}
+	if j.Attempts >= a.cfg.MaxAttempts && !j.ManualAttempt {
+		j.RecoveryAllowed = !j.LegacyHistory && (retryFailureAllowed(j.LastFailure) || j.LastFailure == "")
 		j.AttentionFrom, j.State, j.LastFailure = j.State, NeedsAttention, FailureRetryBudget
 		j.NextAttemptAt = time.Time{}
 		return a.saveJob(index, j, ErrNeedsAttention)
 	}
+	manualAttempt := j.ManualAttempt
+	j.ManualAttempt = false
+	j.ManualInFlight = manualAttempt
 	j.Attempts++
+	j.TotalAttempts++
 	j.NextAttemptAt = a.now().Add(a.cfg.RetryDelay)
 	// Persist attempt intent before calling out. A crash consumes a bounded
 	// attempt, but never manufactures a new upstream/downstream idempotency key.
@@ -191,6 +206,7 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 			} else {
 				j.TriggerMessageID = result.MessageID
 				if result.Status != conversation.StatusBotActive {
+					j.ManualInFlight = false
 					j.State, j.AttentionFrom, j.Attempts, j.LastFailure = NeedsAttention, PendingReply, 0, FailureManual
 					j.NextAttemptAt = time.Time{}
 					return a.saveJob(index, j, ErrNeedsAttention)
@@ -216,6 +232,45 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 			}
 		}
 	case PendingDelivery:
+		checker, ok := a.client.(DeliveryChecker)
+		if !ok {
+			err = &CallError{Code: FailureDeliveryUnavailable}
+			break
+		}
+		var eligibility customerservice.DeliveryEligibility
+		eligibility, err = checker.CheckDeliveryEligibility(callCtx, customerservice.DeliveryCheck{
+			ConversationID: command.ConversationID, CustomerID: command.CustomerID, Channel: command.Channel,
+			TriggerMessageID: j.TriggerMessageID, ReplyMessageID: j.ReplyMessageID, Content: j.ReplyContent,
+		})
+		if err != nil {
+			break
+		}
+		if !eligibility.Eligible || eligibility.Reason != "eligible" {
+			code := FailureDeliveryDenied
+			switch eligibility.Reason {
+			case "superseded":
+				code = FailureDeliverySuperseded
+			case "conversation_closed":
+				code = FailureDeliveryClosed
+			case "not_bot_owned", "ownership_mismatch":
+				code = FailureDeliveryOwnership
+			}
+			err = &CallError{Code: code}
+			break
+		}
+		if err = callCtx.Err(); err != nil {
+			break
+		}
+		// Persist possible delivery before the sink call, even when its result or
+		// the following save is lost. A later eligibility failure cannot clear it.
+		j.DeliveryAttempts++
+		j.MayHaveDelivered = true
+		if _, err := a.saveJob(index, j, nil); err != nil {
+			return Job{}, err
+		}
+		if err = callCtx.Err(); err != nil {
+			break
+		}
 		err = a.deliverer.Deliver(callCtx, Delivery{
 			Key: j.DeliveryKey, SourceID: a.cfg.SourceID, DestinationID: a.cfg.DestinationID,
 			Channel: j.Event.Channel, ConversationID: j.Event.ConversationID, CustomerID: j.Event.CustomerID,
@@ -228,6 +283,7 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 	default:
 		return Job{}, ErrStateInvalid
 	}
+	j.ManualInFlight = false
 	if err != nil {
 		code, retryable, retryAfter := classifyCall(err)
 		// Negative or excessively long retry instructions require review, not an
@@ -236,7 +292,11 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 			retryable = false
 		}
 		j.LastFailure = code
-		if !retryable || j.Attempts >= a.cfg.MaxAttempts {
+		if retryable {
+			j.RetryNotBefore = a.now().Add(max(a.cfg.RetryDelay, retryAfter))
+		}
+		if !retryable || manualAttempt || j.Attempts >= a.cfg.MaxAttempts {
+			j.RecoveryAllowed = retryable && retryFailureAllowed(code)
 			j.AttentionFrom, j.State = j.State, NeedsAttention
 			j.NextAttemptAt = time.Time{}
 			return a.saveJob(index, j, ErrNeedsAttention)
@@ -248,6 +308,9 @@ func (a *Adapter) Advance(ctx context.Context, id string) (Job, error) {
 }
 
 func advanceTo(j *Job, state State) {
+	j.RecoveryAllowed, j.ManualAttempt = false, false
+	j.ManualInFlight = false
+	j.RetryNotBefore = time.Time{}
 	j.State, j.Attempts, j.LastFailure, j.AttentionFrom = state, 0, "", ""
 	j.NextAttemptAt = time.Time{}
 }
@@ -260,6 +323,10 @@ func (a *Adapter) index(id string) int {
 	return -1
 }
 func (a *Adapter) saveJob(index int, j Job, outcome error) (Job, error) {
+	if a.data.Jobs[index].Revision >= ^uint64(0)-1 {
+		return Job{}, ErrStateInvalid
+	}
+	j.Revision = a.data.Jobs[index].Revision + 1
 	next := a.data
 	next.Jobs = append([]Job{}, a.data.Jobs...)
 	next.Jobs[index] = j

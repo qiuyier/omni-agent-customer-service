@@ -25,17 +25,20 @@ const (
 )
 
 var (
-	ErrInvalidInput   = errors.New("integration: invalid input")
-	ErrConflict       = errors.New("integration: event key reused with different data")
-	ErrNotFound       = errors.New("integration: job not found")
-	ErrFull           = errors.New("integration: journal capacity reached")
-	ErrStateInUse     = errors.New("integration: state directory already in use")
-	ErrStateInvalid   = errors.New("integration: incompatible or invalid state")
-	ErrStore          = errors.New("integration: state storage failed; close and reopen before continuing")
-	ErrClosed         = errors.New("integration: adapter closed")
-	ErrNotReady       = errors.New("integration: retry is not due")
-	ErrAttemptFailed  = errors.New("integration: attempt failed; progress retained")
-	ErrNeedsAttention = errors.New("integration: job needs attention")
+	ErrInvalidInput         = errors.New("integration: invalid input")
+	ErrConflict             = errors.New("integration: event key reused with different data")
+	ErrNotFound             = errors.New("integration: job not found")
+	ErrFull                 = errors.New("integration: journal capacity reached")
+	ErrStateInUse           = errors.New("integration: state directory already in use")
+	ErrStateInvalid         = errors.New("integration: incompatible or invalid state")
+	ErrStore                = errors.New("integration: state storage failed; close and reopen before continuing")
+	ErrClosed               = errors.New("integration: adapter closed")
+	ErrNotReady             = errors.New("integration: retry is not due")
+	ErrAttemptFailed        = errors.New("integration: attempt failed; progress retained")
+	ErrNeedsAttention       = errors.New("integration: job needs attention")
+	ErrStaleRevision        = errors.New("integration: stale job revision")
+	ErrResolutionNotAllowed = errors.New("integration: resolution not allowed")
+	ErrOperationConflict    = errors.New("integration: operation ID reused with different data")
 )
 
 type State string
@@ -46,6 +49,7 @@ const (
 	PendingDelivery State = "pending_delivery"
 	Completed       State = "completed"
 	NeedsAttention  State = "needs_attention"
+	Stopped         State = "stopped"
 )
 
 // Event identifiers are from one trusted source configured when opening the
@@ -70,6 +74,16 @@ type Job struct {
 	NextAttemptAt    time.Time   `json:"next_attempt_at"`
 	LastFailure      FailureCode `json:"last_failure,omitempty"`
 	AttentionFrom    State       `json:"attention_from,omitempty"`
+	Revision         uint64      `json:"revision"`
+	TotalAttempts    int         `json:"total_attempts"`
+	DeliveryAttempts int         `json:"delivery_attempts"`
+	MayHaveDelivered bool        `json:"may_have_delivered"`
+	LegacyHistory    bool        `json:"legacy_history"`
+	RecoveryAllowed  bool        `json:"recovery_allowed"`
+	ManualAttempt    bool        `json:"manual_attempt"`
+	ManualRetries    int         `json:"manual_retries"`
+	RetryNotBefore   time.Time   `json:"retry_not_before"`
+	ManualInFlight   bool        `json:"manual_in_flight"`
 }
 
 // SourceID and DestinationID are trusted adapter configuration, never an
@@ -86,6 +100,12 @@ type Config struct {
 type Client interface {
 	ReceiveMessage(context.Context, customerservice.ReceiveMessageCommand) (customerservice.ReceiveMessageResult, error)
 	GenerateBotReply(context.Context, customerservice.GenerateBotReplyCommand) (customerservice.GenerateBotReplyResult, error)
+}
+
+// DeliveryChecker must perform a fresh check on every delivery attempt.
+// Clients without it fail closed; historical reply replay is not permission.
+type DeliveryChecker interface {
+	CheckDeliveryEligibility(context.Context, customerservice.DeliveryCheck) (customerservice.DeliveryEligibility, error)
 }
 
 type Delivery struct {
@@ -115,20 +135,25 @@ func (f DelivererFunc) Deliver(ctx context.Context, d Delivery) error { return f
 type FailureCode string
 
 const (
-	FailureTransport       FailureCode = "transport"
-	FailureTimeout         FailureCode = "timeout"
-	FailureCancelled       FailureCode = "cancelled"
-	FailureInvalidRequest  FailureCode = "invalid_request"
-	FailureUnauthorized    FailureCode = "unauthorized"
-	FailureNotFound        FailureCode = "not_found"
-	FailureConflict        FailureCode = "conflict"
-	FailurePrecondition    FailureCode = "precondition"
-	FailureBusy            FailureCode = "busy"
-	FailureUnavailable     FailureCode = "unavailable"
-	FailureInvalidResponse FailureCode = "invalid_response"
-	FailureRetryBudget     FailureCode = "retry_budget"
-	FailureManual          FailureCode = "manual_handling_required"
-	FailureUnknown         FailureCode = "call_failed"
+	FailureTransport           FailureCode = "transport"
+	FailureTimeout             FailureCode = "timeout"
+	FailureCancelled           FailureCode = "cancelled"
+	FailureInvalidRequest      FailureCode = "invalid_request"
+	FailureUnauthorized        FailureCode = "unauthorized"
+	FailureNotFound            FailureCode = "not_found"
+	FailureConflict            FailureCode = "conflict"
+	FailurePrecondition        FailureCode = "precondition"
+	FailureBusy                FailureCode = "busy"
+	FailureUnavailable         FailureCode = "unavailable"
+	FailureInvalidResponse     FailureCode = "invalid_response"
+	FailureRetryBudget         FailureCode = "retry_budget"
+	FailureManual              FailureCode = "manual_handling_required"
+	FailureUnknown             FailureCode = "call_failed"
+	FailureDeliveryDenied      FailureCode = "delivery_denied"
+	FailureDeliveryUnavailable FailureCode = "delivery_check_unavailable"
+	FailureDeliverySuperseded  FailureCode = "delivery_superseded"
+	FailureDeliveryClosed      FailureCode = "delivery_closed"
+	FailureDeliveryOwnership   FailureCode = "delivery_ownership"
 )
 
 // CallError is the safe error vocabulary for client/delivery adapters. No URL,
@@ -146,7 +171,8 @@ func validFailure(code FailureCode) bool {
 	case "", FailureTransport, FailureTimeout, FailureCancelled, FailureInvalidRequest,
 		FailureUnauthorized, FailureNotFound, FailureConflict, FailurePrecondition,
 		FailureBusy, FailureUnavailable, FailureInvalidResponse, FailureRetryBudget,
-		FailureManual, FailureUnknown:
+		FailureManual, FailureUnknown, FailureDeliveryDenied, FailureDeliveryUnavailable,
+		FailureDeliverySuperseded, FailureDeliveryClosed, FailureDeliveryOwnership:
 		return true
 	default:
 		return false

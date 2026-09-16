@@ -79,7 +79,24 @@ struct ReplySupersededEventData {
 
 struct StreamBotReplyResponse {}
 
+// Snapshot only: not a lease, delivery receipt or authorization token.
+struct DeliveryEligibilityRequest {
+ 1: required string ConversationID (api.path = "conversation_id", api.vd = "$!=''")
+ 2: required string TriggerMessageID (api.path = "trigger_message_id", api.vd = "$!=''")
+ 3: required string CustomerID (api.body = "customer_id", api.vd = "$!=''")
+ 4: required string Channel (api.body = "channel", api.vd = "$!=''")
+ 5: required string ReplyMessageID (api.body = "reply_message_id", api.vd = "$!=''")
+ 6: required string Content (api.body = "content", api.vd = "$!=''")
+}
+struct DeliveryEligibilityResponse {
+ 1: required bool Eligible (api.body = "eligible")
+ 2: required string Reason (api.body = "reason")
+}
+
 service CustomerServiceAPI {
+    DeliveryEligibilityResponse CheckDeliveryEligibility(1: DeliveryEligibilityRequest request) (
+        api.post = "/v1/conversations/:conversation_id/messages/:trigger_message_id/reply/eligibility"
+    )
     HealthResponse Health(1: HealthRequest request) (api.get = "/healthz")
 
     // Liveness and readiness deliberately reuse the same small response DTO;

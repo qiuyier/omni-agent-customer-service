@@ -315,7 +315,84 @@ func (p *StreamBotReplyResponse) String() string {
 	return fmt.Sprintf("StreamBotReplyResponse(%+v)", *p)
 }
 
+// Snapshot only: not a lease, delivery receipt or authorization token.
+type DeliveryEligibilityRequest struct {
+	ConversationID   string `thrift:"ConversationID,1,required" json:"ConversationID,required" path:"conversation_id,required" vd:"$!=''"`
+	TriggerMessageID string `thrift:"TriggerMessageID,2,required" json:"TriggerMessageID,required" path:"trigger_message_id,required" vd:"$!=''"`
+	CustomerID       string `thrift:"CustomerID,3,required" form:"customer_id,required" json:"customer_id,required" vd:"$!=''"`
+	Channel          string `thrift:"Channel,4,required" form:"channel,required" json:"channel,required" vd:"$!=''"`
+	ReplyMessageID   string `thrift:"ReplyMessageID,5,required" form:"reply_message_id,required" json:"reply_message_id,required" vd:"$!=''"`
+	Content          string `thrift:"Content,6,required" form:"content,required" json:"content,required" vd:"$!=''"`
+}
+
+func NewDeliveryEligibilityRequest() *DeliveryEligibilityRequest {
+	return &DeliveryEligibilityRequest{}
+}
+
+func (p *DeliveryEligibilityRequest) InitDefault() {
+}
+
+func (p *DeliveryEligibilityRequest) GetConversationID() (v string) {
+	return p.ConversationID
+}
+
+func (p *DeliveryEligibilityRequest) GetTriggerMessageID() (v string) {
+	return p.TriggerMessageID
+}
+
+func (p *DeliveryEligibilityRequest) GetCustomerID() (v string) {
+	return p.CustomerID
+}
+
+func (p *DeliveryEligibilityRequest) GetChannel() (v string) {
+	return p.Channel
+}
+
+func (p *DeliveryEligibilityRequest) GetReplyMessageID() (v string) {
+	return p.ReplyMessageID
+}
+
+func (p *DeliveryEligibilityRequest) GetContent() (v string) {
+	return p.Content
+}
+
+func (p *DeliveryEligibilityRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeliveryEligibilityRequest(%+v)", *p)
+}
+
+type DeliveryEligibilityResponse struct {
+	Eligible bool   `thrift:"Eligible,1,required" form:"eligible,required" json:"eligible,required"`
+	Reason   string `thrift:"Reason,2,required" form:"reason,required" json:"reason,required"`
+}
+
+func NewDeliveryEligibilityResponse() *DeliveryEligibilityResponse {
+	return &DeliveryEligibilityResponse{}
+}
+
+func (p *DeliveryEligibilityResponse) InitDefault() {
+}
+
+func (p *DeliveryEligibilityResponse) GetEligible() (v bool) {
+	return p.Eligible
+}
+
+func (p *DeliveryEligibilityResponse) GetReason() (v string) {
+	return p.Reason
+}
+
+func (p *DeliveryEligibilityResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeliveryEligibilityResponse(%+v)", *p)
+}
+
 type CustomerServiceAPI interface {
+	CheckDeliveryEligibility(ctx context.Context, request *DeliveryEligibilityRequest) (r *DeliveryEligibilityResponse, err error)
+
 	Health(ctx context.Context, request *HealthRequest) (r *HealthResponse, err error)
 	// Liveness and readiness deliberately reuse the same small response DTO;
 	// their status codes and lifecycle semantics are different.

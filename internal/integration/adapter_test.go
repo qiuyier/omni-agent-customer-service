@@ -63,6 +63,15 @@ type clientFuncs struct {
 	reply   func(context.Context, customerservice.GenerateBotReplyCommand) (customerservice.GenerateBotReplyResult, error)
 }
 
+func (c *testClient) CheckDeliveryEligibility(ctx context.Context, q customerservice.DeliveryCheck) (customerservice.DeliveryEligibility, error) {
+	return c.service.CheckDeliveryEligibility(ctx, q)
+}
+
+// Explicit permissive fake for tests unrelated to eligibility; production never defaults to allow.
+func (c clientFuncs) CheckDeliveryEligibility(context.Context, customerservice.DeliveryCheck) (customerservice.DeliveryEligibility, error) {
+	return customerservice.DeliveryEligibility{Eligible: true, Reason: "eligible"}, nil
+}
+
 func (c clientFuncs) ReceiveMessage(ctx context.Context, v customerservice.ReceiveMessageCommand) (customerservice.ReceiveMessageResult, error) {
 	return c.receive(ctx, v)
 }

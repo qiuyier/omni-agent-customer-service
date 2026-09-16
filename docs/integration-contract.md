@@ -270,9 +270,25 @@ go test ./internal/conversation ./internal/customerservice ./internal/transport/
 当前 IDL、普通/流式幂等、过期 Trigger、关闭后重放等行为还由对应现有测试覆盖。
 质量验收与接入契约验收分开：模型在某组模拟题答对，不证明接口可可靠接入生产系统。
 
-## 8. 下一步实施边界
+## 8. 只读交付资格接口
 
-契约阶段只落实文档和离线回归；后续新增的接入原型也不改现有客服 API、数据库、
+`POST /v1/conversations/:conversation_id/messages/:trigger_message_id/reply/eligibility`
+
+沿用现有 Bearer 鉴权、就绪检查、限流和请求日志中间件。JSON 请求体必填
+`customer_id`、`channel`、`reply_message_id`、`content`；会话和触发 ID 以路径为准。
+正常返回 200 与 `{"eligible":true,"reason":"eligible"}`，或 `eligible=false`。
+拒绝原因包括 `ownership_mismatch`、`conversation_closed`、`not_bot_owned`、
+`invalid_trigger`、`superseded`、`reply_mismatch`。缺少输入 400、缺少凭证 401、
+会话不存在 404；其他错误沿用现有错误映射。响应禁止缓存。
+
+一次会话事务读取归属、状态、消息和已存回复，不生成内容、不变更业务数据。
+该接口不证明调用方拥有该客户的渠道发送权限，也不创建交付凭据或租约。
+检查后的状态变化仍可能早于实际发送；严格条件发送必须由交付系统另行协调。
+适配器每次重试重新查询，不复用允许结果，详见[交付前资格校验](integration-adapter.md#交付前资格校验)。
+
+## 9. 下一步实施边界
+
+契约阶段落实文档和离线回归；接入原型及只读交付资格接口不改变已有 API 语义、数据库、
 鉴权、Prompt 或部署配置，不新增查询拆分或任何行业操作。
 
 中性接入原型已实现稳定 ID 映射和“接收—回复—交付”处理记录，并以模拟响应丢失

@@ -44,6 +44,19 @@ func NewHTTPClient(cfg HTTPConfig) (*HTTPClient, error) {
 }
 func (c *HTTPClient) Close() { c.transport.CloseIdleConnections() }
 
+func (c *HTTPClient) CheckDeliveryEligibility(ctx context.Context, q customerservice.DeliveryCheck) (customerservice.DeliveryEligibility, error) {
+	payload := map[string]string{"customer_id": q.CustomerID, "channel": q.Channel, "reply_message_id": q.ReplyMessageID, "content": q.Content}
+	var result customerservice.DeliveryEligibility
+	status, err := c.post(ctx, "/v1/conversations/"+url.PathEscape(q.ConversationID)+"/messages/"+url.PathEscape(q.TriggerMessageID)+"/reply/eligibility", payload, &result)
+	if err != nil {
+		return customerservice.DeliveryEligibility{}, err
+	}
+	if status != http.StatusOK || result.Reason == "" || (result.Eligible && result.Reason != "eligible") || (!result.Eligible && result.Reason == "eligible") {
+		return customerservice.DeliveryEligibility{}, &CallError{Code: FailureInvalidResponse}
+	}
+	return result, nil
+}
+
 func (c *HTTPClient) ReceiveMessage(ctx context.Context, command customerservice.ReceiveMessageCommand) (customerservice.ReceiveMessageResult, error) {
 	payload := struct {
 		CustomerID        string `json:"customer_id"`

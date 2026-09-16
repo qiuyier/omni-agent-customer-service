@@ -55,5 +55,6 @@ func RegisterRoutes(
 	api.POST(receiveMessageRoute, handler.ReceiveMessage)
 	api.POST(generateReplyRoute, handler.GenerateBotReply)
 	api.POST(streamReplyRoute, handler.StreamBotReply)
+	api.POST(generateReplyRoute+"/eligibility", handler.CheckDeliveryEligibility)
 	return nil
 }
