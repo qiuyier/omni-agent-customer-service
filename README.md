@@ -1196,6 +1196,9 @@ GOPRIVATE=github.com/qiuyier/omni-agent-kit go mod download
 验证认证、持久化幂等与条件交付的并发边界。
 待人工处理记录现支持[查询、确认送达、终止及受限恢复](docs/integration-resolution.md)，
 处置与审计原子保存，保留原去重标识；仅提供可信应用层入口，尚无管理页面或操作员鉴权接口。
+新增[通用接入端到端验收](docs/integration-acceptance.md)：运行
+`bash scripts/integration_check.sh`，通过真实本地 HTTP、适配器进程中断重启和人工处置
+验证八个场景并生成 JSON 报告；仅用假模型/模拟交付端，不调用真实渠道或付费模型。
 多接入方隔离、外部知识源和业务操作按需求单独设计，不以某一行业模拟题驱动核心功能。
 
 当前 SSE、PostgreSQL 持久化、Request ID、基础 Bearer 鉴权、单实例请求限流、
