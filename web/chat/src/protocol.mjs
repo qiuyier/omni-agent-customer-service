@@ -1,0 +1,124 @@
+export const MAX_BYTES = 4000;
+export const byteLength = (value) => new TextEncoder().encode(value).length;
+export const validContent = (value) => typeof value === 'string' && value.trim().length > 0 && byteLength(value) <= MAX_BYTES;
+export const pendingKey = (conversationID) => `webchat:pending:v1:${conversationID}`;
+
+export function readPending(storage, conversationID) {
+  const raw = storage.getItem(pendingKey(conversationID));
+  if (!raw) return null;
+  let value;
+  try { value = JSON.parse(raw); } catch { throw new Error('invalid_pending'); }
+  if (value?.version !== 1 || value.conversation_id !== conversationID ||
+      typeof value.event_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(value.event_id) || !validContent(value.content)) {
+    throw new Error('invalid_pending');
+  }
+  return value;
+}
+
+export function savePending(storage, conversationID, pending) {
+  storage.setItem(pendingKey(conversationID), JSON.stringify({
+    version: 1, conversation_id: conversationID,
+    event_id: pending.event_id, content: pending.content,
+  }));
+}
+
+export function probeStorage(storage, conversationID) {
+  const key = `${pendingKey(conversationID)}:probe`;
+  storage.setItem(key, '1');
+  storage.removeItem(key);
+}
+
+export class APIError extends Error {
+  constructor(code, status = 0) {
+    super(code);
+    this.name = 'APIError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const knownErrors = new Set(['unauthorized', 'invalid_request', 'busy', 'rate_limited', 'event_conflict', 'unavailable', 'conversation_closed', 'not_found']);
+
+export async function requestJSON(path, { method = 'GET', body, token, signal, fetcher = globalThis.fetch, timeout = 45000 } = {}) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', abort, { once: true });
+  const timer = setTimeout(abort, timeout);
+  try {
+    const headers = { Accept: 'application/json' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetcher(path, {
+      method, headers, credentials: 'same-origin', cache: 'no-store',
+      body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal,
+    });
+    if (response.status === 204 && response.ok) return null;
+    let result;
+    try { result = await response.json(); } catch { throw new APIError('unavailable', response.status); }
+    if (!response.ok) {
+      const fallback = response.status === 401 ? 'unauthorized' : response.status === 429 ? 'rate_limited' : 'unavailable';
+      throw new APIError(knownErrors.has(result?.error) ? result.error : fallback, response.status);
+    }
+    return result;
+  } catch (error) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (error instanceof APIError) throw error;
+    throw new APIError('unavailable');
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+  }
+}
+
+// The bearer token exists only in this closure. It never enters React state or browser storage.
+export function createChatAPI(fetcher = globalThis.fetch) {
+  let token = '';
+  let current = null;
+  let revision = 0;
+  const acquire = async (signal, expectedConversation) => {
+    const started = revision;
+    const result = await requestJSON('/host/chat-session', { method: 'POST', body: {}, signal, fetcher });
+    // An old request may resolve after the UI has switched accounts or unmounted.
+    // It must not restore its capability into the new page session.
+    if (started !== revision || signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (!result?.access_token || !result?.conversation_id || !result?.user?.id) throw new APIError('unavailable');
+    if (expectedConversation && result.conversation_id !== expectedConversation) {
+      token = '';
+      throw new APIError('account_changed');
+    }
+    token = result.access_token;
+    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo };
+    return current;
+  };
+  const authorized = async (method, body, signal) => {
+    if (!current || !token) throw new APIError('unauthorized', 401);
+    const expected = current.conversation_id;
+    try {
+      return await requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher });
+    } catch (error) {
+      if (error.status !== 401) throw error;
+      await acquire(signal, expected);
+      // The same body object (and event_id) is reused after token renewal.
+      return requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher });
+    }
+  };
+  return {
+    open: (signal) => acquire(signal),
+    history: (signal) => authorized('GET', undefined, signal),
+    send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
+    clear: () => { revision++; token = ''; current = null; },
+  };
+}
+
+export const errorMessage = (error) => ({
+  unauthorized: '登录已失效。请返回示例站点重新选择演示账号。',
+  account_changed: '演示账号已发生变化。请重新载入当前页面，确认账号后继续。',
+  invalid_request: '消息未被接受，请检查内容后重试。',
+  busy: '当前会话正在处理另一条消息，请稍后重试。',
+  rate_limited: '发送得有些频繁，请稍等片刻再重试。',
+  event_conflict: '这条待确认消息的标识发生冲突。请保留内容并联系服务维护者。',
+  unavailable: '暂时无法确认服务响应，请检查连接后重试。',
+  conversation_closed: '当前会话已结束，暂时无法继续发送。',
+  not_found: '暂时无法找到当前会话。请重新载入页面。',
+})[error?.code] || '暂时无法连接服务，请稍后重试。';

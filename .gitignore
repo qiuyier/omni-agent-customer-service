@@ -8,3 +8,6 @@ coverage.out
 
 # Instance-local enterprise knowledge; keep curated demo fixtures tracked.
 knowledge.local/
+
+# Browser source dependencies; embedded production assets stay tracked.
+web/chat/node_modules/
