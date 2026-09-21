@@ -14,13 +14,21 @@
 
 ## 当前进度
 
+网页客服已接入已有 AI 与知识检索链路，默认模拟模式不变：
+
+- 演示入口用 `-reply ai`，私有宿主网关用 `WEBCHAT_REPLY_MODE=ai` 显式启用；
+- 复用已有模型、FAQ/语义检索与幂等保存，失败不降级假回复，知识为实例级配置；
+- 同步模型、网关、代理和浏览器等待预算；页面根据服务端模式显示能力边界；
+- 本轮仅用本机 mock 模型/embedding 验证，不代表真实模型质量已验收；
+  配置、费用/数据边界及阅读顺序见[网页 AI 接入](docs/webchat-ai.md)。
+
 网页客服已加入 PostgreSQL 持久化启动与真实进程重启验收：
 
 - `cmd/webchat-demo -storage postgres` 显式启用专用本机演示库，默认内存模式保留；
 - `cmd/webchat-server` 是 PostgreSQL 必需的私有宿主网关，不提供模拟登录或 `/v1` 路由；
 - 复用原有 Repository 和迁移，启动失败不回退内存；来源/用户标识保持跨重启稳定；
 - `scripts/webchat_restart_check.sh` 验证丢失确认、终止旧进程、新凭证、历史恢复与幂等；
-- 仍使用假回复，真实宿主认证与生产部署不在本步范围，见[持久化接入说明](docs/webchat-persistence.md)。
+- 重启验收仍使用假回复；真实宿主认证与生产部署不在本步范围，见[持久化接入说明](docs/webchat-persistence.md)。
 
 已加入“宿主没有现成客服能力”的网页接入最小闭环：
 

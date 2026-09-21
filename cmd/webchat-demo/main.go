@@ -1,6 +1,6 @@
 // Command webchat-demo runs an isolated, loopback-only example host. It does not
-// use DATABASE_URL, host deployment secrets or real models. Persistent demo
-// storage is opt-in and restricted to its own loopback PostgreSQL database.
+// use DATABASE_URL or host deployment secrets. AI and persistent demo storage
+// require explicit flags; PostgreSQL is restricted to its own loopback database.
 package main
 
 import (
@@ -29,15 +29,16 @@ const defaultDemoAddress = "127.0.0.1:8092"
 func main() {
 	address := flag.String("address", defaultDemoAddress, "literal loopback listen address (demo only)")
 	storage := flag.String("storage", "memory", "demo storage: memory or explicitly configured local postgres")
+	reply := flag.String("reply", "fake", "fake (offline default) or ai (configured model; simulated login only)")
 	check := flag.Bool("check-config", false, "validate demo configuration without connecting or listening")
 	flag.Parse()
-	config, err := resolveDemoConfig(*address, *storage, os.LookupEnv)
+	config, err := resolveDemoConfigWithReply(*address, *storage, *reply, os.LookupEnv)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "webchat-demo:", err)
 		os.Exit(1)
 	}
 	if *check {
-		fmt.Println("webchat-demo: configuration valid (simulated login, fake replies)")
+		fmt.Printf("webchat-demo: configuration valid (simulated login, reply mode: %s); no database, knowledge file, model or embedding connectivity checked\n", config.reply.Mode)
 		return
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -78,6 +79,9 @@ func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer)
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	if err := config.reply.Validate(); err != nil {
+		return err
+	}
 	secret, err := randomToken()
 	if err != nil {
 		return errors.New("cannot initialize demo credentials")
@@ -95,12 +99,14 @@ func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer)
 	}
 	defer runtime.Close()
 	repository := runtime.Repository
+	options, err := bootstrap.NewWebchatReplyOptions(ctx, config.reply, customerservice.ReplyGeneratorFunc(demoReply))
+	if err != nil {
+		return err
+	}
 	service, err := customerservice.New(repository,
 		customerservice.MessageIDGeneratorFunc(randomToken),
 		customerservice.ClockFunc(time.Now),
-		customerservice.WithReplyGenerator(customerservice.ReplyGeneratorFunc(demoReply)),
-		customerservice.WithReplyGenerationTimeout(3*time.Second),
-		customerservice.WithMaxConcurrentReplies(8),
+		options...,
 	)
 	if err != nil {
 		return errors.New("cannot initialize demo application")
@@ -110,8 +116,9 @@ func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer)
 		sourceID = "webchat-demo"
 	}
 	gateway, err := webchat.New(repository, service, webchat.Config{
-		Hosts:      []webchat.Host{{SourceID: sourceID, Secret: secret}},
-		SessionTTL: 5 * time.Minute,
+		Hosts:          []webchat.Host{{SourceID: sourceID, Secret: secret}},
+		SessionTTL:     5 * time.Minute,
+		RequestTimeout: config.reply.RequestTimeout(),
 	})
 	if err != nil {
 		return errors.New("cannot initialize demo gateway")
@@ -133,14 +140,31 @@ func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer)
 	}
 	defer host.client.CloseIdleConnections()
 	host.storage = string(config.repository.Driver)
+	host.replyMode = config.reply.Mode
+	requestTimeout := config.reply.RequestTimeout()
+	host.client.Timeout = requestTimeout + 10*time.Second
+	host.client.Transport.(*http.Transport).ResponseHeaderTimeout = requestTimeout + 5*time.Second
 	requestRoot, cancelRequests := context.WithCancel(context.Background())
 	defer cancelRequests() // Runs before closing the PostgreSQL pool.
-	privateServer := demoHTTPServer(gateway)
-	publicServer := demoHTTPServer(host)
+	privateRequests := &demoRequestTracker{next: gateway}
+	publicRequests := &demoRequestTracker{next: host}
+	privateServer := demoHTTPServer(privateRequests)
+	publicServer := demoHTTPServer(publicRequests)
+	privateServer.WriteTimeout = requestTimeout + 5*time.Second
+	publicServer.WriteTimeout = requestTimeout + 15*time.Second
 	privateServer.BaseContext = func(net.Listener) context.Context { return requestRoot }
 	publicServer.BaseContext = func(net.Listener) context.Context { return requestRoot }
 	defer privateServer.Close()
 	defer publicServer.Close()
+	defer func() {
+		publicRequests.beginDrain()
+		privateRequests.beginDrain()
+		cancelRequests()
+		_ = publicServer.Close()
+		_ = privateServer.Close()
+		publicRequests.active.Wait()
+		privateRequests.active.Wait()
+	}() // Join canceled model/database work before runtime.Close releases storage.
 	serverErrors := make(chan error, 2)
 	go func() { serverErrors <- privateServer.Serve(privateListener) }()
 	go func() { serverErrors <- publicServer.Serve(publicListener) }()
@@ -148,7 +172,11 @@ func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer)
 	if config.repository.Driver == bootstrap.StorageDriverPostgres {
 		storageNotice = "PostgreSQL demo history survives restart; simulated login must be repeated. Not production authentication."
 	}
-	if _, err := fmt.Fprintf(output, "Web chat demo: %s\nSimulated login and reply only. No external actions or model. %s\n", origin, storageNotice); err != nil {
+	replyNotice := "Fake replies only; no external model calls."
+	if config.reply.Mode == "ai" {
+		replyNotice = "AI replies enabled: prompts and matched knowledge are sent to the configured provider and may incur costs. Simulated accounts are not production authentication."
+	}
+	if _, err := fmt.Fprintf(output, "Web chat demo: %s\nSimulated login only. No external business actions. %s %s\n", origin, replyNotice, storageNotice); err != nil {
 		return errors.New("cannot display the public demo URL")
 	}
 	var serveErr error
@@ -159,7 +187,9 @@ func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer)
 	shutdownContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	// Stop admitting public requests first, then stop the private gateway.
+	publicRequests.beginDrain()
 	publicErr := publicServer.Shutdown(shutdownContext)
+	privateRequests.beginDrain()
 	privateErr := privateServer.Shutdown(shutdownContext)
 	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 		return errors.New("demo HTTP server stopped unexpectedly")

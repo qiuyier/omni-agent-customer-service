@@ -2,7 +2,8 @@
 
 网页客服现在复用已有 PostgreSQL Repository、会话表、消息表和 Tern 迁移，
 没有新增另一套会话存储，也没有修改 CRMEB 或引入电商业务逻辑。
-两个入口仍使用假回复；持久化不等于已完成真实宿主登录或生产部署。
+两个入口默认使用假回复；后续已加入[显式 AI 模式](webchat-ai.md)。
+持久化不等于已完成真实宿主登录或生产部署。
 
 ## 两个启动入口
 
@@ -74,7 +75,7 @@ WEBCHAT_DEMO_DATABASE_URL='postgres://webchat_demo:webchat_demo_local@127.0.0.1:
 | `WEBCHAT_HOST_ID` | 必填、稳定的宿主标识；不能使用保留的 `example-host` / `webchat-demo` |
 | `WEBCHAT_HOST_SECRET` | 必填、独立随机密钥，32–128 字节；与原 `/v1` 服务密钥不同 |
 | `WEBCHAT_ADDRESS` | 默认 `127.0.0.1:8093`；可用 `-address` 覆盖，拒绝非回环监听 |
-| `WEBCHAT_REPLY_MODE` | 默认且目前只允许 `fake`，不读取 AI 模型配置 |
+| `WEBCHAT_REPLY_MODE` | 默认 `fake` 不读取 AI/知识配置；显式 `ai` 接入已有 AI/知识链路 |
 | `STORAGE_DRIVER` | 可以不设置；设置时只能为 `postgres` / `postgresql` |
 
 先通过部署配置或密钥管理器注入这些值，再运行：
@@ -85,7 +86,7 @@ go run ./cmd/webchat-server
 ```
 
 `-check-config` 只检查配置，不代表数据库可达。正常启动会在监听前检查数据库和 schema，
-总初始化预算 10 秒；启动不自动迁移。需要迁移时由部署者显式对已确认目标执行已有
+数据库初始化预算 10 秒，AI/知识初始化有独立预算；启动不自动迁移。需要迁移时由部署者显式对已确认目标执行已有
 `cmd/migrate`。错误输出不会回显数据库连接串、密钥或驱动原始诊断。
 
 私有网关只提供 `/internal/chat/sessions`、`/chat/v1/messages`、`/healthz`、`/readyz`。

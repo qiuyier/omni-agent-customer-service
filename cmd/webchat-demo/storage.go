@@ -16,13 +16,23 @@ const demoDatabaseName = "omni_agent_webchat_demo"
 type demoConfig struct {
 	address    string
 	repository bootstrap.RepositoryConfig
+	reply      bootstrap.WebchatReplyConfig
 }
 
 // The simulated-account executable never consumes the real deployment's
 // DATABASE_URL. PostgreSQL is opt-in and restricted to one local demo database.
 func resolveDemoConfig(address, driver string, lookup func(string) (string, bool)) (demoConfig, error) {
+	return resolveDemoConfigWithReply(address, driver, "fake", lookup)
+}
+
+func resolveDemoConfigWithReply(address, driver, mode string, lookup func(string) (string, bool)) (demoConfig, error) {
 	config := demoConfig{address: address}
 	if err := validateDemoAddress(address); err != nil {
+		return config, err
+	}
+	var err error
+	config.reply, err = bootstrap.ResolveWebchatReplyConfig(mode, lookup)
+	if err != nil {
 		return config, err
 	}
 	switch driver {

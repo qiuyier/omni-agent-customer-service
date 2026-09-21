@@ -41,7 +41,7 @@ func runCommand(ctx context.Context, args []string, lookup func(string) (string,
 	check := flags.Bool("check-config", false, "validate settings only; do not connect or listen")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			_, err = fmt.Fprintln(output, "Usage: webchat-server [-address IP:PORT] [-check-config]\nRequires WEBCHAT_HOST_ID, WEBCHAT_HOST_SECRET and DATABASE_URL. PostgreSQL storage and fake replies only.")
+			_, err = fmt.Fprintln(output, "Usage: webchat-server [-address IP:PORT] [-check-config]\nRequires WEBCHAT_HOST_ID, WEBCHAT_HOST_SECRET and DATABASE_URL. PostgreSQL required; replies default to fake. WEBCHAT_REPLY_MODE=ai explicitly enables configured AI and optional knowledge.")
 			if err == nil {
 				return nil
 			}
@@ -57,7 +57,7 @@ func runCommand(ctx context.Context, args []string, lookup func(string) (string,
 		return err
 	}
 	if *check {
-		if _, err := fmt.Fprintln(output, "Web chat server configuration is valid. PostgreSQL connectivity and schema were not checked. Reply mode: fake."); err != nil {
+		if _, err := fmt.Fprintf(output, "Web chat server configuration is valid. PostgreSQL connectivity, schema, knowledge files and model availability were not checked. No model or embedding requests were made. Reply mode: %s.\n", config.ReplyMode); err != nil {
 			return errors.New("cannot display configuration status")
 		}
 		return nil
@@ -96,21 +96,28 @@ func openRepository(ctx context.Context, config bootstrap.RepositoryConfig) (*re
 }
 
 func newGateway(repository conversation.Repository, config serverConfig) (http.Handler, error) {
+	return newGatewayContext(context.Background(), repository, config)
+}
+
+func newGatewayContext(ctx context.Context, repository conversation.Repository, config serverConfig) (http.Handler, error) {
+	options, err := bootstrap.NewWebchatReplyOptions(ctx, config.Reply, customerservice.ReplyGeneratorFunc(fakeReply))
+	if err != nil {
+		return nil, err
+	}
 	service, err := customerservice.New(repository,
 		customerservice.MessageIDGeneratorFunc(func() (string, error) {
 			id, err := uuid.NewRandom()
 			return id.String(), err
 		}),
 		customerservice.ClockFunc(time.Now),
-		customerservice.WithReplyGenerator(customerservice.ReplyGeneratorFunc(fakeReply)),
-		customerservice.WithReplyGenerationTimeout(3*time.Second),
-		customerservice.WithMaxConcurrentReplies(8),
+		options...,
 	)
 	if err != nil {
 		return nil, errors.New("cannot initialize the web chat application")
 	}
 	gateway, err := webchat.New(repository, service, webchat.Config{
-		Hosts: []webchat.Host{{SourceID: config.HostID, Secret: config.HostSecret}},
+		Hosts:          []webchat.Host{{SourceID: config.HostID, Secret: config.HostSecret}},
+		RequestTimeout: config.Reply.RequestTimeout(),
 	})
 	if err != nil {
 		return nil, errors.New("cannot initialize the trusted-host gateway")

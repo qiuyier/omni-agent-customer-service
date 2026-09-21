@@ -3,6 +3,8 @@ export const byteLength = (value) => new TextEncoder().encode(value).length;
 export const validContent = (value) => typeof value === 'string' && value.trim().length > 0 && byteLength(value) <= MAX_BYTES;
 export const pendingKey = (conversationID) => `webchat:pending:v1:${conversationID}`;
 export const normalizeStorage = (value) => value === 'memory' || value === 'postgres' ? value : null;
+export const normalizeReplyMode = (value) => value === 'fake' || value === 'ai' ? value : null;
+export const replyRequestTimeout = (replyMode) => normalizeReplyMode(replyMode) === 'ai' ? 150000 : 45000;
 
 export function readPending(storage, conversationID) {
   const raw = storage.getItem(pendingKey(conversationID));
@@ -89,19 +91,19 @@ export function createChatAPI(fetcher = globalThis.fetch) {
       throw new APIError('account_changed');
     }
     token = result.access_token;
-    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage) };
+    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage), reply_mode: normalizeReplyMode(result.reply_mode) };
     return current;
   };
   const authorized = async (method, body, signal) => {
     if (!current || !token) throw new APIError('unauthorized', 401);
     const expected = current.conversation_id;
     try {
-      return await requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher });
+      return await requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
     } catch (error) {
       if (error.status !== 401) throw error;
       await acquire(signal, expected);
       // The same body object (and event_id) is reused after token renewal.
-      return requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher });
+      return requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
     }
   };
   return {

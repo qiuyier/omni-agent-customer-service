@@ -1,0 +1,16 @@
+[
+  {
+    "id": "webchat-demo-password",
+    "title": "虚构服务平台：重置密码",
+    "source": "demo/help/account",
+    "content": "这是一条虚构的演示资料。演示平台用户可以在登录页选择“忘记密码”，按页面提示使用注册邮箱完成验证，再设置新密码。这是用户自行操作的指引，客服不能代为重置。不要向任何人提供密码或验证码。",
+    "keywords": ["重置密码", "忘记密码", "找回密码", "reset password"]
+  },
+  {
+    "id": "webchat-demo-service-hours",
+    "title": "虚构服务平台：服务台开放时间",
+    "source": "demo/help/service-hours",
+    "content": "这是一条虚构的演示资料。演示服务台开放时间为周一至周五 09:00—17:30（北京时间）。节假日安排以平台公告为准，当前资料没有具体节假日安排。此说明不表示客服已通知人工或承诺回复时间。",
+    "keywords": ["服务台", "开放时间", "服务时间", "service hours"]
+  }
+]

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MAX_BYTES, byteLength, validContent, pendingKey, readPending, savePending, probeStorage, createChatAPI, requestJSON, errorMessage, normalizeStorage } from './protocol.mjs';
+import { MAX_BYTES, byteLength, validContent, pendingKey, readPending, savePending, probeStorage, createChatAPI, requestJSON, errorMessage, normalizeStorage, normalizeReplyMode } from './protocol.mjs';
 import { demoPresentation } from './demo.mjs';
 
 function Icon({ name, className = 'size-5', ...props }) {
@@ -23,8 +23,8 @@ function Brand({ compact = false }) {
   return <a href="/" className="inline-flex items-center gap-3 text-stone-900 no-underline" aria-label="回到示例站点首页"><span className="grid size-9 place-items-center rounded-xl bg-emerald-900 text-stone-50"><Icon name="chat" className="size-5" /></span><span className="text-sm font-semibold tracking-tight">随时聊{!compact && <span className="ml-2.5 border-l border-stone-300 pl-2.5 font-normal text-stone-500">接入演示</span>}</span></a>;
 }
 
-function DemoLabel({ storage }) {
-  return <span className="inline-flex items-center gap-2 text-xs text-stone-500"><span className="size-1.5 rounded-full bg-emerald-700" />{demoPresentation(storage).label}</span>;
+function DemoLabel({ storage, replyMode }) {
+  return <span className="inline-flex items-center gap-2 text-xs text-stone-500"><span className="size-1.5 rounded-full bg-emerald-700" />{demoPresentation(storage, replyMode).label}</span>;
 }
 
 function announceAccountChange() {
@@ -43,6 +43,7 @@ function InlineError({ children }) {
 function Home() {
   const [user, setUser] = useState(null);
   const [storage, setStorage] = useState(null);
+  const [replyMode, setReplyMode] = useState(null);
   const [phase, setPhase] = useState('loading');
   const [error, setError] = useState('');
   const controller = useRef(null);
@@ -52,7 +53,7 @@ function Home() {
     const c = new AbortController(); controller.current = c;
     const version = ++generation.current;
     requestJSON('/host/me', { signal: c.signal }).then((data) => {
-      if (version === generation.current) { setUser(data.user); setStorage(normalizeStorage(data.storage)); setPhase('ready'); }
+      if (version === generation.current) { setUser(data.user); setStorage(normalizeStorage(data.storage)); setReplyMode(normalizeReplyMode(data.reply_mode)); setPhase('ready'); }
     }).catch((e) => { if (version === generation.current && e.name !== 'AbortError') { setError(errorMessage(e)); setPhase('ready'); } });
     return () => { ++generation.current; controller.current?.abort(); };
   }, []);
@@ -68,7 +69,7 @@ function Home() {
       const data = await requestJSON(account ? '/demo/login' : '/demo/logout', { method: 'POST', body: account ? { account } : {}, signal: c.signal });
       if (version === generation.current) {
         setUser(data?.user || null);
-        if (account) setStorage(normalizeStorage(data?.storage));
+        if (account) { setStorage(normalizeStorage(data?.storage)); setReplyMode(normalizeReplyMode(data?.reply_mode)); }
         announceAccountChange();
       }
     } catch (e) {
@@ -80,6 +81,7 @@ function Home() {
   }
 
   const busy = phase !== 'ready';
+  const demo = demoPresentation(storage, replyMode);
   return <div className="min-h-[100dvh] bg-[#f6f5f1]">
     <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-6 md:px-10"><Brand /><span className="hidden text-xs text-stone-500 sm:block">EXAMPLE / HOST SITE</span></header>
     <main className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 pb-16 pt-12 md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-10 md:pb-24 md:pt-24">
@@ -102,7 +104,7 @@ function Home() {
           {user && !busy ? <a href="/chat/" className="primary-button flex w-full items-center justify-between">进入聊天<Icon name="arrow" className="size-4" /></a> : <button type="button" disabled className="primary-button flex w-full items-center justify-between disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400">{busy ? '正在准备…' : '选择账号后进入聊天'}<Icon name="arrow" className="size-4" /></button>}
         </div>
       </section>
-      <footer className="flex flex-col gap-3 border-t border-stone-300/70 pt-6 text-xs leading-6 text-stone-400 md:col-span-2 md:mt-8 md:flex-row md:items-center md:justify-between"><DemoLabel storage={storage} /><p>{demoPresentation(storage).description}</p></footer>
+      <footer className="flex flex-col gap-3 border-t border-stone-300/70 pt-6 text-xs leading-6 text-stone-400 md:col-span-2 md:mt-8 md:flex-row md:items-center md:justify-between"><DemoLabel storage={storage} replyMode={replyMode} /><p>{demo.description}{demo.capabilities}</p></footer>
     </main>
   </div>;
 }
@@ -255,7 +257,7 @@ function useChat() {
       try { window.sessionStorage.removeItem(pendingKey(session.conversation_id)); }
       catch { storageWarning = '浏览器未能清理待确认缓存，请勿在其他页面重复提交这条消息。'; setStorageAvailable(false); }
       setMessages((items) => items.some((item) => item.id === result.message_id) ? items : [...items, { id: result.message_id, role: 'customer', content: outgoing.content, created_at: new Date().toISOString() }]);
-      const confirmed = result.outcome === 'waiting_human' ? '消息已接受，当前正在等待人工处理。此演示不包含坐席界面。' : result.outcome === 'superseded' ? '消息已接受；回复状态已发生变化，请查看最新记录。' : '消息已发送。';
+      const confirmed = result.outcome === 'waiting_human' ? '消息已接受并标记为待人工处理；此入口不提供人工转接或坐席服务。' : result.outcome === 'superseded' ? '消息已接受；回复状态已发生变化，请查看最新记录。' : '消息已发送。';
       setNotice([confirmed, storageWarning].filter(Boolean).join(' '));
       try {
         const data = await api.current.history(task.signal);
@@ -281,7 +283,7 @@ function Message({ message }) {
   const time = Number.isNaN(parsedTime.getTime()) ? '' : parsedTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   return <article className={`message-enter flex ${own ? 'justify-end' : 'justify-start'}`}>
     <div className={`max-w-[90%] sm:max-w-[82%] ${own ? 'text-right' : ''}`}>
-      <div className={`mb-2 flex items-center gap-2 text-[11px] text-stone-400 ${own ? 'justify-end' : ''}`}><span>{own ? '你' : message.role === 'human_agent' ? '人工坐席' : '演示助手'}</span>{!own && message.role !== 'human_agent' && <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px]">模拟回复</span>}<time dateTime={message.created_at}>{time}</time></div>
+      <div className={`mb-2 flex items-center gap-2 text-[11px] text-stone-400 ${own ? 'justify-end' : ''}`}><span>{own ? '你' : message.role === 'human_agent' ? '人工坐席' : '演示助手'}</span>{!own && message.role !== 'human_agent' && <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px]">助手回复</span>}<time dateTime={message.created_at}>{time}</time></div>
       <div className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-3.5 text-left text-sm leading-7 [overflow-wrap:anywhere] ${own ? 'rounded-tr-md bg-emerald-900 text-white' : 'rounded-tl-md border border-stone-200/80 bg-[#f6f6f2] text-stone-700'}`}>{message.content}</div>
       {message.content_truncated && <p className="mt-1.5 text-[10px] text-stone-400">内容较长，仅展示部分</p>}
     </div>
@@ -290,7 +292,7 @@ function Message({ message }) {
 
 function Chat() {
   const chat = useChat();
-  const demo = demoPresentation(chat.session?.storage);
+  const demo = demoPresentation(chat.session?.storage, chat.session?.reply_mode);
   const end = useRef(null);
   const composer = useRef(null);
   const [nearBottom, setNearBottom] = useState(true);
@@ -308,15 +310,15 @@ function Chat() {
         <h1 className="text-2xl font-medium tracking-tight text-stone-900 md:mt-6 md:text-[2rem] md:leading-snug">有问题，<br className="hidden md:block" />从这里开始。</h1>
         <p className="mt-3 hidden text-sm leading-7 text-stone-500 md:block">一个独立的聊天入口，沿用你在示例站点选择的身份。</p>
         <div className="mt-8 hidden border-t border-stone-300/70 pt-6 md:block"><p className="mb-3 text-[11px] text-stone-400">当前演示身份</p>{chat.session ? <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-[#e9e9df] text-sm text-stone-600">{chat.session.user.display_name.slice(0, 1)}</span><div><p className="text-sm font-medium text-stone-800">{chat.session.user.display_name}</p><a href="/" className="mt-1 inline-block text-xs text-stone-400 underline-offset-4 hover:underline">返回站点切换账号</a></div></div> : <p className="text-sm text-stone-500">{chat.phase === 'loading' ? '正在读取…' : '尚未连接'}</p>}</div>
-        <div className="mt-10 hidden space-y-5 text-xs leading-6 text-stone-500 md:block"><div className="flex gap-2.5"><Icon name="note" className="mt-0.5 size-4 shrink-0" /><p>{demo.description}</p></div><div className="flex gap-2.5"><Icon name="shield" className="mt-0.5 size-4 shrink-0" /><p>助手使用固定逻辑生成模拟回复，未接入真实模型或人工坐席。</p></div></div>
+        <div className="mt-10 hidden space-y-5 text-xs leading-6 text-stone-500 md:block"><div className="flex gap-2.5"><Icon name="note" className="mt-0.5 size-4 shrink-0" /><p>{demo.description}</p></div><div className="flex gap-2.5"><Icon name="shield" className="mt-0.5 size-4 shrink-0" /><p>{demo.capabilities}</p></div></div>
       </aside>
       <section aria-label="聊天窗口" className="flex min-h-[650px] min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white shadow-[0_12px_48px_-30px_rgba(60,54,44,0.18)] md:h-[calc(100dvh-120px)] md:min-h-[660px]">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-200/80 px-5 py-4 md:px-8"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-[#f0f1e9] text-emerald-900"><Icon name="chat" className="size-5" /></span><div><h2 className="text-sm font-medium text-stone-900">演示助手</h2><div className="mt-1"><DemoLabel storage={chat.session?.storage} /></div></div></div><button type="button" aria-label="刷新消息记录" onClick={chat.refresh} disabled={!chat.session || chat.phase !== 'ready' || chat.sending || chat.refreshing || chat.mustReload} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900 active:scale-[0.98] disabled:opacity-40"><Icon name="refresh" className="size-4" /><span className="hidden sm:inline">{chat.refreshing ? '读取中…' : '刷新记录'}</span></button></div>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-200/80 px-5 py-4 md:px-8"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-[#f0f1e9] text-emerald-900"><Icon name="chat" className="size-5" /></span><div><h2 className="text-sm font-medium text-stone-900">演示助手</h2><div className="mt-1"><DemoLabel storage={chat.session?.storage} replyMode={chat.session?.reply_mode} /></div></div></div><button type="button" aria-label="刷新消息记录" onClick={chat.refresh} disabled={!chat.session || chat.phase !== 'ready' || chat.sending || chat.refreshing || chat.mustReload} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900 active:scale-[0.98] disabled:opacity-40"><Icon name="refresh" className="size-4" /><span className="hidden sm:inline">{chat.refreshing ? '读取中…' : '刷新记录'}</span></button></div>
         <div className="border-b border-stone-100 px-5 py-2 text-[11px] text-stone-400 md:px-8">{chat.session ? <>当前：{chat.session.user.display_name} <span className="mx-2 text-stone-300">/</span> {closed ? '会话已结束' : chat.status === 'waiting_human' ? '等待人工处理' : '独立会话'}</> : '正在建立当前账号的独立会话'}</div>
         <div onScroll={(event) => { const node = event.currentTarget; setNearBottom(node.scrollHeight - node.scrollTop - node.clientHeight < 100); }} className="min-h-56 flex-1 overflow-y-auto overscroll-contain scroll-smooth motion-reduce:scroll-auto" tabIndex={0} aria-label="消息记录">
           {chat.phase === 'loading' ? <ChatSkeleton /> : !chat.session ? <div className="px-6 py-14 md:px-9"><span className="mb-5 grid size-12 place-items-center rounded-2xl bg-stone-100 text-stone-500"><Icon name="shield" /></span><h3 className="text-lg font-medium text-stone-800">{chat.phase === 'unauthorized' ? '先选择一个演示账号' : '还没有连上会话'}</h3><p className="mt-3 max-w-sm text-sm leading-7 text-stone-500">{chat.phase === 'unauthorized' ? '聊天页不会替你自动登录。请回到示例站点选择身份，再来开始对话。' : '可以重新尝试连接；这不会发送任何消息。'}</p><div className="mt-6 flex gap-3"><a href="/" className="primary-button inline-flex items-center gap-2">返回示例站点<Icon name="arrow" className="size-4" /></a>{chat.phase !== 'unauthorized' && <button type="button" onClick={chat.initialize} className="secondary-button">重新连接</button>}</div></div> : <div className="space-y-6 px-5 py-7 md:px-8" role="log" aria-label="会话消息" aria-live="polite" aria-relevant="additions text" aria-busy={chat.refreshing}>
             {chat.truncated && <p className="text-center text-[11px] leading-6 text-stone-400">仅显示最近的消息，较早记录未在此页展示。</p>}
-            {chat.messages.length === 0 && !chat.pending && <div className="pb-8 pt-6 md:pt-10"><span className="mb-6 grid size-12 place-items-center rounded-2xl border border-stone-200 text-emerald-900"><Icon name="chat" className="size-6" /></span><h3 className="text-xl font-medium tracking-tight text-stone-800">你好，{chat.session.user.display_name}。</h3><p className="mt-3 max-w-md text-sm leading-7 text-stone-500">这里还没有消息。写下第一个问题，试试聊天流程。回复为演示内容，不代表真实服务。</p><div className="mt-6 flex flex-wrap gap-2">{['你好，我想了解这个演示', '这个聊天页是如何工作的？'].map((value) => <button type="button" key={value} onClick={() => prompt(value)} disabled={blocked} className="rounded-full border border-stone-200 px-3.5 py-2.5 text-xs text-stone-500 transition-colors hover:border-emerald-800/30 hover:text-emerald-900 active:scale-[0.98] disabled:opacity-50">{value}</button>)}</div></div>}
+            {chat.messages.length === 0 && !chat.pending && <div className="pb-8 pt-6 md:pt-10"><span className="mb-6 grid size-12 place-items-center rounded-2xl border border-stone-200 text-emerald-900"><Icon name="chat" className="size-6" /></span><h3 className="text-xl font-medium tracking-tight text-stone-800">你好，{chat.session.user.display_name}。</h3><p className="mt-3 max-w-md text-sm leading-7 text-stone-500">{demo.emptyDescription}</p><div className="mt-6 flex flex-wrap gap-2">{['你好，我想了解这个演示', '这个聊天页是如何工作的？'].map((value) => <button type="button" key={value} onClick={() => prompt(value)} disabled={blocked} className="rounded-full border border-stone-200 px-3.5 py-2.5 text-xs text-stone-500 transition-colors hover:border-emerald-800/30 hover:text-emerald-900 active:scale-[0.98] disabled:opacity-50">{value}</button>)}</div></div>}
             {chat.messages.map((message) => <Message key={message.id} message={message} />)}
             {chat.pending && <article className="flex justify-end"><div className="max-w-[90%] sm:max-w-[82%]"><p className="mb-2 text-right text-[11px] text-stone-400">你 · {chat.sending ? '发送中' : '等待确认'}</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-tr-md border border-dashed border-emerald-800/30 bg-emerald-50/50 px-4 py-3.5 text-sm leading-7 text-stone-600 [overflow-wrap:anywhere]">{chat.pending.content}</p></div></article>}
             {chat.sending && <div role="status" className="flex items-center gap-2 text-xs text-stone-400"><span className="sending-dot size-1.5 rounded-full bg-emerald-700" />正在发送并等待服务确认…</div>}
@@ -334,7 +336,7 @@ function Chat() {
           </form>}
         </div>
       </section>
-      <p className="px-2 text-[10px] leading-6 text-stone-400 md:hidden">模拟回复，未接入真实模型或坐席。{demo.description}</p>
+      <p className="px-2 text-[10px] leading-6 text-stone-400 md:hidden">{demo.capabilities}{demo.description}</p>
     </main>
   </div>;
 }

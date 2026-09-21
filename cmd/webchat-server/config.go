@@ -20,11 +20,11 @@ type serverConfig struct {
 	HostSecret  string
 	DatabaseURL string
 	ReplyMode   string
+	Reply       bootstrap.WebchatReplyConfig
 }
 
-// This command intentionally reads only its own settings, never AI, CRMEB,
-// service-token or demo-login configuration. Missing storage never falls back
-// to memory. Host identity must remain stable across process restarts.
+// AI and knowledge settings are read only when explicitly enabled. This entry
+// never consumes CRMEB, service-token or demo-login configuration.
 func resolveConfig(lookup func(string) (string, bool), addressOverride string) (serverConfig, error) {
 	if lookup == nil {
 		return serverConfig{}, errors.New("environment lookup is required")
@@ -46,6 +46,11 @@ func resolveConfig(lookup func(string) (string, bool), addressOverride string) (
 	}
 	if driver, supplied := lookup("STORAGE_DRIVER"); supplied && driver != "postgres" && driver != "postgresql" {
 		return serverConfig{}, errors.New("STORAGE_DRIVER must be postgres or postgresql; memory storage is not supported")
+	}
+	var err error
+	config.Reply, err = bootstrap.ResolveWebchatReplyConfig(config.ReplyMode, lookup)
+	if err != nil {
+		return serverConfig{}, err
 	}
 	if err := config.validate(); err != nil {
 		return serverConfig{}, err
@@ -72,8 +77,11 @@ func (c serverConfig) validate() error {
 	if _, err := pgxpool.ParseConfig(c.DatabaseURL); err != nil {
 		return errors.New("DATABASE_URL is invalid; no connection was attempted")
 	}
-	if c.ReplyMode != "fake" {
-		return errors.New("WEBCHAT_REPLY_MODE must be fake; real model replies are not supported by this command")
+	if (c.ReplyMode != "fake" && c.ReplyMode != "ai") || c.Reply.Mode != c.ReplyMode {
+		return errors.New("WEBCHAT_REPLY_MODE must be fake or ai and match the resolved reply configuration")
+	}
+	if err := c.Reply.Validate(); err != nil {
+		return err
 	}
 	host, port, err := net.SplitHostPort(c.Address)
 	if err != nil {

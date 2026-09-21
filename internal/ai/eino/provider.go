@@ -162,6 +162,16 @@ func ProviderAPIKeyEnvironmentVariable(provider Provider) (string, error) {
 	return providerPresets[canonical].apiKeyEnv, nil
 }
 
+// ValidateProviderConfig checks the same configuration rules as the generator
+// constructor without creating a model or making any network requests. Return
+// only a stable error: provider names, URLs and extra fields may hold secrets.
+func ValidateProviderConfig(config ProviderConfig) error {
+	if _, err := resolveProviderConfig(context.Background(), config); err != nil {
+		return ErrInvalidConfiguration
+	}
+	return nil
+}
+
 // NewProviderGenerator builds a single ReplyGenerator for OpenAI Responses or
 // any OpenAI-compatible Chat Completions endpoint. Adding another compatible
 // platform normally requires configuration or one preset entry, not a new

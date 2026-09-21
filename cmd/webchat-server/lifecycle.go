@@ -60,7 +60,9 @@ func runServer(stopContext context.Context, config serverConfig, output io.Write
 		return errors.New("PostgreSQL readiness failed during startup; verify connectivity and schema migrations (cmd/migrate)")
 	}
 	cancelStartup()
-	gateway, err := newGateway(repository.repository, config)
+	// Knowledge indexing owns a separate startup budget and remains cancelable
+	// by the signal context; the PostgreSQL startup context is already canceled.
+	gateway, err := newGatewayContext(stopContext, repository.repository, config)
 	if err != nil {
 		return err
 	}
@@ -80,11 +82,11 @@ func runServer(stopContext context.Context, config serverConfig, output io.Write
 	server := &http.Server{
 		Handler: availability, BaseContext: func(net.Listener) context.Context { return requestContext },
 		ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 10 * time.Second,
-		WriteTimeout: 25 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10,
+		WriteTimeout: config.Reply.RequestTimeout() + 5*time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10,
 		ErrorLog: log.New(io.Discard, "", 0),
 	}
 	defer server.Close()
-	if _, err := fmt.Fprintf(output, "Web chat server: http://%s\nStorage: PostgreSQL. Reply mode: fake; no real model or external business actions.\nTrusted host gateway only: no login, authentication UI, public proxy or /v1 API.\n", listener.Addr().String()); err != nil {
+	if _, err := fmt.Fprintf(output, "Web chat server: http://%s\nStorage: PostgreSQL. Reply mode: %s; no external business tools or actions.\nTrusted host gateway only: no login, authentication UI, public proxy or /v1 API.\n", listener.Addr().String(), config.ReplyMode); err != nil {
 		return errors.New("cannot display the web chat server URL")
 	}
 	serveErrors := make(chan error, 1)

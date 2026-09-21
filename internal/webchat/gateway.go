@@ -86,7 +86,7 @@ func New(repo conversation.Repository, app Application, config Config) (*Gateway
 		config.MaxSessions < 1 || config.MaxSessions > 100000 ||
 		config.MaxPrincipals < 1 || config.MaxPrincipals > 100000 ||
 		config.MaxConcurrent < 1 || config.MaxConcurrent > 1024 ||
-		config.RequestTimeout < time.Second || config.RequestTimeout > time.Minute {
+		config.RequestTimeout < time.Second || config.RequestTimeout > 2*time.Minute {
 		return nil, errors.New("webchat: invalid limits")
 	}
 	hosts, err := configureHosts(config.Hosts)
