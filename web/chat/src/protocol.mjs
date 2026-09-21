@@ -2,6 +2,7 @@ export const MAX_BYTES = 4000;
 export const byteLength = (value) => new TextEncoder().encode(value).length;
 export const validContent = (value) => typeof value === 'string' && value.trim().length > 0 && byteLength(value) <= MAX_BYTES;
 export const pendingKey = (conversationID) => `webchat:pending:v1:${conversationID}`;
+export const normalizeStorage = (value) => value === 'memory' || value === 'postgres' ? value : null;
 
 export function readPending(storage, conversationID) {
   const raw = storage.getItem(pendingKey(conversationID));
@@ -88,7 +89,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
       throw new APIError('account_changed');
     }
     token = result.access_token;
-    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo };
+    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage) };
     return current;
   };
   const authorized = async (method, body, signal) => {

@@ -1,5 +1,6 @@
-// Command webchat-demo runs an isolated, loopback-only example host. It never
-// reads deployment credentials, connects to a database, or invokes a real model.
+// Command webchat-demo runs an isolated, loopback-only example host. It does not
+// use DATABASE_URL, host deployment secrets or real models. Persistent demo
+// storage is opt-in and restricted to its own loopback PostgreSQL database.
 package main
 
 import (
@@ -17,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
+	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
 	"github.com/qiuyier/omni-agent-customer-service/internal/webchat"
 	"github.com/qiuyier/omni-agent-customer-service/internal/webchat/ui"
@@ -27,10 +28,21 @@ const defaultDemoAddress = "127.0.0.1:8092"
 
 func main() {
 	address := flag.String("address", defaultDemoAddress, "literal loopback listen address (demo only)")
+	storage := flag.String("storage", "memory", "demo storage: memory or explicitly configured local postgres")
+	check := flag.Bool("check-config", false, "validate demo configuration without connecting or listening")
 	flag.Parse()
+	config, err := resolveDemoConfig(*address, *storage, os.LookupEnv)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "webchat-demo:", err)
+		os.Exit(1)
+	}
+	if *check {
+		fmt.Println("webchat-demo: configuration valid (simulated login, fake replies)")
+		return
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	if err := runDemo(ctx, *address, os.Stdout); err != nil {
+	if err := runDemoWithConfig(ctx, config, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "webchat-demo:", err)
 		os.Exit(1)
 	}
@@ -50,9 +62,17 @@ func validateDemoAddress(address string) error {
 }
 
 func runDemo(ctx context.Context, address string, output io.Writer) error {
+	config, err := resolveDemoConfig(address, "memory", nil)
+	if err != nil {
+		return err
+	}
+	return runDemoWithConfig(ctx, config, output)
+}
+
+func runDemoWithConfig(ctx context.Context, config demoConfig, output io.Writer) error {
 	// Validate before creating either listener; never resolve a hostname that
 	// could unexpectedly expose this deliberately unauthenticated demo.
-	if err := validateDemoAddress(address); err != nil {
+	if err := validateDemoAddress(config.address); err != nil {
 		return err
 	}
 	if err := ctx.Err(); err != nil {
@@ -62,7 +82,19 @@ func runDemo(ctx context.Context, address string, output io.Writer) error {
 	if err != nil {
 		return errors.New("cannot initialize demo credentials")
 	}
-	repository := conversation.NewMemoryRepository()
+	if config.repository.Driver == bootstrap.StorageDriverPostgres {
+		if err := validateDemoDatabaseURL(config.repository.DatabaseURL); err != nil {
+			return err
+		}
+	}
+	startup, stopStartup := context.WithTimeout(ctx, 10*time.Second)
+	runtime, err := bootstrap.NewConversationRepository(startup, config.repository)
+	stopStartup()
+	if err != nil {
+		return errors.New("cannot open demo storage; verify local PostgreSQL and run migrations; no memory fallback")
+	}
+	defer runtime.Close()
+	repository := runtime.Repository
 	service, err := customerservice.New(repository,
 		customerservice.MessageIDGeneratorFunc(randomToken),
 		customerservice.ClockFunc(time.Now),
@@ -73,14 +105,18 @@ func runDemo(ctx context.Context, address string, output io.Writer) error {
 	if err != nil {
 		return errors.New("cannot initialize demo application")
 	}
+	sourceID := "example-host"
+	if config.repository.Driver == bootstrap.StorageDriverPostgres {
+		sourceID = "webchat-demo"
+	}
 	gateway, err := webchat.New(repository, service, webchat.Config{
-		Hosts:      []webchat.Host{{SourceID: "example-host", Secret: secret}},
+		Hosts:      []webchat.Host{{SourceID: sourceID, Secret: secret}},
 		SessionTTL: 5 * time.Minute,
 	})
 	if err != nil {
 		return errors.New("cannot initialize demo gateway")
 	}
-	publicListener, err := net.Listen("tcp", address)
+	publicListener, err := net.Listen("tcp", config.address)
 	if err != nil {
 		return errors.New("cannot listen on the public demo address (it may already be in use)")
 	}
@@ -96,14 +132,23 @@ func runDemo(ctx context.Context, address string, output io.Writer) error {
 		return err
 	}
 	defer host.client.CloseIdleConnections()
+	host.storage = string(config.repository.Driver)
+	requestRoot, cancelRequests := context.WithCancel(context.Background())
+	defer cancelRequests() // Runs before closing the PostgreSQL pool.
 	privateServer := demoHTTPServer(gateway)
 	publicServer := demoHTTPServer(host)
+	privateServer.BaseContext = func(net.Listener) context.Context { return requestRoot }
+	publicServer.BaseContext = func(net.Listener) context.Context { return requestRoot }
 	defer privateServer.Close()
 	defer publicServer.Close()
 	serverErrors := make(chan error, 2)
 	go func() { serverErrors <- privateServer.Serve(privateListener) }()
 	go func() { serverErrors <- publicServer.Serve(publicListener) }()
-	if _, err := fmt.Fprintf(output, "Web chat demo: %s\nSimulated login and reply only. No external actions, model, or database. In-memory history is lost on restart.\n", origin); err != nil {
+	storageNotice := "No database. In-memory history is lost on restart."
+	if config.repository.Driver == bootstrap.StorageDriverPostgres {
+		storageNotice = "PostgreSQL demo history survives restart; simulated login must be repeated. Not production authentication."
+	}
+	if _, err := fmt.Fprintf(output, "Web chat demo: %s\nSimulated login and reply only. No external actions or model. %s\n", origin, storageNotice); err != nil {
 		return errors.New("cannot display the public demo URL")
 	}
 	var serveErr error

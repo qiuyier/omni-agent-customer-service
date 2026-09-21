@@ -55,6 +55,7 @@ type chatSessionResponse struct {
 // production authentication: the two known demonstration users need no password.
 // Only this server can exchange the selected identity for a browser capability.
 type exampleHost struct {
+	storage     string
 	origin      *url.URL
 	upstream    *url.URL
 	secret      string
@@ -92,7 +93,7 @@ func newExampleHost(origin, upstream, secret string, assets http.Handler) (*exam
 			Timeout:       10 * time.Second,
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 		},
-		now: time.Now, sessions: make(map[[32]byte]*hostSession),
+		now: time.Now, sessions: make(map[[32]byte]*hostSession), storage: "memory",
 	}, nil
 }
 
@@ -152,9 +153,10 @@ func (h *exampleHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		h.mu.Unlock()
 		writeJSON(w, http.StatusOK, struct {
-			User *demoUser `json:"user"`
-			Demo bool      `json:"demo"`
-		}{user, true})
+			User    *demoUser `json:"user"`
+			Demo    bool      `json:"demo"`
+			Storage string    `json:"storage"`
+		}{user, true, h.storage})
 	case "/demo/login":
 		if !requireMethod(w, r, http.MethodPost) {
 			return
@@ -226,9 +228,10 @@ func (h *exampleHost) login(w http.ResponseWriter, r *http.Request) {
 	h.loginIssues++
 	h.setCookie(w, raw, expires, int(hostSessionTTL.Seconds()))
 	writeJSON(w, http.StatusOK, struct {
-		User demoUser `json:"user"`
-		Demo bool     `json:"demo"`
-	}{user, true})
+		User    demoUser `json:"user"`
+		Demo    bool     `json:"demo"`
+		Storage string   `json:"storage"`
+	}{user, true, h.storage})
 }
 
 func (h *exampleHost) logout(w http.ResponseWriter, r *http.Request) {
@@ -256,7 +259,7 @@ func (h *exampleHost) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if session.cached != nil && session.cached.ExpiresAt.After(h.now().Add(30*time.Second)) {
-		writeHostSession(w, *session.cached, session.user)
+		writeHostSession(w, *session.cached, session.user, h.storage)
 		h.mu.Unlock()
 		return
 	}
@@ -315,15 +318,16 @@ func (h *exampleHost) bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 	session.tokens[sha256.Sum256([]byte(minted.AccessToken))] = minted.ExpiresAt
 	session.cached = &minted
-	writeHostSession(w, minted, user)
+	writeHostSession(w, minted, user, h.storage)
 }
 
-func writeHostSession(w http.ResponseWriter, minted chatSessionResponse, user demoUser) {
+func writeHostSession(w http.ResponseWriter, minted chatSessionResponse, user demoUser, storage string) {
 	writeJSON(w, http.StatusOK, struct {
 		chatSessionResponse
-		User demoUser `json:"user"`
-		Demo bool     `json:"demo"`
-	}{minted, user, true})
+		User    demoUser `json:"user"`
+		Demo    bool     `json:"demo"`
+		Storage string   `json:"storage"`
+	}{minted, user, true, storage})
 }
 
 func (h *exampleHost) proxyMessages(w http.ResponseWriter, r *http.Request) {
