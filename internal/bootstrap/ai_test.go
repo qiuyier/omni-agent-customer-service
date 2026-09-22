@@ -222,6 +222,9 @@ func TestResolveAIConfigSupportsSystemPromptOverride(t *testing.T) {
 // These are prompt-contract checks, not assertions about a model's answers.
 func TestDefaultAISystemPromptStatesGuidanceOnlyCapabilities(t *testing.T) {
 	for _, fragment := range []string{
+		"常见产品经验不是当前系统事实",
+		"历史中助手自己的回答也不是独立证据",
+		"资料明确给出的步骤应直接说明",
 		"没有实时库存、订单或排班查询工具",
 		"不得承诺由你查询、核实、跟进这些外部事项",
 		"客户提供订单号、商品编号、链接或日期不会让你获得这些能力",

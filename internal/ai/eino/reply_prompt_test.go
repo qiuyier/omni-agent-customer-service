@@ -3,6 +3,7 @@ package einoadapter_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -188,6 +189,9 @@ func TestReplyPromptCapabilityBoundariesAcrossModesAndKnowledgeStates(t *testing
 						t.Fatal("grounding rules and untrusted references lost their separate roles")
 					}
 					for _, rule := range []string{
+						"Common product conventions are not evidence about this system",
+						"Earlier assistant answers are not independent evidence",
+						"Give documented steps directly rather than refusing supported questions",
 						"no live inventory, order or staff-schedule lookup tools",
 						"Do not promise to look up, verify, follow up on",
 						"Receiving an order number, product identifier, URL or date does not grant those capabilities",
@@ -209,6 +213,57 @@ func TestReplyPromptCapabilityBoundariesAcrossModesAndKnowledgeStates(t *testing
 					}
 				})
 			}
+		}
+	}
+}
+
+// Fixture coverage checks prompt wiring, not semantic correctness of canned answers.
+// Real answers are reviewed separately against each fixture's criterion.
+func TestGroundingFixturesAcrossModelPaths(t *testing.T) {
+	data, err := os.ReadFile("../../../examples/knowledge/webchat/grounding_cases.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		ID        string                      `json:"id"`
+		Reference string                      `json:"reference"`
+		History   []customerservice.ReplyTurn `json:"history"`
+		Criterion string                      `json:"criterion"`
+	}
+	if err := json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) != 6 {
+		t.Fatalf("fixture count = %d, want 6", len(cases))
+	}
+	seen := make(map[string]bool)
+	for _, fixture := range cases {
+		if fixture.ID == "" || seen[fixture.ID] || fixture.Reference == "" || fixture.Criterion == "" || len(fixture.History) == 0 {
+			t.Fatal("invalid or duplicate grounding fixture")
+		}
+		seen[fixture.ID] = true
+		for _, path := range []string{"chat_generate", "agentic_generate", "agentic_stream"} {
+			t.Run(fixture.ID+"/"+path, func(t *testing.T) {
+				request := customerservice.ReplyRequest{History: fixture.History, Knowledge: &customerservice.ReplyKnowledge{
+					Snippets: []customerservice.KnowledgeSnippet{{ID: fixture.ID, Title: fixture.ID, Source: "fixture://" + fixture.ID, Content: fixture.Reference}},
+				}}
+				prompt := recordedReplyPrompt(t, path, bootstrap.DefaultAISystemPrompt, request)
+				if len(prompt) != len(fixture.History)+3 || !reflect.DeepEqual(prompt[3:], fixture.History) {
+					t.Fatal("fixture history changed")
+				}
+				var envelope struct {
+					Snippets []customerservice.KnowledgeSnippet `json:"snippets"`
+				}
+				if err := json.Unmarshal([]byte(referenceJSON(t, prompt[2].Content)), &envelope); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(envelope.Snippets, request.Knowledge.Snippets) {
+					t.Fatal("fixture evidence changed")
+				}
+				if strings.Contains(prompt[1].Content, fixture.Reference) || strings.Contains(prompt[1].Content, fixture.Criterion) {
+					t.Fatal("fixture data or grading criterion leaked into trusted rules")
+				}
+			})
 		}
 	}
 }
