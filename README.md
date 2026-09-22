@@ -14,6 +14,9 @@
 
 ## 当前进度
 
+已新增独立[回答依据校验实验](docs/grounding-check.md)，默认不联网、不影响正式回复。
+十二条固定样例已备好；首条真实审查调用失败后停止，效果尚未验证，见[实验记录](examples/knowledge/webchat/grounding-judge.md)。
+
 已补充通用事实约束及跨业务回归：离线测试通过，六次真实模型提示回放中仍有三条需改进；
 保留失败结果，不视为新的端到端通过，见[事实约束回归](examples/knowledge/webchat/grounding-regression.md)。
 
