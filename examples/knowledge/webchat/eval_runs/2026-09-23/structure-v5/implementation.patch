@@ -1,0 +1,226 @@
+diff --git a/cmd/grounding-check/main.go b/cmd/grounding-check/main.go
+index a0e0766..066c54b 100644
+--- a/cmd/grounding-check/main.go
++++ b/cmd/grounding-check/main.go
+@@ -43,7 +43,8 @@ reference 没有覆盖某事实时应判 unsupported，而不是 uncertain；unc
+ 4. supported 必须逐项列 checks，detail 是 quote 内一个细节的简短语义描述，可用自己的话描述；quote 和 evidence 才必须逐字摘录。relation 只能是 entailed（明确支持或严格同义）、not_stated（缺失）、contradicted（冲突）。not_stated 的 evidence 留空，contradicted 的 evidence 必须引用相反资料。不确定是否同义则 kind 用 uncertain，不要猜。只要任何细节缺失或冲突，kind 应为 unsupported，checks 如实保留。
+ 5. general 适用于非业务断言、否认未知、通用安全提醒和上述 information_seeking。不能隐藏具体系统能力。每项填写 advice_kind：none（礼貌、安全提醒、未知说明等，不肯定系统能力）、information_seeking（通用求证）、capability_use（肯定或使用系统能力）。general 项必须明确填写；如果 advice_kind=capability_use，即使你写了 general 也必须提供 checks 验证隐含能力，不允许空证据逃逸。
+ quote 可以重叠，但并集必须覆盖回答全部文字；礼貌和引文标记等也可单独标 general。不要省略标题或过渡语。
+-只返回 JSON 对象，无 Markdown：{"claims":[{"quote":"回答原句","advice_kind":"none|information_seeking|capability_use","kind":"supported|unsupported|uncertain|general","evidence":"整项支持的资料原文或空字符串","reason":"简短理由","checks":[{"detail":"回答里的具体细节","relation":"entailed|not_stated|contradicted","evidence":"对应资料原文或空字符串"}]}]}。supported 的 checks 至少一项；非能力类 general 的 checks 为空数组。`
++输出结构将事实与通用建议分开：claims 只放需要核对的系统事实/能力，advice 放 general 内容（求证、礼貌、未知说明、安全提醒）。混合句拆成连续原文片段，分别放入两个数组；checks 只检查业务事实，不要为通用建议生成 entailed 或空证据占位。两个数组的 quote 合起来覆盖全文。不要把 capability_use 放进 advice。
++只返回 JSON 对象，无 Markdown：{"claims":[{"quote":"事实原文","advice_kind":"none|capability_use","kind":"supported|unsupported|uncertain","evidence":"整项支持的资料原文或空字符串","reason":"简短理由","checks":[{"detail":"业务事实细节","relation":"entailed|not_stated|contradicted","evidence":"对应资料原文或空字符串"}]}],"advice":[{"quote":"通用建议原文","advice_kind":"none|information_seeking","reason":"为何不肯定业务能力"}]}。两个数组可分别为空，但不能同时为空。supported 的 checks 至少一项；advice 项不允许 kind、checks、evidence 字段。`
+ 
+ type turn struct {
+ 	Role    string `json:"role"`
+@@ -78,8 +79,14 @@ type detailCheck struct {
+ }
+ type judgment struct {
+ 	Claims []claim            `json:"claims"`
++	Advice []generalAdvice    `json:"advice,omitempty"`
+ 	Review *specificityReview `json:"review,omitempty"`
+ }
++type generalAdvice struct {
++	Quote      string `json:"quote"`
++	AdviceKind string `json:"advice_kind"`
++	Reason     string `json:"reason"`
++}
+ type specificityReview struct {
+ 	Findings  []specificityFinding `json:"findings"`
+ 	Uncertain *bool                `json:"uncertain"`
+@@ -93,6 +100,8 @@ type result struct {
+ 	Expected  string             `json:"expected"`
+ 	Verdict   string             `json:"verdict"`
+ 	Claims    []claim            `json:"claims,omitempty"`
++	Advice    []generalAdvice    `json:"advice,omitempty"`
++	Failure   *judgeFailure      `json:"failure,omitempty"`
+ 	Review    *specificityReview `json:"review,omitempty"`
+ 	Raw       string             `json:"raw,omitempty"`
+ 	Error     string             `json:"error,omitempty"`
+@@ -127,6 +136,38 @@ type judgeFunc func(context.Context, judgeInput) (string, error)
+ type requestCounterKey struct{}
+ type factory func() (judgeFunc, string, error)
+ 
++// Only controlled metadata is serialized; causes may contain transport secrets.
++type judgeFailure struct {
++	Phase      string `json:"phase"`
++	Stage      string `json:"stage"`
++	Code       string `json:"code"`
++	HTTPStatus int    `json:"http_status,omitempty"`
++	cause      error
++}
++
++func (e *judgeFailure) Error() string { return e.Code }
++func (e *judgeFailure) Unwrap() error { return e.cause }
++func failure(stage, code string, cause error) *judgeFailure {
++	if errors.Is(cause, context.DeadlineExceeded) {
++		code = "model_timeout"
++	}
++	if errors.Is(cause, context.Canceled) {
++		code = "model_canceled"
++	}
++	return &judgeFailure{Stage: stage, Code: code, cause: cause}
++}
++func inPhase(phase string, err error) error {
++	var f *judgeFailure
++	if errors.As(err, &f) {
++		copy := *f
++		copy.Phase = phase
++		return &copy
++	}
++	f = failure("request", "model_call_failed", err)
++	f.Phase = phase
++	return f
++}
++
+ func main() {
+ 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+ 	defer stop()
+@@ -179,7 +220,7 @@ func load(path string) ([]sample, []byte, error) {
+ }
+ func parse(raw string, input judgeInput) (judgment, string, error) {
+ 	var j judgment
+-	if len(raw) > 128<<10 || strict([]byte(raw), &j) != nil || len(j.Claims) == 0 || len(j.Claims) > 64 {
++	if len(raw) > 128<<10 || strict([]byte(raw), &j) != nil || len(j.Claims)+len(j.Advice) == 0 || len(j.Claims)+len(j.Advice) > 64 {
+ 		return j, "error", errors.New("invalid_judgment")
+ 	}
+ 	verdict := "clear"
+@@ -258,7 +299,14 @@ func parse(raw string, input judgeInput) (judgment, string, error) {
+ 			verdict = "uncertain"
+ 		}
+ 	}
+-	if verdict == "clear" && !coversAnswer(input.Answer, j.Claims) {
++	coverage := append([]claim(nil), j.Claims...)
++	for _, a := range j.Advice {
++		if strings.TrimSpace(a.Quote) == "" || !strings.Contains(input.Answer, a.Quote) || strings.TrimSpace(a.Reason) == "" || (a.AdviceKind != "none" && a.AdviceKind != "information_seeking") {
++			return j, "error", errors.New("invalid_general_advice")
++		}
++		coverage = append(coverage, claim{Quote: a.Quote})
++	}
++	if verdict == "clear" && !coversAnswer(input.Answer, coverage) {
+ 		verdict = "uncertain"
+ 	}
+ 	return j, verdict, nil
+@@ -276,11 +324,11 @@ func withSpecificityReview(primary, reviewer judgeFunc) judgeFunc {
+ 	return func(ctx context.Context, input judgeInput) (string, error) {
+ 		raw, err := primary(ctx, input)
+ 		if err != nil {
+-			return "", err
++			return "", inPhase("primary", err)
+ 		}
+ 		j, v, err := parse(raw, input)
+ 		if j.Review != nil {
+-			return "", errors.New("unexpected embedded review")
++			return "", inPhase("primary", failure("judgment_parse", "unexpected_embedded_review", nil))
+ 		}
+ 		if err != nil || v == "unsupported" {
+ 			return raw, nil
+@@ -288,14 +336,19 @@ func withSpecificityReview(primary, reviewer judgeFunc) judgeFunc {
+ 		// Missing coverage is also reviewed, but can never become clear by review alone.
+ 		reviewRaw, err := reviewer(ctx, input)
+ 		if err != nil {
+-			return "", err
++			return raw, inPhase("review", err)
+ 		}
+ 		var review specificityReview
+ 		if strict([]byte(reviewRaw), &review) != nil {
+-			return "", errors.New("invalid specificity JSON")
++			return raw, inPhase("review", failure("review_parse", "invalid_specificity_json", nil))
+ 		}
+ 		j.Review = &review
+ 		combined, err := json.Marshal(j)
++		if err == nil {
++			if _, _, validationErr := parse(string(combined), input); validationErr != nil {
++				return raw, inPhase("review", failure("review_validation", validationErr.Error(), nil))
++			}
++		}
+ 		return string(combined), err
+ 	}
+ }
+@@ -371,7 +424,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge
+ 	}
+ 	rep := report{Mode: "offline_validation_only", StartedAt: time.Now().UTC().Format(time.RFC3339), CorpusSHA256: fmt.Sprintf("%x", sha256.Sum256(data)), PromptSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(judgePrompt))), Prompt: judgePrompt, Samples: cases, Results: []result{}}
+ 	emit := func() error {
+-		rep.SchemaVersion = 4
++		rep.SchemaVersion = 5
+ 		rep.ReviewPrompt = specificityPrompt
+ 		rep.Summary = aggregate(rep.Results)
+ 		e := json.NewEncoder(out)
+@@ -414,13 +467,26 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge
+ 				r.Error = "model_canceled"
+ 			}
+ 			r.Raw = ""
++			var f *judgeFailure
++			if errors.As(callErr, &f) {
++				r.Failure = f
++				r.Error = f.Code
++				// Retain only validated primary output, never arbitrary failure bodies.
++				if f.Phase == "review" {
++					if j, _, e := parse(raw, input); e == nil && j.Review == nil {
++						r.Raw, r.Claims, r.Advice = raw, j.Claims, j.Advice
++					}
++				}
++			}
+ 		} else {
+ 			j, v, err := parse(raw, input)
+ 			r.Verdict = v
+ 			if err != nil {
+ 				r.Error = err.Error()
++				r.Failure = &judgeFailure{Phase: "primary", Stage: "judgment_parse", Code: err.Error()}
+ 			} else {
+ 				r.Claims = j.Claims
++				r.Advice = j.Advice
+ 				r.Review = j.Review
+ 			}
+ 		}
+@@ -479,7 +545,7 @@ func chatJudge(client *http.Client, endpoint, apiKey, model string, effort ...st
+ 		}{model, []turn{{"system", prompt}, {"user", string(encoded)}}, false, level})
+ 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+ 		if err != nil {
+-			return "", errors.New("request failed")
++			return "", failure("request_build", "request_build_failed", err)
+ 		}
+ 		req.Header.Set("Authorization", "Bearer "+apiKey)
+ 		req.Header.Set("Content-Type", "application/json")
+@@ -488,21 +554,18 @@ func chatJudge(client *http.Client, endpoint, apiKey, model string, effort ...st
+ 		}
+ 		resp, err := client.Do(req)
+ 		if err != nil {
+-			if errors.Is(err, context.DeadlineExceeded) {
+-				return "", context.DeadlineExceeded
+-			}
+-			if errors.Is(err, context.Canceled) {
+-				return "", context.Canceled
+-			}
+-			return "", errors.New("request failed")
++			return "", failure("request_send", "request_send_failed", err)
+ 		}
+ 		defer resp.Body.Close()
+ 		if resp.StatusCode != http.StatusOK {
+-			return "", errors.New("provider status failed")
++			return "", &judgeFailure{Stage: "http_status", Code: "provider_http_status", HTTPStatus: resp.StatusCode}
+ 		}
+ 		data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20+1))
+-		if err != nil || len(data) > 1<<20 {
+-			return "", errors.New("response too large or unreadable")
++		if err != nil {
++			return "", failure("body_read", "response_read_failed", err)
++		}
++		if len(data) > 1<<20 {
++			return "", failure("body_read", "response_too_large", nil)
+ 		}
+ 		var envelope struct {
+ 			Choices []struct {
+@@ -512,8 +575,11 @@ func chatJudge(client *http.Client, endpoint, apiKey, model string, effort ...st
+ 				FinishReason string `json:"finish_reason"`
+ 			} `json:"choices"`
+ 		}
+-		if json.Unmarshal(data, &envelope) != nil || len(envelope.Choices) != 1 || envelope.Choices[0].FinishReason != "stop" {
+-			return "", errors.New("incomplete provider response")
++		if json.Unmarshal(data, &envelope) != nil {
++			return "", failure("response_decode", "invalid_provider_json", nil)
++		}
++		if len(envelope.Choices) != 1 || envelope.Choices[0].FinishReason != "stop" {
++			return "", failure("response_finish", "incomplete_provider_response", nil)
+ 		}
+ 		return envelope.Choices[0].Message.Content, nil
+ 	}

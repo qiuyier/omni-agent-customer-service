@@ -1,0 +1,60 @@
+# 输出结构与失败诊断 v5（2026-09-23）
+
+## 结论
+
+实现已完成，离线测试通过；模型可靠性验证没有全部通过。
+六条既有开发样例、八次实际请求：四条符合预期、一条误判、一条首审结构错误。
+不用于线上拦截，不修改 CRMEB，不将调用错误或格式错误计为成功。
+
+## 实现范围
+
+- 新增 `advice` 类型，通用求证/礼貌/未知说明与 `claims/checks` 事实分开；
+  不允许在建议项里塞事实证据字段，也不接受 `entailed` 空证据。
+- 保持既有原文引用与全文覆盖门槛；兼容旧 `general` 输出的原校验。
+- 失败报告记录首审/复核阶段、具体失败环节、受控错误码和可选 HTTP 状态码。
+  超时与取消沿错误链保留；不泄露 URL、密钥或供应商错误正文。
+- 复核失败保留有效首审输出作为诊断证据，但结果仍是错误，停止批次且不重试。
+- 不改变正式客服回复链路、模型参数默认值或业务接入方式。
+
+## 冻结验证
+
+从 v4 样例中预选六条旧题，预先固定规则和样例；不是新增盲测，也不是全量验收。
+模型 `glm-5.3-flash`，`reasoning_effort=low`；预算最多十二次请求，实际八次，无重试。
+源码、二进制、语料和两个提示词的哈希见 [freeze.json](eval_runs/2026-09-23/structure-v5/freeze.json)。
+实验期间未修改实现或提示词。新增的首审诊断测试不参与模型判断。
+
+| 样例 | 预期 | 实际 | 人工核对 |
+| --- | --- | --- | --- |
+| device-effects | unsupported | unsupported | 正确指出资料没有设备/IP 查询功能；通用官方资料建议不再生成空证据检查。 |
+| library-history-correction | clear | unsupported | 错把“不确认按钮存在”的否定说明当成 `not_stated` 业务事实，程序按既定规则判无依据。 |
+| device-effects-documented | clear | error | 首审 JSON 在 advice 项携带禁止的 `checks`，严格解析拒绝；还把否认自身能力标成 supported 且证据为空，存在第二处契约错误。 |
+| advice-seek-official | clear | clear | 独立 advice 输出，复核无新增事实。未复现旧调用失败，但不能因此断言旧故障根因。 |
+| advice-use-portal | unsupported | unsupported | 识别未提供的门户及查询能力。 |
+| advice-use-portal-documented | clear | clear | 功能有资料证据，复核通过。 |
+
+另一个不能忽略的现象：device-effects 虽然总体判对，仍把有依据的重置密码步骤放入 advice，
+理由甚至明确说“属系统事实”。说明分类语义不稳定，不能用最终命中掩盖中间结构错误。
+这次图书馆误判也不是之前的“通用咨询被当能力”，而是把否定/未知说明当成肯定事实缺失。
+不把它们通过改标签、删除错误细节、允许空证据或增补样例重跑改成通过。
+
+原始证据：[cases.json](eval_runs/2026-09-23/structure-v5/cases.json)、
+[results.json](eval_runs/2026-09-23/structure-v5/results.json)、
+[progress.txt](eval_runs/2026-09-23/structure-v5/progress.txt)、
+[exit.json](eval_runs/2026-09-23/structure-v5/exit.json)、
+[实现差异](eval_runs/2026-09-23/structure-v5/implementation.patch)。
+程序完整遍历六题并退出 0，只表示批次完成，不表示全部通过。
+
+## 离线检查
+
+- `env -u TEST_DATABASE_URL go test ./...`：通过；未使用真实测试数据库。
+- `go test -race -timeout 60s ./cmd/grounding-check`：通过。
+- `go vet ./cmd/grounding-check`、`git diff --check`：通过。
+- 覆盖混合事实/建议、拒绝空事实证据、建议字段限制、全文覆盖不放宽，
+  首审/复核 HTTP 错误、响应读取超时、非法响应、未完成输出、首审解析、复核解析/校验、
+  首审证据保留、失败不通过/不重试和传输错误脱敏。
+
+## 下一步依据
+
+本轮不支持继续接入线上。下一步先收紧“肯定事实 / 否定或未知说明 / 通用建议”的分类契约，
+用配对样例单独验证分类稳定性，再考虑严格结构输出约束；不要继续仅叠加提示词或扩大调用量。
+当前诊断能定位未来失败阶段，不能追溯补出 v4 已丢失的供应商响应。
