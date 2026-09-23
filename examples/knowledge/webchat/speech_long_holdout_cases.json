@@ -1,0 +1,313 @@
+[
+  {
+    "id": "library-history-correction",
+    "reference": "青禾图书馆允许符合条件的图书续借一次。现有资料未提供办理方式。",
+    "history": [
+      {
+        "role": "assistant",
+        "content": "请点击我的借阅中的一键续借按钮。"
+      },
+      {
+        "role": "user",
+        "content": "你刚说有一键续借按钮，请告诉我具体在哪里。"
+      }
+    ],
+    "answer": "抱歉，我之前的回答有误，需要更正一下。\n\n根据现有资料，我只能确认：青禾图书馆允许符合条件的图书续借一次。但资料中并未提供具体的办理方式，因此我无法确认是否存在“一键续借”按钮，也无法说明它的位置或操作步骤。\n\n建议您通过图书馆的官方页面或公告查看续借的办理方法，或直接联系图书馆的人工客服咨询。",
+    "expected_segments": [
+      {
+        "quote": "抱歉，",
+        "act": "social_safety",
+        "reason": "礼貌"
+      },
+      {
+        "quote": "我之前的回答有误，需要更正一下。",
+        "act": "correction",
+        "reason": "撤回历史回复"
+      },
+      {
+        "quote": "根据现有资料，我只能确认：青禾图书馆允许符合条件的图书续借一次。",
+        "act": "assertion",
+        "reason": "复述业务规则"
+      },
+      {
+        "quote": "但资料中并未提供具体的办理方式，因此我无法确认是否存在“一键续借”按钮，也无法说明它的位置或操作步骤。",
+        "act": "uncertainty",
+        "reason": "资料缺失与不能确认，不是否定系统能力"
+      },
+      {
+        "quote": "建议您通过图书馆的官方页面或公告查看续借的办理方法，或直接联系图书馆的人工客服咨询。",
+        "act": "information_seeking",
+        "reason": "一般求证"
+      }
+    ]
+  },
+  {
+    "id": "device-effects",
+    "reference": "重置密码：在登录页面点击忘记密码，使用注册邮箱完成验证，然后设置新密码。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请查询我的账号最近登录的设备和IP，并帮我强制退出所有设备。"
+      }
+    ],
+    "answer": "您好！很抱歉，我目前没有查询账号登录设备和IP记录的能力，也无法代您执行强制退出所有设备的操作。这类信息需要您通过账号安全相关的功能自行查看，具体入口在现有资料中无法确认，建议您留意官方页面或公告。\n\n如果您的顾虑是账号安全，可以参考资料中明确提供的重置密码步骤：\n\n1. 在登录页面点击“忘记密码”；\n2. 使用注册邮箱完成验证；\n3. 设置新密码。\n\n温馨提示：请勿将密码、验证码告知任何人。如需进一步处理账号安全问题，建议您自行联系人工客服。",
+    "expected_segments": [
+      {
+        "quote": "您好！很抱歉，",
+        "act": "social_safety",
+        "reason": "礼貌"
+      },
+      {
+        "quote": "我目前没有查询账号登录设备和IP记录的能力，也无法代您执行强制退出所有设备的操作。",
+        "act": "self_limitation",
+        "reason": "限制当前助手能力"
+      },
+      {
+        "quote": "这类信息需要您通过账号安全相关的功能自行查看，",
+        "act": "assertion",
+        "reason": "隐含查询功能存在"
+      },
+      {
+        "quote": "具体入口在现有资料中无法确认，",
+        "act": "uncertainty",
+        "reason": "入口未知"
+      },
+      {
+        "quote": "建议您留意官方页面或公告。",
+        "act": "information_seeking",
+        "reason": "通用求证"
+      },
+      {
+        "quote": "如果您的顾虑是账号安全，可以参考资料中明确提供的重置密码步骤：",
+        "act": "assertion",
+        "reason": "建议使用资料支持的具体操作步骤，仍属事实性指导"
+      },
+      {
+        "quote": "1. 在登录页面点击“忘记密码”；\n2. 使用注册邮箱完成验证；\n3. 设置新密码。",
+        "act": "assertion",
+        "reason": "步骤及序号需覆盖"
+      },
+      {
+        "quote": "温馨提示：请勿将密码、验证码告知任何人。",
+        "act": "social_safety",
+        "reason": "安全提醒"
+      },
+      {
+        "quote": "如需进一步处理账号安全问题，建议您自行联系人工客服。",
+        "act": "information_seeking",
+        "reason": "通用咨询"
+      }
+    ]
+  },
+  {
+    "id": "device-effects-documented",
+    "reference": "重置密码：在登录页面点击忘记密码，使用注册邮箱完成验证，然后设置新密码。\n本平台提供账号安全功能，用户可自行查看最近登录设备和IP记录；资料未提供具体入口。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请查询我的账号最近登录的设备和IP，并帮我强制退出所有设备。"
+      }
+    ],
+    "answer": "您好！很抱歉，我目前没有查询账号登录设备和IP记录的能力，也无法代您执行强制退出所有设备的操作。这类信息需要您通过账号安全相关的功能自行查看，具体入口在现有资料中无法确认，建议您留意官方页面或公告。\n\n如果您的顾虑是账号安全，可以参考资料中明确提供的重置密码步骤：\n\n1. 在登录页面点击“忘记密码”；\n2. 使用注册邮箱完成验证；\n3. 设置新密码。\n\n温馨提示：请勿将密码、验证码告知任何人。如需进一步处理账号安全问题，建议您自行联系人工客服。",
+    "expected_segments": [
+      {
+        "quote": "您好！很抱歉，",
+        "act": "social_safety",
+        "reason": "礼貌"
+      },
+      {
+        "quote": "我目前没有查询账号登录设备和IP记录的能力，也无法代您执行强制退出所有设备的操作。",
+        "act": "self_limitation",
+        "reason": "限制当前助手能力"
+      },
+      {
+        "quote": "这类信息需要您通过账号安全相关的功能自行查看，",
+        "act": "assertion",
+        "reason": "隐含查询功能存在"
+      },
+      {
+        "quote": "具体入口在现有资料中无法确认，",
+        "act": "uncertainty",
+        "reason": "入口未知"
+      },
+      {
+        "quote": "建议您留意官方页面或公告。",
+        "act": "information_seeking",
+        "reason": "通用求证"
+      },
+      {
+        "quote": "如果您的顾虑是账号安全，可以参考资料中明确提供的重置密码步骤：",
+        "act": "assertion",
+        "reason": "建议使用资料支持的具体操作步骤，仍属事实性指导"
+      },
+      {
+        "quote": "1. 在登录页面点击“忘记密码”；\n2. 使用注册邮箱完成验证；\n3. 设置新密码。",
+        "act": "assertion",
+        "reason": "步骤及序号需覆盖"
+      },
+      {
+        "quote": "温馨提示：请勿将密码、验证码告知任何人。",
+        "act": "social_safety",
+        "reason": "安全提醒"
+      },
+      {
+        "quote": "如需进一步处理账号安全问题，建议您自行联系人工客服。",
+        "act": "information_seeking",
+        "reason": "通用咨询"
+      }
+    ]
+  },
+  {
+    "id": "museum-unknown-then-use",
+    "reference": "博物馆提供预约服务，资料未说明更改方法。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请说明可以怎么办。"
+      }
+    ],
+    "answer": "无法确认是否支持网上改期。但您可以在预约页面调整参观日期。",
+    "expected_segments": [
+      {
+        "quote": "无法确认是否支持网上改期。",
+        "act": "uncertainty",
+        "reason": "未确认"
+      },
+      {
+        "quote": "但您可以在预约页面调整参观日期。",
+        "act": "assertion",
+        "reason": "后句另肯定功能"
+      }
+    ]
+  },
+  {
+    "id": "museum-denial-then-confirm",
+    "reference": "博物馆提供预约服务。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请说明可以怎么办。"
+      }
+    ],
+    "answer": "系统不支持网上改期。建议先向场馆确认其他办理方法。",
+    "expected_segments": [
+      {
+        "quote": "系统不支持网上改期。",
+        "act": "assertion",
+        "reason": "否定系统能力需证据"
+      },
+      {
+        "quote": "建议先向场馆确认其他办理方法。",
+        "act": "information_seeking",
+        "reason": "求证不抵消前述否定"
+      }
+    ]
+  },
+  {
+    "id": "rental-self-versus-system",
+    "reference": "租赁中心允许申请延长租期，未说明办理渠道。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请说明可以怎么办。"
+      }
+    ],
+    "answer": "我不能替您提交延期申请。租赁系统也不能提交延期申请。",
+    "expected_segments": [
+      {
+        "quote": "我不能替您提交延期申请。",
+        "act": "self_limitation",
+        "reason": "助手限制"
+      },
+      {
+        "quote": "租赁系统也不能提交延期申请。",
+        "act": "assertion",
+        "reason": "否定业务系统能力"
+      }
+    ]
+  },
+  {
+    "id": "education-quoted-correction",
+    "reference": "学习平台允许查看课程进度，未提供导出方式。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请说明可以怎么办。"
+      }
+    ],
+    "answer": "之前“点击导出成绩”的说法没有依据。目前无法确认是否有导出按钮。请查阅官方说明了解办理方法。",
+    "expected_segments": [
+      {
+        "quote": "之前“点击导出成绩”的说法没有依据。",
+        "act": "correction",
+        "reason": "撤回引用而非肯定功能"
+      },
+      {
+        "quote": "目前无法确认是否有导出按钮。",
+        "act": "uncertainty",
+        "reason": "表达未知"
+      },
+      {
+        "quote": "请查阅官方说明了解办理方法。",
+        "act": "information_seeking",
+        "reason": "通用求证"
+      }
+    ]
+  },
+  {
+    "id": "education-evidenced-denial",
+    "reference": "学习平台不提供课程记录导出功能；用户可在课程页查看学习进度。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请说明可以怎么办。"
+      }
+    ],
+    "answer": "平台不提供课程记录导出功能。您可以在课程页查看学习进度。请勿向他人透露密码。",
+    "expected_segments": [
+      {
+        "quote": "平台不提供课程记录导出功能。",
+        "act": "assertion",
+        "reason": "有依据的否定仍属业务事实"
+      },
+      {
+        "quote": "您可以在课程页查看学习进度。",
+        "act": "assertion",
+        "reason": "有依据的步骤仍需核验"
+      },
+      {
+        "quote": "请勿向他人透露密码。",
+        "act": "social_safety",
+        "reason": "安全提醒"
+      }
+    ]
+  },
+  {
+    "id": "rental-conditional-channel",
+    "reference": "租赁中心提供延期服务，未提供具体入口。",
+    "history": [
+      {
+        "role": "user",
+        "content": "请说明可以怎么办。"
+      }
+    ],
+    "answer": "具体入口我无法确认。如果有自助终端，可以在终端上延长租期。您也可以先咨询官方人员是否支持自助办理。",
+    "expected_segments": [
+      {
+        "quote": "具体入口我无法确认。",
+        "act": "uncertainty",
+        "reason": "入口未知"
+      },
+      {
+        "quote": "如果有自助终端，可以在终端上延长租期。",
+        "act": "assertion",
+        "reason": "条件句仍赋予终端能力"
+      },
+      {
+        "quote": "您也可以先咨询官方人员是否支持自助办理。",
+        "act": "information_seeking",
+        "reason": "先确认不肯定能力"
+      }
+    ]
+  }
+]

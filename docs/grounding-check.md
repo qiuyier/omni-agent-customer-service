@@ -7,6 +7,9 @@
 不替代下面的 v5 事实审查，也没有接入正式客服。
 用于先定位“否定/未知说明被当事实”和“操作步骤被归为通用建议”的分类错误。
 本轮十二题单次分类均匹配，范围和限制见[分类验收报告](../examples/knowledge/webchat/speech-classification-v1.md)。
+后续[长回答验收](../examples/knowledge/webchat/speech-long-validation-v1.md)保持相同分类规则：
+九题严格匹配七题，两题差异仅在礼貌语归属，零结构错误；没有连接事实审查或线上回复。
+对应语料为 `examples/knowledge/webchat/speech_long_holdout_cases.json`，可替换下方 `-cases` 路径验证。
 
 ```sh
 go run ./cmd/grounding-check -classify-only \

@@ -13,6 +13,34 @@ import (
 
 const speechCorpus = "../../examples/knowledge/webchat/speech_classification_cases.json"
 
+func TestSpeechLongCorpusPreservesOriginalAnswers(t *testing.T) {
+	long, _, err := loadSpeech("../../examples/knowledge/webchat/speech_long_holdout_cases.json")
+	if err != nil || len(long) != 9 {
+		t.Fatalf("long corpus: %v", err)
+	}
+	original, _, err := load("../../examples/knowledge/webchat/grounding_advice_cases.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range long[:3] {
+		found := false
+		for _, old := range original {
+			if old.ID != c.ID {
+				continue
+			}
+			found = true
+			a, _ := json.Marshal(old.History)
+			b, _ := json.Marshal(c.History)
+			if c.Answer != old.Answer || c.Reference != old.Reference || !bytes.Equal(a, b) {
+				t.Fatalf("modified original %s", c.ID)
+			}
+		}
+		if !found {
+			t.Fatalf("missing original %s", c.ID)
+		}
+	}
+}
+
 func TestSpeechCorpusAndOffline(t *testing.T) {
 	cases, _, err := loadSpeech(speechCorpus)
 	if err != nil || len(cases) != 12 {
