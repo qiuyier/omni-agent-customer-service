@@ -3,6 +3,37 @@
 本实验审查固定的候选回答，不重新回答客户，也不修改、拦截或重试正式回复。
 它是模型审查实验，不是通过关键词判断正确性的规则引擎。
 
+新增独立的言语行为分类实验，入口 `-classify-only`。它不判断答案是否有依据，
+不替代下面的 v5 事实审查，也没有接入正式客服。
+用于先定位“否定/未知说明被当事实”和“操作步骤被归为通用建议”的分类错误。
+本轮十二题单次分类均匹配，范围和限制见[分类验收报告](../examples/knowledge/webchat/speech-classification-v1.md)。
+
+```sh
+go run ./cmd/grounding-check -classify-only \
+  -cases examples/knowledge/webchat/speech_classification_cases.json
+```
+
+默认仅检查本地样例。加 `-allow-model-api` 才调用模型，每题一次、整批最多十二次，
+沿用既有 HTTPS 配置、超时、禁止重定向、无重试和脱敏错误诊断。
+该模式独立使用 schema 1，报告模式为 `speech_classification_experiment`，
+结果只有 `matched` / `mismatched` / `error`，没有事实审查的 `clear`。
+
+分类契约：
+
+- `assertion`：业务事实或能力的肯定/否定、具体操作指导；有依据的步骤仍在此类。
+- `uncertainty`：无法确认能力是否存在，不是声称系统没有该能力。
+- `self_limitation`：当前助手不能代办或没有工具，不代表业务系统不支持。
+- `correction`：撤回先前无依据说法；同时新增的系统断言必须另拆。
+- `information_seeking`：建议查询官方资料或咨询以确认规则，不承诺可办理。
+- `social_safety`：礼貌、安全提醒、不含独立业务事实的过渡语。
+
+输出每段只能包含 `quote`、`act`、`reason`；未知字段、非法类别、非原文引用、覆盖不完整、
+同一文字类别冲突均为格式错误。段落划分可以不同，评分按全部文字/数字的位置比较类别，
+忽略标点与排版；任一文字分错，整题为 `mismatched`。同样文字重复出现且需要不同分类时，
+当前引用匹配方式会拒绝冲突，不适合直接扩展为任意长对话的通用对齐器。
+标签及标注理由不发送给模型。此约束是本地严格校验，不是供应商 JSON Schema 强制生成，
+也不能证明模型的语义判断稳定；分类正确更不等于事实有依据。
+
 最新改动为[结构与诊断 v5](../examples/knowledge/webchat/grounding-structure-v5.md)：拆分事实与通用建议，记录失败阶段。
 六题定向回归有四题符合预期、一题误判、一题格式错误；还不能认定稳定或上线。
 此前[建议边界 v4](../examples/knowledge/webchat/grounding-advice-v4.md)的十二题结果保留，不与本轮不同样本数直接比较。

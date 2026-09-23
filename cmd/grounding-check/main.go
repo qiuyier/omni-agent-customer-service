@@ -408,6 +408,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	flags.SetOutput(progress)
 	path := flags.String("cases", "examples/knowledge/webchat/grounding_judge_cases.json", "fixed labelled fictional answers")
 	allow := flags.Bool("allow-model-api", false, "send corpus to configured model; costs may apply; no retries")
+	classify := flags.Bool("classify-only", false, "independent speech-act experiment; not a grounding verdict")
 	timeout := flags.Duration("timeout", 10*time.Minute, "overall timeout, at most 15m")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -417,6 +418,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	}
 	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute {
 		return errors.New("invalid arguments")
+	}
+	if *classify {
+		return runSpeech(ctx, *path, *allow, *timeout, out, progress, func() (judgeFunc, string, error) { return liveJudgeForPrompt(speechPrompt) })
 	}
 	cases, data, err := load(*path)
 	if err != nil {
@@ -506,6 +510,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 // Experimental transport only; production provider wiring is deliberately untouched.
 // No SDK retries, redirects, tools, retrieval, or env-file loading.
 func liveJudge() (judgeFunc, string, error) {
+	return liveJudgeForPrompt("")
+}
+func liveJudgeForPrompt(prompt string) (judgeFunc, string, error) {
 	effort := strings.TrimSpace(os.Getenv("GROUNDING_REASONING_EFFORT"))
 	if effort != "" && effort != "low" && effort != "high" && effort != "max" {
 		return nil, "", errors.New("invalid reasoning effort")
@@ -523,6 +530,9 @@ func liveJudge() (judgeFunc, string, error) {
 	}
 	endpoint := strings.TrimRight(config.BaseURL, "/") + "/chat/completions"
 	client := &http.Client{Timeout: 75 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("redirect refused") }}
+	if prompt != "" {
+		return chatJudge(client, endpoint, config.APIKey, config.Model, effort, prompt), config.Model, nil
+	}
 	return withSpecificityReview(chatJudge(client, endpoint, config.APIKey, config.Model, effort), chatJudge(client, endpoint, config.APIKey, config.Model, effort, specificityPrompt)), config.Model, nil
 }
 
