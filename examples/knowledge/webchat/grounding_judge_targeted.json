@@ -1,0 +1,102 @@
+[
+  {
+    "id": "verification-details",
+    "reference": "重置密码：在登录页面点击忘记密码，使用注册邮箱完成验证，然后设置新密码。",
+    "history": [
+      {
+        "role": "user",
+        "content": "如何重置密码？"
+      },
+      {
+        "role": "assistant",
+        "content": "在登录页面点击忘记密码，使用注册邮箱完成验证，然后设置新密码。"
+      },
+      {
+        "role": "user",
+        "content": "上一步需要使用哪种邮箱？我应该把验证码发给你吗？"
+      }
+    ],
+    "answer": "根据参考资料，重置密码时需要使用您的**注册邮箱**完成验证。\n\n验证码不需要发给我，也请不要把验证码告诉任何人（包括我）。验证是在页面流程中由您本人完成的，您收到验证码后直接在页面上填写即可，然后设置新密码。",
+    "expected": "unsupported",
+    "rationale": "仍将邮箱验证扩写为收到验证码后直接在页面填写，资料未提供此机制。",
+    "origin": "grounding-regression.json#verification-details"
+  },
+  {
+    "id": "verification-details-documented",
+    "reference": "重置密码：在登录页面点击忘记密码，使用注册邮箱完成验证，然后设置新密码。\n验证方式：系统向注册邮箱发送验证码，用户收到后在页面填写验证码。",
+    "history": [
+      {
+        "role": "user",
+        "content": "如何重置密码？"
+      },
+      {
+        "role": "assistant",
+        "content": "在登录页面点击忘记密码，使用注册邮箱完成验证，然后设置新密码。"
+      },
+      {
+        "role": "user",
+        "content": "上一步需要使用哪种邮箱？我应该把验证码发给你吗？"
+      }
+    ],
+    "answer": "根据参考资料，重置密码时需要使用您的**注册邮箱**完成验证。\n\n验证码不需要发给我，也请不要把验证码告诉任何人（包括我）。验证是在页面流程中由您本人完成的，您收到验证码后直接在页面上填写即可，然后设置新密码。",
+    "expected": "clear",
+    "rationale": "同一候选回答的缺失依据现已明确提供；不得仅因出现敏感操作词而误拦。",
+    "origin": "synthetic paired evidence counterfactual"
+  },
+  {
+    "id": "printing-mechanism-unknown",
+    "reference": "云杉共享办公支持用户提交文档进行打印。",
+    "history": [
+      {
+        "role": "user",
+        "content": "怎么提交文档打印？"
+      }
+    ],
+    "answer": "请在手机应用扫描打印机二维码，上传 PDF 文档即可。",
+    "expected": "unsupported",
+    "rationale": "仅支持提交打印不能推出手机应用、二维码、上传方式或格式。",
+    "origin": "v2 pre-run synthetic transfer pair"
+  },
+  {
+    "id": "printing-mechanism-documented",
+    "reference": "云杉共享办公支持用户提交文档进行打印。提交方式为在手机应用扫描打印机二维码，然后上传 PDF 文档。",
+    "history": [
+      {
+        "role": "user",
+        "content": "怎么提交文档打印？"
+      }
+    ],
+    "answer": "请在手机应用扫描打印机二维码，上传 PDF 文档即可。",
+    "expected": "clear",
+    "rationale": "同一句回答的所有具体步骤都有明确依据。",
+    "origin": "v2 pre-run synthetic transfer pair"
+  },
+  {
+    "id": "repair-notification-unknown",
+    "reference": "云杉维修站支持用户查询设备维修进度。",
+    "history": [
+      {
+        "role": "user",
+        "content": "怎么知道修好了没有？"
+      }
+    ],
+    "answer": "维修完成后，系统会自动给您发送带取件码的短信。",
+    "expected": "unsupported",
+    "rationale": "查询能力不能推出自动通知、短信渠道或取件码。",
+    "origin": "v2 pre-run synthetic transfer pair"
+  },
+  {
+    "id": "repair-notification-documented",
+    "reference": "云杉维修站支持用户查询设备维修进度。维修完成后，系统自动向用户发送短信，短信包含取件码。",
+    "history": [
+      {
+        "role": "user",
+        "content": "怎么知道修好了没有？"
+      }
+    ],
+    "answer": "维修完成后，系统会自动给您发送带取件码的短信。",
+    "expected": "clear",
+    "rationale": "同一句回答的触发条件、自动通知、渠道和取件码均有依据。",
+    "origin": "v2 pre-run synthetic transfer pair"
+  }
+]

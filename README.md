@@ -14,6 +14,15 @@
 
 ## 当前进度
 
+校验器新增共享建议边界与 `advice_kind` 约束：12 题有 10 题符合预期、2 题错误，
+未放宽覆盖检查、未接入正式回复，见[建议边界修正记录](examples/knowledge/webchat/grounding-advice-v4.md)。
+
+已冻结校验器并完成原十二题及八条新题验收：20 题有 14 题符合预期，存在误判、
+不确定结果和输出契约错误，暂不进入真实业务试运行，见[冻结验收报告](examples/knowledge/webchat/grounding-frozen-validation.md)。
+
+依据校验新增逐细节检查和独立复核；验证码、打印、维修通知六题配对回归符合预期，
+随后完成上述冻结回归，仍未接入正式回复；此前六题范围见[修正报告](examples/knowledge/webchat/grounding-judge-v3.md)。
+
 已新增独立[回答依据校验实验](docs/grounding-check.md)，默认不联网、不影响正式回复。
 十二条固定样例已备好；首条真实审查调用失败后停止，效果尚未验证，见[实验记录](examples/knowledge/webchat/grounding-judge.md)。
 

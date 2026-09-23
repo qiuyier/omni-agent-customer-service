@@ -1,5 +1,14 @@
 # 网页客服：显式 AI 回复与知识检索
 
+最新[建议边界实验 v4](../examples/knowledge/webchat/grounding-advice-v4.md)仍有输出契约/调用错误，
+没有接入本网页的回复链路，也没有放宽覆盖检查。
+
+独立校验器的[20 题冻结验收](../examples/knowledge/webchat/grounding-frozen-validation.md)已完成但未全过，
+尚不进入真实业务旁路或在线拦截；本网页回复没有因此增加校验保护。
+
+独立校验器已做[逐细节检查修正](../examples/knowledge/webchat/grounding-judge-v3.md)，
+六题针对性回归符合预期；未接入本网页的回复链路，不代表在线回答已经受其保护。
+
 新增[独立依据校验实验](grounding-check.md)，尚未接入网页回复；首次真实审查调用失败，
 因此不能视为已经能够阻止资料外推断。
 
