@@ -60,9 +60,10 @@ type sample struct {
 	Origin    string `json:"origin"`
 }
 type judgeInput struct {
-	Reference string `json:"reference"`
-	History   []turn `json:"history"`
-	Answer    string `json:"answer"`
+	Classification []speechSegment `json:"classification_hint,omitempty"`
+	Reference      string          `json:"reference"`
+	History        []turn          `json:"history"`
+	Answer         string          `json:"answer"`
 }
 type claim struct {
 	AdviceKind string        `json:"advice_kind,omitempty"`
@@ -96,16 +97,17 @@ type specificityFinding struct {
 	MissingDetail string `json:"missing_detail"`
 }
 type result struct {
-	ID        string             `json:"id"`
-	Expected  string             `json:"expected"`
-	Verdict   string             `json:"verdict"`
-	Claims    []claim            `json:"claims,omitempty"`
-	Advice    []generalAdvice    `json:"advice,omitempty"`
-	Failure   *judgeFailure      `json:"failure,omitempty"`
-	Review    *specificityReview `json:"review,omitempty"`
-	Raw       string             `json:"raw,omitempty"`
-	Error     string             `json:"error,omitempty"`
-	ElapsedMS int64              `json:"elapsed_ms"`
+	Classification *speechOutput      `json:"classification,omitempty"`
+	ID             string             `json:"id"`
+	Expected       string             `json:"expected"`
+	Verdict        string             `json:"verdict"`
+	Claims         []claim            `json:"claims,omitempty"`
+	Advice         []generalAdvice    `json:"advice,omitempty"`
+	Failure        *judgeFailure      `json:"failure,omitempty"`
+	Review         *specificityReview `json:"review,omitempty"`
+	Raw            string             `json:"raw,omitempty"`
+	Error          string             `json:"error,omitempty"`
+	ElapsedMS      int64              `json:"elapsed_ms"`
 }
 type summary struct {
 	UnsupportedDetected int `json:"unsupported_detected"`
@@ -116,21 +118,22 @@ type summary struct {
 	Errors              int `json:"errors"`
 }
 type report struct {
-	ProviderRequests int      `json:"provider_requests"`
-	ReviewPrompt     string   `json:"review_prompt"`
-	SchemaVersion    int      `json:"schema_version"`
-	ReasoningEffort  string   `json:"reasoning_effort,omitempty"`
-	Mode             string   `json:"mode"`
-	Model            string   `json:"model,omitempty"`
-	StartedAt        string   `json:"started_at"`
-	Complete         bool     `json:"complete"`
-	Calls            int      `json:"calls"`
-	CorpusSHA256     string   `json:"corpus_sha256"`
-	PromptSHA256     string   `json:"prompt_sha256"`
-	Prompt           string   `json:"prompt"`
-	Samples          []sample `json:"samples"`
-	Results          []result `json:"results"`
-	Summary          summary  `json:"summary"`
+	ClassificationPrompt string   `json:"classification_prompt,omitempty"`
+	ProviderRequests     int      `json:"provider_requests"`
+	ReviewPrompt         string   `json:"review_prompt"`
+	SchemaVersion        int      `json:"schema_version"`
+	ReasoningEffort      string   `json:"reasoning_effort,omitempty"`
+	Mode                 string   `json:"mode"`
+	Model                string   `json:"model,omitempty"`
+	StartedAt            string   `json:"started_at"`
+	Complete             bool     `json:"complete"`
+	Calls                int      `json:"calls"`
+	CorpusSHA256         string   `json:"corpus_sha256"`
+	PromptSHA256         string   `json:"prompt_sha256"`
+	Prompt               string   `json:"prompt"`
+	Samples              []sample `json:"samples"`
+	Results              []result `json:"results"`
+	Summary              summary  `json:"summary"`
 }
 type judgeFunc func(context.Context, judgeInput) (string, error)
 type requestCounterKey struct{}
@@ -409,6 +412,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	path := flags.String("cases", "examples/knowledge/webchat/grounding_judge_cases.json", "fixed labelled fictional answers")
 	allow := flags.Bool("allow-model-api", false, "send corpus to configured model; costs may apply; no retries")
 	classify := flags.Bool("classify-only", false, "independent speech-act experiment; not a grounding verdict")
+	assisted := flags.Bool("with-classification", false, "experimental classification hints; original full answer remains mandatory")
 	timeout := flags.Duration("timeout", 10*time.Minute, "overall timeout, at most 15m")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -416,7 +420,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		}
 		return err
 	}
-	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute {
+	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute || (*classify && *assisted) {
 		return errors.New("invalid arguments")
 	}
 	if *classify {
@@ -427,8 +431,16 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		return err
 	}
 	rep := report{Mode: "offline_validation_only", StartedAt: time.Now().UTC().Format(time.RFC3339), CorpusSHA256: fmt.Sprintf("%x", sha256.Sum256(data)), PromptSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(judgePrompt))), Prompt: judgePrompt, Samples: cases, Results: []result{}}
+	if *assisted {
+		rep.Prompt = assistedPrompt
+		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(assistedPrompt)))
+		rep.ClassificationPrompt = speechPrompt
+	}
 	emit := func() error {
 		rep.SchemaVersion = 5
+		if *assisted {
+			rep.SchemaVersion = 6
+		}
 		rep.ReviewPrompt = specificityPrompt
 		rep.Summary = aggregate(rep.Results)
 		e := json.NewEncoder(out)
@@ -439,6 +451,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		rep.Complete = true
 		return emit()
 	}
+	if *assisted {
+		makeJudge = liveAssistedJudge
+	}
 	judge, model, err := makeJudge()
 	if err != nil {
 		return errors.New("judge configuration failed (details withheld)")
@@ -446,6 +461,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	rep.Model = model
 	rep.ReasoningEffort = strings.TrimSpace(os.Getenv("GROUNDING_REASONING_EFFORT"))
 	rep.Mode = "model_judge_experiment"
+	if *assisted {
+		rep.Mode = "classification_assisted_judge_experiment"
+	}
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 	ctx = context.WithValue(ctx, requestCounterKey{}, &rep.ProviderRequests)
@@ -459,8 +477,11 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		input := judgeInput{Reference: c.Reference, History: c.History, Answer: c.Answer}
 		start := time.Now()
 		rep.Calls++
-		raw, callErr := judge(ctx, input)
+		trace := &classificationTrace{}
+		caseCtx := context.WithValue(ctx, classificationTraceKey{}, trace)
+		raw, callErr := judge(caseCtx, input)
 		r := result{ID: c.ID, Expected: c.Expected, Raw: raw, ElapsedMS: time.Since(start).Milliseconds()}
+		r.Classification = trace.Output
 		if callErr != nil {
 			r.Verdict = "error"
 			r.Error = "model_call_failed"

@@ -3,6 +3,41 @@
 本实验审查固定的候选回答，不重新回答客户，也不修改、拦截或重试正式回复。
 它是模型审查实验，不是通过关键词判断正确性的规则引擎。
 
+## 默认关闭的分类辅助组合模式
+
+[完整冻结验收](../examples/knowledge/webchat/grounding-assisted-v1.md)：二十题十五题符合预期，
+另有一题漏判、两题误判、两题结构错误。组合实现完成不等于模型可靠性通过。
+
+`-with-classification` 开启独立旁路实验，不能与 `-classify-only` 同用。
+默认行为保持原来的 v5 两阶段审查；正式客服不会使用这个开关。
+
+```sh
+go run ./cmd/grounding-check -with-classification \
+  -cases examples/knowledge/webchat/grounding_judge_cases.json
+```
+
+默认仅本地校验。显式加 `-allow-model-api` 才运行以下阶段：
+
+1. 分类原始全文，校验分类结构及全文覆盖；失败停止批次，不重试、不放行。
+2. 首审读取原始 reference/history/answer 和不可信 `classification_hint`。
+   分类不能作为证据，不能删减原文，不能让任何非 assertion 标签自动免审。
+3. 首审格式有效且未判 unsupported 时，复核再次读取原始全文；
+   不接收分类提示、首审判断或理由，保留独立否决能力。
+
+每题最多三次模型请求；十二题最多三十六次，八题最多二十四次。
+仍保留单次 75 秒超时、整体至多 15 分钟、无重试、无重定向、错误脱敏。
+这不改变旧模式每题最多两次、纯分类模式每题一次的预算。
+
+报告 schema 6，模式为 `classification_assisted_judge_experiment`，记录完整的
+`classification_prompt`、首审 prompt 和复核 prompt；每题 `classification` 记录通过
+结构校验的分类结果，即使后续审查失败也保留，不能当作事实审查成功。
+分类错误的 `failure.phase=classification`，解析环节为 `classification_parse`。
+仍使用旧的错误/漏判/误判/不确定分类统计，不因为增加了分类步骤而放宽成功标准。
+
+分类和两个审查阶段使用同一模型，仍可能存在共同盲点。这是实验，不是可靠性保证。
+
+## 独立分类模式
+
 新增独立的言语行为分类实验，入口 `-classify-only`。它不判断答案是否有依据，
 不替代下面的 v5 事实审查，也没有接入正式客服。
 用于先定位“否定/未知说明被当事实”和“操作步骤被归为通用建议”的分类错误。
