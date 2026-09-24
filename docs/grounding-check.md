@@ -3,6 +3,42 @@
 本实验审查固定的候选回答，不重新回答客户，也不修改、拦截或重试正式回复。
 它是模型审查实验，不是通过关键词判断正确性的规则引擎。
 
+## 按类型区分的首审契约（默认关闭）
+
+[定向验收报告](../examples/knowledge/webchat/grounding-typed-primary-v1.md)：七题六题符合预期，
+旧工单负例仍有非法类型与语义误分，不能算已修复；尚未完成全量事实验收。
+
+`-typed-primary` 是替换首审输出契约的实验，不增加分类调用，也不叠加在旧首审提示词上。
+它与分类、分类辅助及回放诊断模式互斥。正式客服不使用该模式。
+
+```sh
+go run ./cmd/grounding-check -typed-primary \
+  -cases examples/knowledge/webchat/grounding_typed_cases.json
+```
+
+默认只做本地校验；`-allow-model-api` 才调用模型，每题最多首审和独立复核两次。
+输出使用 `segments`，每项包含连续原文 `quote`、`scope` 和 `reason`：
+
+- `system_fact`：系统规则、功能、操作、渠道、机制或执行结果，肯定和否定都需要核验。
+  只有此类型能携带 `assessment`，包含 status/evidence/checks。
+- `assistant_limitation`：当前助手不能代办或没有工具的说明。
+- `knowledge_limit`：资料局限和无法确认，不肯定或否定系统能力。
+- `inquiry`：一般求证，不承诺渠道可办理。
+- `social`：礼貌、安全提醒等。
+- `correction`：撤回以前无依据说法。
+
+后五类必须完全省略 assessment，连 null 也拒绝；未知字段不被容错删除。
+业务事实的 supported 必须有非空原文证据，supported/unsupported 都要列出细节检查；
+细节缺失/冲突仍会覆盖不一致的 supported。原来的原文引用和全文覆盖检查不放宽。
+通过校验后仅做表示转换，复用旧结果聚合及复核；不修补证据、不更改模型给出的类型。
+模型仍可能把业务事实错标为非事实，因此复核必须看到原始全文，不能因非事实类型直接放行。
+
+报告 schema 8，模式 `typed_primary_experiment`。`typed_primary_raw` 是首审实际输出，
+`raw` 是通过校验后的兼容表示与可选复核结果，二者不能混淆。
+首审结构失败标为 primary / typed_primary_parse，不重试，停止当前批次；
+有原始模型正文时在大小限制内保留，传输错误正文仍不保存。
+这是本地严格类型校验，不是供应商强制结构生成或语义正确性保证。
+
 ## 固定分类提示的对照诊断
 
 [本轮五题配对结果](../examples/knowledge/webchat/grounding-hint-comparison-v1.md)：

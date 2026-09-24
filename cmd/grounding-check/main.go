@@ -97,17 +97,18 @@ type specificityFinding struct {
 	MissingDetail string `json:"missing_detail"`
 }
 type result struct {
-	Classification *speechOutput      `json:"classification,omitempty"`
-	ID             string             `json:"id"`
-	Expected       string             `json:"expected"`
-	Verdict        string             `json:"verdict"`
-	Claims         []claim            `json:"claims,omitempty"`
-	Advice         []generalAdvice    `json:"advice,omitempty"`
-	Failure        *judgeFailure      `json:"failure,omitempty"`
-	Review         *specificityReview `json:"review,omitempty"`
-	Raw            string             `json:"raw,omitempty"`
-	Error          string             `json:"error,omitempty"`
-	ElapsedMS      int64              `json:"elapsed_ms"`
+	TypedPrimaryRaw string             `json:"typed_primary_raw,omitempty"`
+	Classification  *speechOutput      `json:"classification,omitempty"`
+	ID              string             `json:"id"`
+	Expected        string             `json:"expected"`
+	Verdict         string             `json:"verdict"`
+	Claims          []claim            `json:"claims,omitempty"`
+	Advice          []generalAdvice    `json:"advice,omitempty"`
+	Failure         *judgeFailure      `json:"failure,omitempty"`
+	Review          *specificityReview `json:"review,omitempty"`
+	Raw             string             `json:"raw,omitempty"`
+	Error           string             `json:"error,omitempty"`
+	ElapsedMS       int64              `json:"elapsed_ms"`
 }
 type summary struct {
 	UnsupportedDetected int `json:"unsupported_detected"`
@@ -417,6 +418,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	assisted := flags.Bool("with-classification", false, "experimental classification hints; original full answer remains mandatory")
 	replayPath := flags.String("replay-hints", "", "replay fixed classification hints for a controlled diagnostic")
 	omitHints := flags.Bool("omit-replayed-hints", false, "control arm: identical prompt but no hints delivered")
+	typed := flags.Bool("typed-primary", false, "experimental discriminated primary contract; no classification call")
 	timeout := flags.Duration("timeout", 10*time.Minute, "overall timeout, at most 15m")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -424,7 +426,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		}
 		return err
 	}
-	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute || (*classify && *assisted) || (*replayPath != "" && (*classify || *assisted)) || (*omitHints && *replayPath == "") {
+	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute || (*classify && *assisted) || (*replayPath != "" && (*classify || *assisted)) || (*omitHints && *replayPath == "") || (*typed && (*classify || *assisted || *replayPath != "" || *omitHints)) {
 		return errors.New("invalid arguments")
 	}
 	if *classify {
@@ -435,6 +437,11 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		return err
 	}
 	rep := report{Mode: "offline_validation_only", StartedAt: time.Now().UTC().Format(time.RFC3339), CorpusSHA256: fmt.Sprintf("%x", sha256.Sum256(data)), PromptSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(judgePrompt))), Prompt: judgePrompt, Samples: cases, Results: []result{}}
+	if *typed {
+		rep.Prompt = typedPrimaryPrompt
+		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(typedPrimaryPrompt)))
+		makeJudge = liveTypedJudge
+	}
 	if *assisted {
 		rep.Prompt = assistedPrompt
 		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(assistedPrompt)))
@@ -462,6 +469,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		if *replayPath != "" {
 			rep.SchemaVersion = 7
 		}
+		if *typed {
+			rep.SchemaVersion = 8
+		}
 		rep.ReviewPrompt = specificityPrompt
 		rep.Summary = aggregate(rep.Results)
 		e := json.NewEncoder(out)
@@ -488,6 +498,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	if *replayPath != "" {
 		rep.Mode = "fixed_hint_diagnostic"
 	}
+	if *typed {
+		rep.Mode = "typed_primary_experiment"
+	}
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 	ctx = context.WithValue(ctx, requestCounterKey{}, &rep.ProviderRequests)
@@ -503,9 +516,12 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		rep.Calls++
 		trace := &classificationTrace{}
 		caseCtx := context.WithValue(ctx, classificationTraceKey{}, trace)
+		typedTrace := &typedPrimaryTrace{}
+		caseCtx = context.WithValue(caseCtx, typedPrimaryTraceKey{}, typedTrace)
 		raw, callErr := judge(caseCtx, input)
 		r := result{ID: c.ID, Expected: c.Expected, Raw: raw, ElapsedMS: time.Since(start).Milliseconds()}
 		r.Classification = trace.Output
+		r.TypedPrimaryRaw = typedTrace.Raw
 		if callErr != nil {
 			r.Verdict = "error"
 			r.Error = "model_call_failed"
