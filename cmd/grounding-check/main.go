@@ -118,6 +118,8 @@ type summary struct {
 	Errors              int `json:"errors"`
 }
 type report struct {
+	ReplayHintsSHA256    string   `json:"replay_hints_sha256,omitempty"`
+	HintDelivery         string   `json:"hint_delivery,omitempty"`
 	ClassificationPrompt string   `json:"classification_prompt,omitempty"`
 	ProviderRequests     int      `json:"provider_requests"`
 	ReviewPrompt         string   `json:"review_prompt"`
@@ -413,6 +415,8 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	allow := flags.Bool("allow-model-api", false, "send corpus to configured model; costs may apply; no retries")
 	classify := flags.Bool("classify-only", false, "independent speech-act experiment; not a grounding verdict")
 	assisted := flags.Bool("with-classification", false, "experimental classification hints; original full answer remains mandatory")
+	replayPath := flags.String("replay-hints", "", "replay fixed classification hints for a controlled diagnostic")
+	omitHints := flags.Bool("omit-replayed-hints", false, "control arm: identical prompt but no hints delivered")
 	timeout := flags.Duration("timeout", 10*time.Minute, "overall timeout, at most 15m")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -420,7 +424,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		}
 		return err
 	}
-	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute || (*classify && *assisted) {
+	if flags.NArg() != 0 || *timeout <= 0 || *timeout > 15*time.Minute || (*classify && *assisted) || (*replayPath != "" && (*classify || *assisted)) || (*omitHints && *replayPath == "") {
 		return errors.New("invalid arguments")
 	}
 	if *classify {
@@ -436,10 +440,27 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(assistedPrompt)))
 		rep.ClassificationPrompt = speechPrompt
 	}
+	if *replayPath != "" {
+		hints, digest, err := loadReplayHints(*replayPath, cases)
+		if err != nil {
+			return err
+		}
+		rep.ReplayHintsSHA256 = digest
+		rep.HintDelivery = "recorded"
+		if *omitHints {
+			rep.HintDelivery = "omitted"
+		}
+		rep.Prompt = assistedPrompt
+		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(assistedPrompt)))
+		makeJudge = func() (judgeFunc, string, error) { return liveReplayJudge(hints, *omitHints) }
+	}
 	emit := func() error {
 		rep.SchemaVersion = 5
 		if *assisted {
 			rep.SchemaVersion = 6
+		}
+		if *replayPath != "" {
+			rep.SchemaVersion = 7
 		}
 		rep.ReviewPrompt = specificityPrompt
 		rep.Summary = aggregate(rep.Results)
@@ -463,6 +484,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	rep.Mode = "model_judge_experiment"
 	if *assisted {
 		rep.Mode = "classification_assisted_judge_experiment"
+	}
+	if *replayPath != "" {
+		rep.Mode = "fixed_hint_diagnostic"
 	}
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()

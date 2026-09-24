@@ -3,6 +3,33 @@
 本实验审查固定的候选回答，不重新回答客户，也不修改、拦截或重试正式回复。
 它是模型审查实验，不是通过关键词判断正确性的规则引擎。
 
+## 固定分类提示的对照诊断
+
+[本轮五题配对结果](../examples/knowledge/webchat/grounding-hint-comparison-v1.md)：
+提供提示组零题符合预期，不提供组两题符合；其余三题两组均未解决。
+单次、失败样例对照不足以作因果判断，不代表已修复或可上线。
+
+`-replay-hints` 只回放归档分类，不再调用分类模型；它与 `-with-classification`、
+`-classify-only` 互斥。`-omit-replayed-hints` 必须与回放文件同时使用。
+
+```sh
+go run ./cmd/grounding-check \
+  -cases examples/knowledge/webchat/grounding_hint_comparison_cases.json \
+  -replay-hints examples/knowledge/webchat/grounding_hint_comparison_hints.json
+```
+
+默认仍为离线校验。显式 `-allow-model-api` 才请求模型，每题每组最多两次：首审及条件复核。
+以上为提供提示组；附加 `-omit-replayed-hints` 是不提供提示组。
+两组使用完全相同的 assistedPrompt 和复核提示词，仅首审 user JSON 中
+`classification_hint` 是否存在不同；复核始终不接收提示。
+因此无提示组不是旧 v5 提示词的基准测试，不能混为一谈。
+
+回放文件必须精确匹配每条原始 reference/history/answer；拒绝缺失、重复、
+无效分类、覆盖不完整、未知字段或样例数据变化，校验失败不会构造模型请求。
+诊断报告 schema 7，记录回放文件哈希及 `hint_delivery=recorded|omitted`。
+两组结果里的 `classification` 都是归档诊断材料；只有 recorded 组把它传入首审。
+样例 ID、标签、上一轮判定不发送给模型。没有新增业务判定规则或自动修复输出。
+
 ## 默认关闭的分类辅助组合模式
 
 [完整冻结验收](../examples/knowledge/webchat/grounding-assisted-v1.md)：二十题十五题符合预期，
