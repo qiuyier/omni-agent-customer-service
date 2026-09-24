@@ -15,6 +15,9 @@ system_fact：业务系统的规则、能力、具体操作指导、渠道、实
 assistant_limitation：当前助手不能代办/没有工具/没有执行的说明，不是对业务系统能力的断言，不需要 reference 为助手限制背书。声称已执行不能放这里。
 knowledge_limit：说明资料没有给出、无法确认能力或入口是否存在。它没有肯定或否定系统能力，不能因为资料缺失判 unsupported。若 reference 明确反驳其对资料的描述，则作为 system_fact 检查该冲突。
 inquiry：一般查阅资料或咨询人工以了解规则、确认是否支持，不保证能完成特定操作。
+对建议按动作和对象逐项拆分，而不是按入口是否具体命名判断：询问“如何办理/是否支持”是 inquiry；指示用户借助渠道实际提交、查询个人记录或改变状态是 system_fact，即使仅称“官方渠道”、入口未知或使用条件语气。
+同一句的并列动作分别判断。“通过某渠道提交申请，或向人工咨询”不能整体归为 inquiry；提交部分必须核验渠道能力，未保证办理效果的一般人工咨询仍是 inquiry。一个部分有证据不能替另一个部分背书，一个部分未知也不能抵消另一个部分的能力声明。
+“联系人工”本身按一般咨询处理；只有明确保证人工能完成某特定业务、取得个人数据或执行操作时，才另列 system_fact。不从并列语法自行添加原句未保证的办理能力。
 social：礼貌、一般安全提醒、不含独立业务事实的过渡语。
 correction：撤回此前无依据说法；同时新增的系统断言必须拆到 system_fact。
 混合句必须拆分：“我不能代办，但您可以通过某渠道提交申请”分别是 assistant_limitation 和 system_fact。
@@ -25,7 +28,7 @@ supported 的 evidence 必须非空且逐字摘录，checks 至少一项。unsup
 其他五类只含 quote/scope/reason，完全省略 assessment，不能写 supported/unsupported，也不能填证据或 checks。不要为了表示“助手说得属实”给助手限制填写 supported。
 quote 必须逐字摘录 answer；合起来覆盖全文全部文字及数字，包括标题、序号和来源标记。不能通过把事实放到非事实类型绕过核验。
 只输出 JSON，无 Markdown：{"segments":[{"quote":"事实原文","scope":"system_fact","reason":"简短理由","assessment":{"status":"supported","evidence":"资料原文","checks":[{"detail":"细节","relation":"entailed","evidence":"资料原文"}]}},{"quote":"不能代办的原文","scope":"assistant_limitation","reason":"当前助手限制，不是业务系统事实"}]}。
-` + adviceBoundaryRules
+`
 
 type typedSegment struct {
 	Quote      string          `json:"quote"`

@@ -6,8 +6,30 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 )
+
+func TestTypedPromptHasNoLegacyScopeVocabulary(t *testing.T) {
+	for _, legacy := range []string{"information_seeking", "capability_use", "general"} {
+		if strings.Contains(typedPrimaryPrompt, legacy) {
+			t.Fatalf("legacy scope leaked: %s", legacy)
+		}
+		raw := `{"segments":[{"quote":"回答","scope":"` + legacy + `","reason":"测试"}]}`
+		if _, _, err := parseTyped(raw, judgeInput{Answer: "回答"}); err == nil || err.Error() != "invalid_typed_scope" {
+			t.Fatalf("legacy scope accepted: %s %v", legacy, err)
+		}
+	}
+}
+
+func TestTypedMixedActionsDoNotCancelMissingCapability(t *testing.T) {
+	input := judgeInput{Reference: "工作日受理。", Answer: "可通过官方渠道提交申请，或咨询人工了解办理方法。"}
+	raw := `{"segments":[{"quote":"可通过官方渠道提交申请，","scope":"system_fact","reason":"隐含提交能力","assessment":{"status":"unsupported","evidence":"","checks":[{"detail":"官方渠道支持提交申请","relation":"not_stated","evidence":""}]}},{"quote":"或咨询人工了解办理方法。","scope":"inquiry","reason":"仅询问规则"}]}`
+	j, v, err := parseTyped(raw, input)
+	if err != nil || v != "unsupported" || len(j.Claims) != 1 || len(j.Advice) != 1 {
+		t.Fatalf("mixed: %s %v", v, err)
+	}
+}
 
 func TestTypedContractDiscriminatesNonFacts(t *testing.T) {
 	for _, scope := range []string{"assistant_limitation", "knowledge_limit", "inquiry", "social", "correction"} {
