@@ -1,2 +1,0 @@
-1/1 ticket-entry: error
-grounding-check: model call failed; partial report written
