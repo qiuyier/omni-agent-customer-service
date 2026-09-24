@@ -114,7 +114,7 @@ func TestTypedOfflineAndModes(t *testing.T) {
 		t.Fatal(err)
 	}
 	var r report
-	if json.Unmarshal(out.Bytes(), &r) != nil || r.SchemaVersion != 8 || r.Prompt != typedPrimaryPrompt || r.Calls != 0 {
+	if json.Unmarshal(out.Bytes(), &r) != nil || r.SchemaVersion != 8 || r.Prompt != typedPrimaryPrompt || r.ReviewPrompt != specificityPrompt || r.Calls != 0 {
 		t.Fatal("incorrect typed plan")
 	}
 	for _, flag := range []string{"-classify-only", "-with-classification", "-omit-replayed-hints"} {
