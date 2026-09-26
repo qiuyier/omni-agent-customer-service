@@ -1,7 +1,33 @@
 # 回答依据校验：独立实验，不用于在线拦截
 
+[结构输出能力核查](../examples/knowledge/webchat/grounding-structure-capability-audit.md)：
+当前官方接口规范未列出严格 JSON Schema 模式；上轮四次错误均为合法 JSON，
+新增历史回放测试保护字段与证据校验，不能据此认定模型生成稳定性已修复。
+
 本实验审查固定的候选回答，不重新回答客户，也不修改、拦截或重试正式回复。
 它是模型审查实验，不是通过关键词判断正确性的规则引擎。
+
+## 固定双数组首审（默认关闭）
+
+[三轮验收未通过](../examples/knowledge/webchat/grounding-split-primary-v1.md)：18 次中 13 次符合预期、
+5 次错误；设备有依据正例三次均失败。未追加完整二十题，不能视为已解决结构稳定性问题。
+
+`-split-primary` 单独选择结构简化候选，与 typed、清单复核、分类及回放模式互斥。
+业务事实固定放入 `facts`（quote/reason/status/evidence/checks），非事实放入
+`non_facts`（quote/scope/reason），两个数组均必须存在，不接受 null。
+不再使用按 scope 条件出现的 assessment；但在 non_facts 中多出 assessment（含 null）仍报错。
+程序只转换表示，复用 typed 首审和原有证据、全文覆盖校验；不修复模型的证据或分类。
+这不是供应商强制结构生成，也不能防止模型把业务事实误分到非事实中。
+
+```sh
+go run ./cmd/grounding-check -split-primary \
+  -cases examples/knowledge/webchat/grounding_inventory_cases.json
+```
+
+默认离线，不调用模型；加 `-allow-model-api` 后每题最多首审与原独立复核两次，不重试。
+schema 10，在线模式 `split_primary_experiment`，首审原文保存在 `split_primary_raw`；
+`raw` 是转换和复核结果，不能当成模型原始输出。首审失败阶段为 `split_primary_parse`。
+原 typed 和 inventory 实验没有被替换，正式客服不使用新模式。
 
 ## 按类型区分的首审契约（默认关闭）
 

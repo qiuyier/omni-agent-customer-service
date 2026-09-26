@@ -90,6 +90,9 @@ func parseTyped(raw string, input judgeInput) (judgment, string, error) {
 	return parse(string(data), input)
 }
 func withTypedPrimary(primary, reviewer judgeFunc) judgeFunc {
+	return withPrimaryParser(primary, reviewer, parseTyped, "typed_primary_parse")
+}
+func withPrimaryParser(primary, reviewer judgeFunc, parser func(string, judgeInput) (judgment, string, error), stage string) judgeFunc {
 	first := func(ctx context.Context, input judgeInput) (string, error) {
 		input.Classification = nil
 		raw, err := primary(ctx, input)
@@ -99,9 +102,9 @@ func withTypedPrimary(primary, reviewer judgeFunc) judgeFunc {
 		if trace, ok := ctx.Value(typedPrimaryTraceKey{}).(*typedPrimaryTrace); ok && len(raw) <= 128<<10 {
 			trace.Raw = raw
 		}
-		j, _, err := parseTyped(raw, input)
+		j, _, err := parser(raw, input)
 		if err != nil {
-			return "", failure("typed_primary_parse", err.Error(), nil)
+			return "", failure(stage, err.Error(), nil)
 		}
 		data, err := json.Marshal(j)
 		return string(data), err

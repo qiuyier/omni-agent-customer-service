@@ -97,6 +97,7 @@ type specificityFinding struct {
 	MissingDetail string `json:"missing_detail"`
 }
 type result struct {
+	SplitPrimaryRaw    string             `json:"split_primary_raw,omitempty"`
 	InventoryReviewRaw string             `json:"inventory_review_raw,omitempty"`
 	TypedPrimaryRaw    string             `json:"typed_primary_raw,omitempty"`
 	Classification     *speechOutput      `json:"classification,omitempty"`
@@ -420,6 +421,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	replayPath := flags.String("replay-hints", "", "replay fixed classification hints for a controlled diagnostic")
 	omitHints := flags.Bool("omit-replayed-hints", false, "control arm: identical prompt but no hints delivered")
 	typed := flags.Bool("typed-primary", false, "experimental discriminated primary contract; no classification call")
+	split := flags.Bool("split-primary", false, "opt-in fixed facts/non_facts primary; original independent reviewer")
 	inventory := flags.Bool("inventory-review", false, "opt-in inventory reviewer candidate; requires typed-primary")
 	timeout := flags.Duration("timeout", 10*time.Minute, "overall timeout, at most 15m")
 	if err := flags.Parse(args); err != nil {
@@ -432,7 +434,13 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		return errors.New("invalid arguments")
 	}
 	if *classify {
+		if *split {
+			return errors.New("invalid arguments")
+		}
 		return runSpeech(ctx, *path, *allow, *timeout, out, progress, func() (judgeFunc, string, error) { return liveJudgeForPrompt(speechPrompt) })
+	}
+	if *split && (*typed || *inventory || *assisted || *replayPath != "" || *omitHints) {
+		return errors.New("invalid arguments")
 	}
 	cases, data, err := load(*path)
 	if err != nil {
@@ -451,6 +459,11 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		rep.Prompt = assistedPrompt
 		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(assistedPrompt)))
 		rep.ClassificationPrompt = speechPrompt
+	}
+	if *split {
+		rep.Prompt = splitPrimaryPrompt
+		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(splitPrimaryPrompt)))
+		makeJudge = liveSplitJudge
 	}
 	if *replayPath != "" {
 		hints, digest, err := loadReplayHints(*replayPath, cases)
@@ -481,6 +494,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 			rep.SchemaVersion = 9
 		}
 		rep.ReviewPrompt = specificityPrompt
+		if *split {
+			rep.SchemaVersion = 10
+		}
 		if *inventory {
 			rep.ReviewPrompt = inventoryReviewPrompt
 		}
@@ -515,6 +531,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	if *inventory {
 		rep.Mode = "typed_inventory_experiment"
 	}
+	if *split {
+		rep.Mode = "split_primary_experiment"
+	}
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 	ctx = context.WithValue(ctx, requestCounterKey{}, &rep.ProviderRequests)
@@ -538,6 +557,10 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		r := result{ID: c.ID, Expected: c.Expected, Raw: raw, ElapsedMS: time.Since(start).Milliseconds()}
 		r.Classification = trace.Output
 		r.TypedPrimaryRaw = typedTrace.Raw
+		if *split {
+			r.SplitPrimaryRaw = typedTrace.Raw
+			r.TypedPrimaryRaw = ""
+		}
 		r.InventoryReviewRaw = inventoryTrace.Raw
 		if callErr != nil {
 			r.Verdict = "error"
