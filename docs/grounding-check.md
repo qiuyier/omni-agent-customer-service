@@ -1,5 +1,9 @@
 # 回答依据校验：独立实验，不用于在线拦截
 
+[DeepSeek strict 极简诊断](../examples/knowledge/webchat/grounding-deepseek-strict-probe-v1.md)：
+2026-09-27 三种小契约两轮开关对照，strict=true 六次均违规，关闭时六次也均违规。
+当前模型/端点/参数不能视为已具备可靠硬约束；不追加客服回归，编号器 v2 仍仅离线验证。
+
 [原文编号与严格工具输出实验](../examples/knowledge/webchat/grounding-anchored-strict-v1.md)：
 初版两轮 6/12 符合预期，仍有字段违规、遗漏与语义漏判。采样后已修复本地独立空白编号问题，
 当前编号器 v2 仅通过离线测试，不能沿用初版成绩，不用于正式客服。
