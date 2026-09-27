@@ -1,0 +1,2 @@
+1/1 supported-steps: error
+grounding-check: model call failed; partial report written

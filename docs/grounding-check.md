@@ -1,5 +1,24 @@
 # 回答依据校验：独立实验，不用于在线拦截
 
+[原文编号与严格工具输出实验](../examples/knowledge/webchat/grounding-anchored-strict-v1.md)：
+初版两轮 6/12 符合预期，仍有字段违规、遗漏与语义漏判。采样后已修复本地独立空白编号问题，
+当前编号器 v2 仅通过离线测试，不能沿用初版成绩，不用于正式客服。
+
+`-anchored-primary` 是 DeepSeek 官方 Beta 工具首审实验，与其他首审模式互斥。
+需要 AI_PROVIDER=deepseek、AI_PROTOCOL=chat_completions、AI_BASE_URL=https://api.deepseek.com，
+且不设置 GROUNDING_REASONING_EFFORT；首审自行选择官方 /beta 路径、strict=true、thinking=disabled。
+工具仅传回审查数据，不执行动作，复核仍使用普通接口。默认不联网，显式 -allow-model-api 才调用。
+schema 11，模式 anchored_strict_primary_experiment；anchored_primary_raw 保留原始参数，
+answer_anchors 保留地址表，anchor_version 区分编号器版本。不能把返回 HTTP 200 当成严格 Schema 已生效。
+
+[DeepSeek 原首审对照](../examples/knowledge/webchat/grounding-deepseek-typed-v1.md)：
+相同六种输入两轮 10/12 符合预期，两次分别因额外字段、原句新增换行被拒绝。
+此前 GLM 原首审为 11/12；不同推理配置、非同期小样本，不能据此宣称换模型已解决问题。
+
+[最新受控诊断](../examples/knowledge/webchat/grounding-controlled-contract-length-v1.md)：
+同模型同复核器、完整回答与原文短片段两轮对照，typed 11/12，split 8/12。
+split 出现一次实际漏放，typed 短片段仍有条件字段错误；不支持替换或上线分段审核。
+
 [结构输出能力核查](../examples/knowledge/webchat/grounding-structure-capability-audit.md)：
 当前官方接口规范未列出严格 JSON Schema 模式；上轮四次错误均为合法 JSON，
 新增历史回放测试保护字段与证据校验，不能据此认定模型生成稳定性已修复。

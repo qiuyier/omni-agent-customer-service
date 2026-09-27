@@ -97,6 +97,8 @@ type specificityFinding struct {
 	MissingDetail string `json:"missing_detail"`
 }
 type result struct {
+	AnswerAnchors      []answerAnchor     `json:"answer_anchors,omitempty"`
+	AnchoredPrimaryRaw string             `json:"anchored_primary_raw,omitempty"`
 	SplitPrimaryRaw    string             `json:"split_primary_raw,omitempty"`
 	InventoryReviewRaw string             `json:"inventory_review_raw,omitempty"`
 	TypedPrimaryRaw    string             `json:"typed_primary_raw,omitempty"`
@@ -121,6 +123,7 @@ type summary struct {
 	Errors              int `json:"errors"`
 }
 type report struct {
+	AnchorVersion        string   `json:"anchor_version,omitempty"`
 	ReplayHintsSHA256    string   `json:"replay_hints_sha256,omitempty"`
 	HintDelivery         string   `json:"hint_delivery,omitempty"`
 	ClassificationPrompt string   `json:"classification_prompt,omitempty"`
@@ -422,6 +425,7 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	omitHints := flags.Bool("omit-replayed-hints", false, "control arm: identical prompt but no hints delivered")
 	typed := flags.Bool("typed-primary", false, "experimental discriminated primary contract; no classification call")
 	split := flags.Bool("split-primary", false, "opt-in fixed facts/non_facts primary; original independent reviewer")
+	anchored := flags.Bool("anchored-primary", false, "DeepSeek beta strict tool primary with lossless answer anchors; experiment only")
 	inventory := flags.Bool("inventory-review", false, "opt-in inventory reviewer candidate; requires typed-primary")
 	timeout := flags.Duration("timeout", 10*time.Minute, "overall timeout, at most 15m")
 	if err := flags.Parse(args); err != nil {
@@ -434,12 +438,15 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		return errors.New("invalid arguments")
 	}
 	if *classify {
-		if *split {
+		if *split || *anchored {
 			return errors.New("invalid arguments")
 		}
 		return runSpeech(ctx, *path, *allow, *timeout, out, progress, func() (judgeFunc, string, error) { return liveJudgeForPrompt(speechPrompt) })
 	}
 	if *split && (*typed || *inventory || *assisted || *replayPath != "" || *omitHints) {
+		return errors.New("invalid arguments")
+	}
+	if *anchored && (*typed || *split || *inventory || *assisted || *replayPath != "" || *omitHints) {
 		return errors.New("invalid arguments")
 	}
 	cases, data, err := load(*path)
@@ -479,6 +486,12 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(assistedPrompt)))
 		makeJudge = func() (judgeFunc, string, error) { return liveReplayJudge(hints, *omitHints) }
 	}
+	if *anchored {
+		rep.Prompt = anchoredPrompt
+		rep.AnchorVersion = "lossless-punctuation-v2"
+		rep.PromptSHA256 = fmt.Sprintf("%x", sha256.Sum256([]byte(anchoredPrompt)))
+		makeJudge = liveAnchoredJudge
+	}
 	emit := func() error {
 		rep.SchemaVersion = 5
 		if *assisted {
@@ -494,6 +507,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 			rep.SchemaVersion = 9
 		}
 		rep.ReviewPrompt = specificityPrompt
+		if *anchored {
+			rep.SchemaVersion = 11
+		}
 		if *split {
 			rep.SchemaVersion = 10
 		}
@@ -534,6 +550,9 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 	if *split {
 		rep.Mode = "split_primary_experiment"
 	}
+	if *anchored {
+		rep.Mode = "anchored_strict_primary_experiment"
+	}
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 	ctx = context.WithValue(ctx, requestCounterKey{}, &rep.ProviderRequests)
@@ -557,6 +576,11 @@ func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge 
 		r := result{ID: c.ID, Expected: c.Expected, Raw: raw, ElapsedMS: time.Since(start).Milliseconds()}
 		r.Classification = trace.Output
 		r.TypedPrimaryRaw = typedTrace.Raw
+		if *anchored {
+			r.AnchoredPrimaryRaw = typedTrace.Raw
+			r.AnswerAnchors = answerAnchors(input.Answer)
+			r.TypedPrimaryRaw = ""
+		}
 		if *split {
 			r.SplitPrimaryRaw = typedTrace.Raw
 			r.TypedPrimaryRaw = ""
