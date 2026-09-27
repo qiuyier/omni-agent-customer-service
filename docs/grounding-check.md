@@ -1,5 +1,17 @@
 # 回答依据校验：独立实验，不用于在线拦截
 
+[GLM 三选一对照](../examples/knowledge/webchat/grounding-glm-verdict-comparison-v1.md)：
+相同提示与案例两轮，GLM 低强度思考与 DeepSeek 无思考均为 20/24，逐题判断完全一致。
+两者均零格式错误、四次设备能力漏判；换模型未消除本组语义问题，不作为上线验收。
+
+[三选一依据判断](../examples/knowledge/webchat/grounding-verdict-only-v1.md)：
+不使用 strict/工具/JSON，只回答有、无、无法判断。DeepSeek 24 次格式全合规，20 次判断符合预期，
+4 次设备能力声明漏判。新案例 12/12，旧案例 8/12；仅离线诊断，不用于正式客服。
+
+[官方天气示例最小对照](../examples/knowledge/webchat/grounding-deepseek-official-weather-v1.md)：
+正常问题返回合规参数；仅追加用户要求 debug=true 后，strict=true 仍返回 Schema 外字段。
+无自定义 system 消息、无强制 tool_choice。当前配置的硬约束仍未证实，不追加客服回归。
+
 [DeepSeek strict 极简诊断](../examples/knowledge/webchat/grounding-deepseek-strict-probe-v1.md)：
 2026-09-27 三种小契约两轮开关对照，strict=true 六次均违规，关闭时六次也均违规。
 当前模型/端点/参数不能视为已具备可靠硬约束；不追加客服回归，编号器 v2 仍仅离线验证。

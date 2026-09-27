@@ -1,0 +1,50 @@
+[
+  {
+    "id": "library-renewal-count-missing",
+    "reference": "借阅到期前，读者可申请续借；是否批准由图书馆审核。",
+    "history": [{"role":"user","content":"借的书最多能续借几次？"}],
+    "answer": "到期前可以申请续借，最多续借两次，最终以图书馆审核结果为准。",
+    "expected": "unsupported",
+    "rationale": "资料未提供两次上限，审核免责声明不抵消新增数量规则。"
+  },
+  {
+    "id": "library-renewal-count-documented",
+    "reference": "借阅到期前，读者可申请续借；是否批准由图书馆审核。每本书最多续借两次。",
+    "history": [{"role":"user","content":"借的书最多能续借几次？"}],
+    "answer": "到期前可以申请续借，最多续借两次，最终以图书馆审核结果为准。",
+    "expected": "clear",
+    "rationale": "同一回答的次数上限已有明确依据。"
+  },
+  {
+    "id": "event-ticket-effect-missing",
+    "reference": "活动开始前可联系主办方申请退票，申请通过后退回票款。",
+    "history": [{"role":"user","content":"退票后我的入场码怎么办？"}],
+    "answer": "退票申请通过后会退回票款，系统还会自动撤销对应的入场二维码。",
+    "expected": "unsupported",
+    "rationale": "退款不蕴含系统自动撤销二维码的机制。"
+  },
+  {
+    "id": "event-ticket-effect-documented",
+    "reference": "活动开始前可联系主办方申请退票，申请通过后退回票款。退票申请通过后，系统自动撤销对应的入场二维码。",
+    "history": [{"role":"user","content":"退票后我的入场码怎么办？"}],
+    "answer": "退票申请通过后会退回票款，系统还会自动撤销对应的入场二维码。",
+    "expected": "clear",
+    "rationale": "同一回答的自动撤销机制已有明确依据。"
+  },
+  {
+    "id": "course-change-capability-missing",
+    "reference": "培训机构提供周末课程。有关班次安排，可向教务人员咨询。",
+    "history": [{"role":"user","content":"你能帮我换个上课班次吗？"}],
+    "answer": "我不能代您办理换班，但您可以通过学习中心提交换班申请；具体入口我无法确认，建议先咨询教务人员。",
+    "expected": "unsupported",
+    "rationale": "助手不能代办、入口未知和咨询建议不抵消无依据的学习中心申请能力。"
+  },
+  {
+    "id": "course-change-capability-documented",
+    "reference": "培训机构提供周末课程。有关班次安排，可向教务人员咨询。学习中心支持学员提交换班申请；资料未说明具体入口。",
+    "history": [{"role":"user","content":"你能帮我换个上课班次吗？"}],
+    "answer": "我不能代您办理换班，但您可以通过学习中心提交换班申请；具体入口我无法确认，建议先咨询教务人员。",
+    "expected": "clear",
+    "rationale": "同一回答的申请渠道已有依据，未承诺换班一定成功。"
+  }
+]
