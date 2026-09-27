@@ -1,5 +1,13 @@
 # 回答依据校验：独立实验，不用于在线拦截
 
+[四种措辞对照](../examples/knowledge/webchat/grounding-boundary-four-v1.md)：
+GLM 固定四次请求，3/4 符合预期；明确功能声明检出，原隐含声明仍漏判，咨询与未知表达通过。
+定向小样本不能证明内部原因；到此停止追加诊断，审核仍不用于在线拦截，建议回到生成主流程验收。
+
+[功能声明与咨询建议的边界复核](../examples/knowledge/webchat/grounding-claim-boundary-review-v1.md)：
+保留原标签，设备负例属于隐含功能存在声明；入口未知不能替代功能存在的依据。
+四次漏判是同一声明长短版本的重复，不是四类缺陷。本轮仅文本复核，未调用模型或改变线上逻辑。
+
 [GLM 三选一对照](../examples/knowledge/webchat/grounding-glm-verdict-comparison-v1.md)：
 相同提示与案例两轮，GLM 低强度思考与 DeepSeek 无思考均为 20/24，逐题判断完全一致。
 两者均零格式错误、四次设备能力漏判；换模型未消除本组语义问题，不作为上线验收。
