@@ -1,5 +1,13 @@
 # 网页客服：显式 AI 回复与知识检索
 
+[2026-09-28 跨业务主流程重试](../examples/knowledge/webchat/mainflow-acceptance-v2.md)
+已完成六个真实模型场景；保存、重放与冲突检查通过。回答审阅五题符合预期，
+空资料的积分问题仍补出无依据页面建议，不能标记质量全部通过。
+
+[2026-09-28 跨业务主流程验收](../examples/knowledge/webchat/mainflow-acceptance-v1.md)
+在首次供应商调用返回 401 后停止；网页安全返回 503，六题质量验收尚未完成。
+不将认证失败计为回答质量结果，待凭据确认后再恢复。
+
 最新[建议边界实验 v4](../examples/knowledge/webchat/grounding-advice-v4.md)仍有输出契约/调用错误，
 没有接入本网页的回复链路，也没有放宽覆盖检查。
 
