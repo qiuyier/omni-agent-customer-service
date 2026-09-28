@@ -198,6 +198,10 @@ func TestReplyPromptCapabilityBoundariesAcrossModesAndKnowledgeStates(t *testing
 						"Do not solicit identifiers, contact details",
 						"Ask a clarifying question only when the answer can help explain the available references",
 						"contact human support themselves",
+						"Advice requires grounding too",
+						"do not name unverified pages, buttons, lookup or notification features",
+						"or offer to explain how to use them",
+						"Explain documented pages, features and steps directly rather than refusing supported requests",
 					} {
 						if !strings.Contains(prompt[1].Content, rule) {
 							t.Errorf("grounding prompt lacks rule %q", rule)
