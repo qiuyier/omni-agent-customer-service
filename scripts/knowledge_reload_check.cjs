@@ -1,0 +1,22 @@
+const fs=require('fs'),http=require('http'),cp=require('child_process'),assert=require('assert/strict'),os=require('os');
+const binary=process.argv[2];if(!binary){console.error('Usage: node scripts/knowledge_reload_check.cjs /absolute/path/to/webchat-demo');process.exit(1)}
+const dir=fs.mkdtempSync('/tmp/omni-reload-e2e-'),path=dir+'/faq.json',results=[];
+function write(text){fs.writeFileSync(path,text==='[]'||text==='bad'?text:JSON.stringify([{id:'help',title:'Help',source:'fixture',content:text,keywords:['help']}]));}
+write('old');let child,model,requests=[],logs=[],waiters=[];
+function status(want){const found=logs.find(x=>x.event===want);if(found){logs.splice(logs.indexOf(found),1);return Promise.resolve(found)}return new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(Error('status timeout '+want)),5000);waiters.push({want,resolve:x=>{clearTimeout(t);resolve(x)}})})}
+(async()=>{try{
+model=http.createServer(async(req,res)=>{let b='';for await(const x of req)b+=x;const payload=JSON.parse(b);const texts=payload.messages.filter(x=>x.role==='user').map(x=>typeof x.content==='string'?x.content:x.content.map(p=>p.text||'').join(''));const ref=texts.find(x=>x.startsWith('BEGIN_UNTRUSTED_KNOWLEDGE_JSON'));assert(ref);requests.push(JSON.parse(ref.split('\n')[1]).snippets);res.setHeader('Content-Type','application/json');res.end(JSON.stringify({id:'mock',object:'chat.completion',created:1,model:'mock',choices:[{index:0,message:{role:'assistant',content:'local test reply'},finish_reason:'stop'}]}))});await new Promise(r=>model.listen(0,'127.0.0.1',r));
+child=cp.spawn(binary,['-address','127.0.0.1:0','-reply','ai'],{env:{PATH:process.env.PATH,HOME:process.env.HOME,AI_PROVIDER:'custom',AI_MODEL:'mock',AI_PROTOCOL:'chat_completions',AI_BASE_URL:'http://127.0.0.1:'+model.address().port+'/v1',AI_API_KEY:'local-only',AI_ALLOW_INSECURE_HTTP:'true',KNOWLEDGE_FAQ_PATH:path},stdio:['ignore','pipe','pipe']});
+let errbuf='';child.stderr.on('data',b=>{errbuf+=b;let i;while((i=errbuf.indexOf('\n'))>=0){const l=errbuf.slice(0,i);errbuf=errbuf.slice(i+1);try{const x=JSON.parse(l);const w=waiters.find(w=>w.want===x.event);if(w){waiters.splice(waiters.indexOf(w),1);w.resolve(x)}else logs.push(x)}catch{}}});
+const origin=await new Promise((resolve,reject)=>{let s='';const t=setTimeout(()=>reject(Error('startup timeout')),10000);child.stdout.on('data',b=>{s+=b;const m=s.match(/Web chat demo: (http:\/\/127\.0\.0\.1:\d+)/);if(m){clearTimeout(t);resolve(m[1])}})});
+let cookie='',token='';async function call(method,p,data){const r=await fetch(origin+p,{method,headers:{Origin:origin,'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(5000)});const cs=r.headers.getSetCookie();if(cs.length)cookie=cs.map(x=>x.split(';')[0]).join('; ');assert.equal(r.status,200);return r.json()}
+await call('POST','/demo/login',{account:'lin'});token=(await call('POST','/host/chat-session',{})).access_token;
+let seq=0;async function ask(want){await call('POST','/chat/v1/messages',{event_id:'reload-'+(++seq),content:'help'});const refs=requests.at(-1);assert.deepEqual(refs.map(x=>x.content),want);results.push({message:seq,reference_contents:refs.map(x=>x.content)});}
+child.kill('SIGUSR1');const initial=await status('knowledge_status');await ask(['old']);
+write('new');child.kill('SIGHUP');const changed=await status('knowledge_reload_succeeded');assert.notEqual(initial.knowledge.version,changed.knowledge.version);await ask(['new']);
+write('bad');child.kill('SIGHUP');const failed=await status('knowledge_reload_failed');assert.equal(changed.knowledge.version,failed.knowledge.version);await ask(['new']);
+write('[]');child.kill('SIGHUP');const empty=await status('knowledge_reload_succeeded');assert.equal(empty.knowledge.entries,0);await ask([]);
+write('restored');child.kill('SIGHUP');await status('knowledge_reload_succeeded');await ask(['restored']);
+assert.equal(requests.length,5);console.log(JSON.stringify({passed:true,local_mock_calls:5,checks:results}));fs.writeFileSync(dir+'/report.json',JSON.stringify({passed:true,checks:results},null,2));
+}catch(e){console.log(JSON.stringify({passed:false,error:e.message}));process.exitCode=1}finally{if(child&&child.exitCode===null)await new Promise(r=>{const t=setTimeout(()=>child.kill('SIGKILL'),7000);child.once('exit',()=>{clearTimeout(t);r()});child.kill('SIGTERM')});if(model)await new Promise(r=>model.close(r));}})();
+

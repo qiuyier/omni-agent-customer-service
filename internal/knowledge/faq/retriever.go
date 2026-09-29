@@ -126,7 +126,7 @@ func (r *Retriever) Retrieve(ctx context.Context, query customerservice.Knowledg
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if r == nil || len(r.entries) == 0 {
+	if r == nil || r.entries == nil {
 		return nil, fmt.Errorf("%w: retriever is not initialized", ErrInvalidData)
 	}
 	if !validText(query.Text, customerservice.MaxKnowledgeQueryRunes, true) {

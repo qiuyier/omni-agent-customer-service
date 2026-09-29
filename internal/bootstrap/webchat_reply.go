@@ -123,6 +123,7 @@ func NewWebchatReplyOptions(ctx context.Context, c WebchatReplyConfig, fake cust
 		if fake == nil {
 			return nil, errors.New("webchat: fake reply generator is required")
 		}
+		observeKnowledgeSignals(ctx, nil)
 		return []customerservice.Option{
 			customerservice.WithReplyGenerator(fake),
 			customerservice.WithReplyGenerationTimeout(3 * time.Second),
@@ -135,7 +136,7 @@ func NewWebchatReplyOptions(ctx context.Context, c WebchatReplyConfig, fake cust
 	}
 	initializationContext, cancel := context.WithTimeout(ctx, initializationTimeout)
 	defer cancel()
-	retriever, err := NewKnowledgeRetrieverContext(initializationContext, c.Knowledge)
+	retriever, err := NewReloadableKnowledge(initializationContext, c.Knowledge)
 	if err != nil {
 		return nil, errors.New("webchat: knowledge initialization failed; check FAQ format and, for semantic retrieval, embedding settings and connectivity; no fake fallback")
 	}
@@ -154,5 +155,6 @@ func NewWebchatReplyOptions(ctx context.Context, c WebchatReplyConfig, fake cust
 		options = append(options, customerservice.WithKnowledgeRetriever(retriever),
 			customerservice.WithKnowledgeRetrievalTimeout(c.Knowledge.RetrievalTimeout))
 	}
+	observeKnowledgeSignals(ctx, retriever)
 	return options, nil
 }

@@ -43,6 +43,7 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx = bootstrap.WithKnowledgeSignals(ctx, os.Stderr)
 	if err := runDemoWithConfig(ctx, config, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "webchat-demo:", err)
 		os.Exit(1)

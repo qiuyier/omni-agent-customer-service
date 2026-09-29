@@ -2,6 +2,8 @@ package faq
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +18,45 @@ const maxFileBytes = 1 << 20
 // before and during reading; replacing or growing the file cannot bypass it.
 // Errors intentionally omit paths, raw file contents, and JSON parser excerpts.
 func Load(path string) (*Retriever, error) {
+	r, _, err := loadVersion(path, false)
+	return r, err
+}
+
+// LoadVersion accepts an explicit [] as an enabled but empty knowledge source.
+// Hash and retriever are built from the same read, never separate path opens.
+func LoadVersion(path string) (*Retriever, string, error) {
+	return loadVersion(path, true)
+}
+
+func loadVersion(path string, allowEmpty bool) (*Retriever, string, error) {
+	data, err := readFile(path)
+	if err != nil {
+		return nil, "", err
+	}
+	sum := sha256.Sum256(data)
+	version := hex.EncodeToString(sum[:])
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || data[0] != '[' || !utf8.Valid(data) {
+		return nil, "", fmt.Errorf("%w: file must contain a UTF-8 JSON array", ErrInvalidData)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var entries []Entry
+	if err := decoder.Decode(&entries); err != nil {
+		return nil, "", fmt.Errorf("%w: cannot decode FAQ entries", ErrInvalidData)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return nil, "", fmt.Errorf("%w: unexpected trailing data", ErrInvalidData)
+	}
+	if allowEmpty && len(entries) == 0 {
+		return &Retriever{entries: []indexedEntry{}}, version, nil
+	}
+	r, err := New(entries)
+	return r, version, err
+}
+
+func readFile(path string) ([]byte, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, fmt.Errorf("%w: file path is blank", ErrInvalidData)
 	}
@@ -44,19 +85,5 @@ func Load(path string) (*Retriever, error) {
 	if len(data) > maxFileBytes {
 		return nil, fmt.Errorf("%w: file exceeds 1 MiB", ErrInvalidData)
 	}
-	data = bytes.TrimSpace(data)
-	if len(data) == 0 || data[0] != '[' || !utf8.Valid(data) {
-		return nil, fmt.Errorf("%w: file must contain a UTF-8 JSON array", ErrInvalidData)
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var entries []Entry
-	if err := decoder.Decode(&entries); err != nil {
-		return nil, fmt.Errorf("%w: cannot decode FAQ entries", ErrInvalidData)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return nil, fmt.Errorf("%w: unexpected trailing data", ErrInvalidData)
-	}
-	return New(entries)
+	return data, nil
 }

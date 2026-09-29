@@ -24,6 +24,7 @@ import (
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	ctx = bootstrap.WithKnowledgeSignals(ctx, os.Stderr)
 	// A second signal retains its normal immediate-exit behavior during drain.
 	go func() { <-ctx.Done(); stop() }()
 	if err := runCommand(ctx, os.Args[1:], os.LookupEnv, os.Stdout, defaultDependencies()); err != nil {
