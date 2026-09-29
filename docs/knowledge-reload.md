@@ -74,5 +74,8 @@ go build -o /tmp/omni-knowledge-reload-demo ./cmd/webchat-demo
 node scripts/knowledge_reload_check.cjs /tmp/omni-knowledge-reload-demo
 ```
 
+另已完成[CRMEB 真实测试库联合验收](crmeb-sync-reload-acceptance.md)，串联数据库变更、
+只读导出、同步、显式重载与模型入口参考校验；该轮临时修改的测试记录已恢复。
+
 阅读顺序：本说明 → `internal/knowledge/reload/manager.go` → `internal/bootstrap/knowledge_reload.go`
 → `internal/bootstrap/webchat_reply.go` → 两处对应测试。

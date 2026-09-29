@@ -94,5 +94,8 @@ php -l scripts/crmeb_knowledge_export.php
 已改为分类 ID 的精确二进制字符串比较后导出成功；没有为兼容而修改数据库排序规则。
 该实测验证数据库到文件的适配，不是付费模型回归、定时任务或部署完成。
 
+2026-09-29 已完成[真实测试库到模型入口的联合验收](crmeb-sync-reload-acceptance.md)：
+修改、撤回、导出/同步/重载失败保留及恢复全部通过；使用本机 mock，测试记录已恢复。
+
 阅读顺序：本说明 → `scripts/crmeb_knowledge_export.php` → `cmd/crmeb-knowledge-sync/main.go`
 → `cmd/crmeb-knowledge-sync/main_test.go`。
