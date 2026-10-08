@@ -9,9 +9,9 @@
 | 文件 | 内容 | 用途 |
 | --- | --- | --- |
 | [faq.json](faq.json) | 16 条短知识资料 | 可直接由现有 FAQ 加载器使用 |
-| [eval_cases.json](eval_cases.json) | 20 题：18 有相关资料、2 无相关资料 | 开发/诊断集 |
-| [eval_holdout.json](eval_holdout.json) | 10 题：7 有相关资料、3 无相关资料 | 单独保留的回归题，不按结果反向改标签 |
-| [reply_cases.json](reply_cases.json) | 从上述题目选取 8 题 | 普通回复、SSE、顺序重放及内容审阅 |
+| [eval_cases.json](../../regression/knowledge/ecommerce/eval_cases.json) | 20 题：18 有相关资料、2 无相关资料 | 开发/诊断集 |
+| [eval_holdout.json](../../regression/knowledge/ecommerce/eval_holdout.json) | 10 题：7 有相关资料、3 无相关资料 | 单独保留的回归题，不按结果反向改标签 |
+| [reply_cases.json](../../regression/knowledge/ecommerce/reply_cases.json) | 从上述题目选取 8 题 | 普通回复、SSE、顺序重放及内容审阅 |
 
 30 题指开发集和保留集的不同问题之和，8 道回复题是子集，不额外计入。
 保留题与开发题不重复，但它们与资料均由同一助手编写；这不是独立人工标注或盲测。
@@ -44,13 +44,13 @@
 ## 本地离线检查
 
 首轮已完成：开发题相关集合匹配17/20、保留题6/10，失败项与输入摘要见
-[离线基线记录](baseline.md)。这不是模型回答验收成绩。
+[离线基线记录](../../archive/knowledge/ecommerce/baseline.md)。这不是模型回答验收成绩。
 
 从项目根目录执行，无需 API Key、不读取本地模型配置、不产生模型费用：
 
 ~~~bash
-go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/knowledge/ecommerce/eval_cases.json -retriever keyword -format json
-go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/knowledge/ecommerce/eval_holdout.json -retriever keyword -format json
+go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/regression/knowledge/ecommerce/eval_cases.json -retriever keyword -format json
+go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/regression/knowledge/ecommerce/eval_holdout.json -retriever keyword -format json
 ~~~
 
 离线检索分数反映关键词检索的限制，不按测试题不断补关键词来伪造满分。
@@ -60,9 +60,9 @@ go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases ex
 
 2026-09-10已完成30题语义检索评测：开发题12/20、保留题7/10集合匹配。
 GLM运费题普通/SSE和4次重放通过；第二题退货多带入质量问题引用，严格验收失败并停止。
-其余回复尚未执行，完整结果、措辞问题与输入摘要见[真实验收记录](acceptance.md)。
+其余回复尚未执行，完整结果、措辞问题与输入摘要见[真实验收记录](../../archive/knowledge/ecommerce/acceptance.md)。
 
-同日新增[开发集候选分数诊断](diagnostics.md)：20题逐题结果与前次一致，仍为12/20。
+同日新增[开发集候选分数诊断](../../archive/knowledge/ecommerce/diagnostics.md)：20题逐题结果与前次一致，仍为12/20。
 双意图题的两条正确资料排第1、2但均被阈值过滤，WiFi题则误选登录密码资料；
 没有候选因Top-K被截断，单一阈值不能同时修好这两题。本轮只做诊断，未改资料、
 标签或检索策略，未调用GLM或重跑保留集。原始分数与 `-diagnostics` 用法见该记录。
@@ -72,14 +72,14 @@ GLM运费题普通/SSE和4次重放通过；第二题退货多带入质量问题
 以下命令**可能产生费用**：
 
 ~~~bash
-go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/knowledge/ecommerce/eval_cases.json -retriever semantic -allow-embedding-api -timeout 5m -format json
-go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/knowledge/ecommerce/eval_holdout.json -retriever semantic -allow-embedding-api -timeout 5m -format json
+go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/regression/knowledge/ecommerce/eval_cases.json -retriever semantic -allow-embedding-api -timeout 5m -format json
+go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/regression/knowledge/ecommerce/eval_holdout.json -retriever semantic -allow-embedding-api -timeout 5m -format json
 ~~~
 
 先检查检索结果，再运行回复验收，不因真实服务返回了内容就默认成功：
 
 ~~~bash
-go run ./cmd/reply-check -faq examples/knowledge/ecommerce/faq.json -cases examples/knowledge/ecommerce/reply_cases.json -allow-model-api -allow-embedding-api -timeout 10m
+go run ./cmd/reply-check -faq examples/knowledge/ecommerce/faq.json -cases examples/regression/knowledge/ecommerce/reply_cases.json -allow-model-api -allow-embedding-api -timeout 10m
 ~~~
 
 8 题每题两种生成模式，完整运行最多涉及16次首次应用层回复生成和32次完成后重放，

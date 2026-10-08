@@ -417,7 +417,7 @@ func aggregate(results []result) summary {
 func run(ctx context.Context, args []string, out, progress io.Writer, makeJudge factory) error {
 	flags := flag.NewFlagSet("grounding-check", flag.ContinueOnError)
 	flags.SetOutput(progress)
-	path := flags.String("cases", "examples/knowledge/webchat/grounding_judge_cases.json", "fixed labelled fictional answers")
+	path := flags.String("cases", "examples/regression/knowledge/webchat/grounding_judge_cases.json", "fixed labelled fictional answers")
 	allow := flags.Bool("allow-model-api", false, "send corpus to configured model; costs may apply; no retries")
 	classify := flags.Bool("classify-only", false, "independent speech-act experiment; not a grounding verdict")
 	assisted := flags.Bool("with-classification", false, "experimental classification hints; original full answer remains mandatory")

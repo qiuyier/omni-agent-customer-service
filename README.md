@@ -12,26 +12,28 @@
 当前是单一信任范围内的文本客服与知识问答；共享多方隔离、业务工具和可靠出站投递
 并未因本契约而自动实现。独立部署与共享后台均可保持业务通用性，具体形态尚未选定。
 
+示例资料、回归样本和历史实验的分类入口见 [examples 阅读指南](examples/README.md)。
+
 ## 当前进度
 
 校验器新增共享建议边界与 `advice_kind` 约束：12 题有 10 题符合预期、2 题错误，
-未放宽覆盖检查、未接入正式回复，见[建议边界修正记录](examples/knowledge/webchat/grounding-advice-v4.md)。
+未放宽覆盖检查、未接入正式回复，见[建议边界修正记录](examples/archive/knowledge/webchat/grounding-advice-v4.md)。
 
 已冻结校验器并完成原十二题及八条新题验收：20 题有 14 题符合预期，存在误判、
-不确定结果和输出契约错误，暂不进入真实业务试运行，见[冻结验收报告](examples/knowledge/webchat/grounding-frozen-validation.md)。
+不确定结果和输出契约错误，暂不进入真实业务试运行，见[冻结验收报告](examples/archive/knowledge/webchat/grounding-frozen-validation.md)。
 
 依据校验新增逐细节检查和独立复核；验证码、打印、维修通知六题配对回归符合预期，
-随后完成上述冻结回归，仍未接入正式回复；此前六题范围见[修正报告](examples/knowledge/webchat/grounding-judge-v3.md)。
+随后完成上述冻结回归，仍未接入正式回复；此前六题范围见[修正报告](examples/archive/knowledge/webchat/grounding-judge-v3.md)。
 
 已新增独立[回答依据校验实验](docs/grounding-check.md)，默认不联网、不影响正式回复。
-十二条固定样例已备好；首条真实审查调用失败后停止，效果尚未验证，见[实验记录](examples/knowledge/webchat/grounding-judge.md)。
+十二条固定样例已备好；首条真实审查调用失败后停止，效果尚未验证，见[实验记录](examples/archive/knowledge/webchat/grounding-judge.md)。
 
 已补充通用事实约束及跨业务回归：离线测试通过，六次真实模型提示回放中仍有三条需改进；
-保留失败结果，不视为新的端到端通过，见[事实约束回归](examples/knowledge/webchat/grounding-regression.md)。
+保留失败结果，不视为新的端到端通过，见[事实约束回归](examples/archive/knowledge/webchat/grounding-regression.md)。
 
 2026-09-22 已完成网页真实模型小批量验收：6 次供应商请求，刷新、账号隔离、
 真实进程重启与已完成消息重放通过；回答出现资料未提供的验证流程及人工/工单入口，
-质量尚未全部通过，见[验收报告](examples/knowledge/webchat/acceptance.md)。
+质量尚未全部通过，见[验收报告](examples/archive/knowledge/webchat/acceptance.md)。
 
 网页客服已接入已有 AI 与知识检索链路，默认模拟模式不变：
 
@@ -63,14 +65,14 @@
 
 - `cmd/reply-check` 覆盖普通回复、SSE、完成后同模式/跨模式重试，以及分阶段耗时；
 - 2026-09-10 使用 `glm-5.3-flash` 与百炼 Embedding，6 组首次生成和 12 次重放通过；
-- 收紧无工具时的承诺与信息收集规则后，本轮回答不再承诺代查或索取无用信息，见[验收记录](examples/knowledge/reply_acceptance.md)。
+- 收紧无工具时的承诺与信息收集规则后，本轮回答不再承诺代查或索取无用信息，见[验收记录](examples/archive/knowledge/reply_acceptance.md)。
 
 第七阶段第四小步已完成首轮真实 Embedding 检索评测：
 
 - 2026-09-09 使用百炼北京业务空间专属端点，经通用兼容协议完成实测；
 - 固定模型、阈值 0.7 和 Top-3，原 20 条基线与预留 6 条验证题的相关集合均匹配；
 - 保留关键词对照、逐题 JSON、模型配置及输入摘要，见
-  [首轮真实评测记录](examples/knowledge/eval_semantic.md)；
+  [首轮真实评测记录](examples/archive/knowledge/eval_semantic.md)；
 - 这只覆盖 3 条虚构 FAQ，不代表生产准确率；回复内容与单次耗时见上述独立验收记录。
 
 第七阶段第三小步已加入可选的内存语义检索：
@@ -89,7 +91,7 @@
 - 提供 20 条人工相关性标注，覆盖直问、口语改写、多主题、否定与歧义关键词；
 - 输出首条命中、正确无命中、集合完全匹配、Top-K 内漏检和无关命中的逐条结果；
 - 质量差异正常生成报告；数据错误、检索执行失败、超时或输出失败返回错误。
-  初始成绩与输入指纹见 `examples/knowledge/eval_baseline.md`，不改算法来掩盖差异。
+  初始成绩与输入指纹见 `examples/archive/knowledge/eval_baseline.md`，不改算法来掩盖差异。
 
 第七阶段第一小步已经加入本地 FAQ RAG 最小闭环：
 
@@ -415,7 +417,7 @@ go run ./cmd/knowledge-eval -format json
 go run ./cmd/knowledge-eval -top-k 1
 ~~~
 
-默认使用 `examples/knowledge/faq.json` 和 `examples/knowledge/eval_cases.json`，
+默认使用 `examples/knowledge/faq.json` 和 `examples/regression/knowledge/eval_cases.json`，
 Top K 为 3；可通过 `-faq`、`-cases` 指定成对的本地文件，`-top-k` 允许 1–3，
 `-format` 允许 `text` / `json`。相对路径从进程工作目录解析。默认 `-retriever keyword`
 只使用本地 FAQ，不读取 AI/Embedding 配置，环境中的 `KNOWLEDGE_RETRIEVER=semantic`
@@ -458,7 +460,7 @@ JSON 报告含 `schema_version`、`top_k`、`summary` 和保持输入顺序的 `
 
 初始 Top-3 基线：首条命中 10/15（66.7%）、正确无命中 2/5（40.0%）、集合完全
 匹配 12/20（60.0%），4 条问题漏检、4 条问题含无关命中。逐条差异与文件 SHA-256
-见 [初始评测基线](examples/knowledge/eval_baseline.md)。这仅是小型虚构样例集，
+见 [初始评测基线](examples/archive/knowledge/eval_baseline.md)。这仅是小型虚构样例集，
 不代表真实客服准确率。以后比较时应固定同一份 FAQ、标签集与 K；调整标注必须
 说明原因，不得用当前错误输出替换人工预期来让分数提高。
 
@@ -542,7 +544,7 @@ HTTP 超时采用检索预算；更早的 Context deadline 优先。所有配置
 
 ~~~bash
 go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -timeout 5m -format json
-go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -cases examples/knowledge/eval_holdout.json -timeout 5m -format json
+go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -cases examples/regression/knowledge/eval_holdout.json -timeout 5m -format json
 ~~~
 
 `-retriever semantic` 与 `-allow-embedding-api` 缺一不可；标签/FAQ 校验在任何联网前
@@ -562,14 +564,14 @@ query_timeout 和语料/标注 SHA-256；不含密钥或 endpoint。这里的快
 低于阈值的候选即使排名靠前也不入选；相似度不是概率或答案置信度。
 开关不改变检索阈值、Top-K、排序和默认报告格式，报告不加入资料正文或向量；
 仍须 `-allow-embedding-api`，可能产生费用，失败不输出部分成绩。
-用法与真实候选证据见[电商开发集诊断](examples/knowledge/ecommerce/diagnostics.md)。
+用法与真实候选证据见[电商开发集诊断](examples/archive/knowledge/ecommerce/diagnostics.md)。
 
 原 20 条基线及 FAQ 不改动；新增 6 条 `eval_holdout.json` 可作为小型独立验证题，
 不要一边看验证题结果一边调阈值，再把它当作未见数据成绩。需要同时看漏检、无关
 命中及排序，不能只看召回。语义相似度也可能不理解否定、代码标识符或回答充分性。
 2026-09-09 已在固定参数下完成首轮真实 Embedding 评测：原 20 条基线的首条命中
 为 15/15、正确无命中为 5/5、集合匹配为 20/20；预留验证题集合匹配为 6/6。
-同日关键词对照与原始 JSON 见[首轮真实评测记录](examples/knowledge/eval_semantic.md)。
+同日关键词对照与原始 JSON 见[首轮真实评测记录](examples/archive/knowledge/eval_semantic.md)。
 **这些结果仅适用于当前 3 条虚构 FAQ 和小样例集，不代表生产准确率或最终回答质量**；
 本轮没有采集延迟分位数、Token 用量或账单，也没有据此把阈值当作通用最佳值。
 
@@ -582,8 +584,8 @@ query_timeout 和语料/标注 SHA-256；不含密钥或 endpoint。这里的快
 
 关键词离线基线集合匹配17/20、6/10；2026-09-10真实语义评测为12/20、7/10。
 GLM运费题普通/SSE与4次重放通过，但第二题因多余引用停止，整套回复验收未通过。
-失败项和复现方式见[电商验收记录](examples/knowledge/ecommerce/acceptance.md)，不沿用旧3条FAQ的通过结论。
-后续[开发集分数诊断](examples/knowledge/ecommerce/diagnostics.md)复现12/20，发现双意图
+失败项和复现方式见[电商验收记录](examples/archive/knowledge/ecommerce/acceptance.md)，不沿用旧3条FAQ的通过结论。
+后续[开发集分数诊断](examples/archive/knowledge/ecommerce/diagnostics.md)复现12/20，发现双意图
 正确资料被阈值过滤、WiFi题对象错配；单一阈值不能同时解决，尚未实施检索修复。
 
 ## 真实回复 HTTP / SSE 验收
@@ -600,7 +602,7 @@ go run ./cmd/reply-check -allow-model-api -allow-embedding-api -timeout 10m
 ~~~
 
 两个许可参数都必需，输入和标签先于联网校验。默认 FAQ 和样例分别为
-`examples/knowledge/faq.json`、`examples/knowledge/reply_cases.json`，可用
+`examples/knowledge/faq.json`、`examples/regression/knowledge/reply_cases.json`，可用
 `-faq` / `-cases` 覆盖，每轮 1～10 条。命令固定使用语义检索，忽略环境中的
 `KNOWLEDGE_RETRIEVER` 与 FAQ 路径，使用其余 Embedding 配置、阈值和查询超时。
 `-timeout` 默认 10 分钟、最多 30 分钟，包含索引初始化；单次生成预算为 75 秒。
@@ -623,7 +625,7 @@ stdout 输出 JSON，stderr 输出进度。进入验收循环后发生失败会�
 `glm-5.3-flash` 后，6 组真实普通/SSE 及 12 次顺序重放全部通过。
 首轮发现的库存核实承诺已通过收紧 Prompt 修正；同日再次回归仍为 6+12 全通过，
 本轮未再出现代查承诺或无用信息收集。单轮样例不代表模型始终遵守规则或生产准确率。
-已保存[验收记录与原始 JSON](examples/knowledge/reply_acceptance.md)。
+已保存[验收记录与原始 JSON](examples/archive/knowledge/reply_acceptance.md)。
 
 ## 模型供应商与协议适配
 

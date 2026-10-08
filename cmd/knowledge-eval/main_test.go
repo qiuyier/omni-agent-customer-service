@@ -18,7 +18,7 @@ import (
 )
 
 func exampleArgs() []string {
-	return []string{"-faq", "../../examples/knowledge/faq.json", "-cases", "../../examples/knowledge/eval_cases.json"}
+	return []string{"-faq", "../../examples/knowledge/faq.json", "-cases", "../../examples/regression/knowledge/eval_cases.json"}
 }
 
 func TestRunOfflineReport(t *testing.T) {

@@ -73,7 +73,7 @@ schema 7 记录提示交付模式和归档哈希，两组都可保留归档分�
 ## 证据与阅读顺序
 
 1. 本报告。
-2. [固定五题](grounding_hint_comparison_cases.json)与[原样归档分类](grounding_hint_comparison_hints.json)。
+2. [固定五题](../../../regression/knowledge/webchat/grounding_hint_comparison_cases.json)与[原样归档分类](../../../regression/knowledge/webchat/grounding_hint_comparison_hints.json)。
 3. `cmd/grounding-check/replay.go` 和 `replay_test.go`。
 4. [冻结计划](eval_runs/2026-09-23/hint-comparison-v1/freeze.json)、
    [十次结果摘要](eval_runs/2026-09-23/hint-comparison-v1/summary.json)、

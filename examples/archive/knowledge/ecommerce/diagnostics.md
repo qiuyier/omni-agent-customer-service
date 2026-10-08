@@ -90,7 +90,7 @@ ID、source 和 keywords 不参与向量化。
 **可能产生费用**，不需要启动客服服务或配置回复模型：
 
 ~~~bash
-go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/knowledge/ecommerce/eval_cases.json -retriever semantic -allow-embedding-api -diagnostics -timeout 5m -format json
+go run ./cmd/knowledge-eval -faq examples/knowledge/ecommerce/faq.json -cases examples/regression/knowledge/ecommerce/eval_cases.json -retriever semantic -allow-embedding-api -diagnostics -timeout 5m -format json
 ~~~
 
 新增 `-diagnostics` 仅支持 semantic＋JSON，每轮最多 20 题；无联网许可、

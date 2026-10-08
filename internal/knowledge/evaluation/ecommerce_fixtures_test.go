@@ -10,8 +10,8 @@ import (
 // Synthetic fixture integrity only: do not pin retrieval scores or treat canned
 // model answers as evidence of real answer quality.
 func TestEcommerceSimulationFixtures(t *testing.T) {
-	const root = "../../../examples/knowledge/ecommerce/"
-	corpus, err := faq.Load(root + "faq.json")
+	const root = "../../../examples/regression/knowledge/ecommerce/"
+	corpus, err := faq.Load("../../../examples/knowledge/ecommerce/faq.json")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -255,7 +255,7 @@ func TestReplyPromptCapabilityBoundariesAcrossModesAndKnowledgeStates(t *testing
 // Fixture coverage checks prompt wiring, not semantic correctness of canned answers.
 // Real answers are reviewed separately against each fixture's criterion.
 func TestGroundingFixturesAcrossModelPaths(t *testing.T) {
-	data, err := os.ReadFile("../../../examples/knowledge/webchat/grounding_cases.json")
+	data, err := os.ReadFile("../../../examples/regression/knowledge/webchat/grounding_cases.json")
 	if err != nil {
 		t.Fatal(err)
 	}

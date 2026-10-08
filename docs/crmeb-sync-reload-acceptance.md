@@ -38,7 +38,7 @@ CRMEB 独立测试数据库 → PHP 只读导出 → `crmeb-knowledge-sync` →
 
 ## 证据与边界
 
-原始结果：[report.json](../examples/knowledge/webchat/eval_runs/2026-09-29/crmeb-sync-reload-v1/report.json)。
+原始结果：[report.json](../examples/archive/knowledge/webchat/eval_runs/2026-09-29/crmeb-sync-reload-v1/report.json)。
 同目录 `run.cjs` 和 `database.php` 保存本次实际使用的验收脚本，不包含数据库密码。
 它们是固定本机路径、容器、ID 与标记的一次性验收记录，不是可直接用于其他环境的通用工具；不要直接在其他数据库重放。
 临时构建目录为 `/tmp/omni-crmeb-chain-StRCAC`，容器输出目录为 `/tmp/omni-crmeb-chain-dkCLmK`。

@@ -103,7 +103,7 @@ SDK HTTP尝试数或账单；没有收集Token用量或实际费用。
 - 保留题：`7c1baf16dc49435d6a8f7eff98bc551a586105868d74a45c5e13523880147173`
 - 8题回复集：`886147c55a204d4ee65b8748a1bf26e46669f293613c115f28e1d27be160ed26`
 
-真实执行命令与[材料说明](README.md)一致；两个knowledge-eval命令退出0表示成功生成
+真实执行命令与[材料说明](../../../knowledge/ecommerce/README.md)一致；两个knowledge-eval命令退出0表示成功生成
 检索评测报告，并不表示质量全通过。reply-check遇到失败会提前终止，本轮没有绕过
 该行为、更换标签或筛掉失败题后宣称全套通过。
 

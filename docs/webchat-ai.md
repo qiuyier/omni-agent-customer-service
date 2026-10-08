@@ -3,38 +3,38 @@
 已支持[显式知识重载与版本状态](knowledge-reload.md)：进程管理信号触发加载，成功整体切换，
 失败保留旧版，空数组撤回全部资料；不新增浏览器管理权限，不自动改写处理中或历史回复。
 
-[新场景迁移验收](../examples/knowledge/webchat/mainflow-transfer-v1.md)：
+[新场景迁移验收](../examples/archive/knowledge/webchat/mainflow-transfer-v1.md)：
 提示和模型不变，维修、酒店、虚构政务咨询六题核心标准及技术检查通过。
 这是单轮虚构案例验收，不是生产质量保证；本阶段停止单句调优，后续回到接入能力梳理。
 
-[通用建议边界修正与六场景回归](../examples/knowledge/webchat/mainflow-acceptance-v3.md)：
+[通用建议边界修正与六场景回归](../examples/archive/knowledge/webchat/mainflow-acceptance-v3.md)：
 默认提示和知识约束均要求页面/功能建议有依据，保留有据回答；原六场景本轮技术和回答审阅通过。
 这是已知案例单轮回归，不是独立盲测或事实正确性的运行时保证；未启用独立审核器。
 
-[2026-09-28 跨业务主流程重试](../examples/knowledge/webchat/mainflow-acceptance-v2.md)
+[2026-09-28 跨业务主流程重试](../examples/archive/knowledge/webchat/mainflow-acceptance-v2.md)
 已完成六个真实模型场景；保存、重放与冲突检查通过。回答审阅五题符合预期，
 空资料的积分问题仍补出无依据页面建议，不能标记质量全部通过。
 
-[2026-09-28 跨业务主流程验收](../examples/knowledge/webchat/mainflow-acceptance-v1.md)
+[2026-09-28 跨业务主流程验收](../examples/archive/knowledge/webchat/mainflow-acceptance-v1.md)
 在首次供应商调用返回 401 后停止；网页安全返回 503，六题质量验收尚未完成。
 不将认证失败计为回答质量结果，待凭据确认后再恢复。
 
-最新[建议边界实验 v4](../examples/knowledge/webchat/grounding-advice-v4.md)仍有输出契约/调用错误，
+最新[建议边界实验 v4](../examples/archive/knowledge/webchat/grounding-advice-v4.md)仍有输出契约/调用错误，
 没有接入本网页的回复链路，也没有放宽覆盖检查。
 
-独立校验器的[20 题冻结验收](../examples/knowledge/webchat/grounding-frozen-validation.md)已完成但未全过，
+独立校验器的[20 题冻结验收](../examples/archive/knowledge/webchat/grounding-frozen-validation.md)已完成但未全过，
 尚不进入真实业务旁路或在线拦截；本网页回复没有因此增加校验保护。
 
-独立校验器已做[逐细节检查修正](../examples/knowledge/webchat/grounding-judge-v3.md)，
+独立校验器已做[逐细节检查修正](../examples/archive/knowledge/webchat/grounding-judge-v3.md)，
 六题针对性回归符合预期；未接入本网页的回复链路，不代表在线回答已经受其保护。
 
 新增[独立依据校验实验](grounding-check.md)，尚未接入网页回复；首次真实审查调用失败，
 因此不能视为已经能够阻止资料外推断。
 
-通用事实约束已收紧，并补充[跨业务回归](../examples/knowledge/webchat/grounding-regression.md)：
+通用事实约束已收紧，并补充[跨业务回归](../examples/archive/knowledge/webchat/grounding-regression.md)：
 六次提示回放仍发现未知验证机制及功能存在的推断，不能认为质量问题已解决。
 
-后续已完成 [2026-09-22 真实网页小批量验收](../examples/knowledge/webchat/acceptance.md)：
+后续已完成 [2026-09-22 真实网页小批量验收](../examples/archive/knowledge/webchat/acceptance.md)：
 技术链路通过，但存在资料外流程/入口补充，回答质量需改进。下文离线测试说明保留原范围。
 
 网页入口现在复用已有的 AI provider、FAQ/语义检索和客户服务应用层。

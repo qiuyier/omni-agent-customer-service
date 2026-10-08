@@ -55,7 +55,7 @@ func TestLoadStrictCases(t *testing.T) {
 // Labels must reference the paired FAQ, but do not pin today's quality scores:
 // better retrieval should improve the evaluation, not break the unit tests.
 func TestExampleLabelsReferenceExistingFAQ(t *testing.T) {
-	cases, err := Load("../../../examples/knowledge/eval_cases.json")
+	cases, err := Load("../../../examples/regression/knowledge/eval_cases.json")
 	if err != nil {
 		t.Fatal(err)
 	}

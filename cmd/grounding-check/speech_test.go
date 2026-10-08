@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-const speechCorpus = "../../examples/knowledge/webchat/speech_classification_cases.json"
+const speechCorpus = "../../examples/regression/knowledge/webchat/speech_classification_cases.json"
 
 func TestSpeechLongCorpusPreservesOriginalAnswers(t *testing.T) {
-	long, _, err := loadSpeech("../../examples/knowledge/webchat/speech_long_holdout_cases.json")
+	long, _, err := loadSpeech("../../examples/regression/knowledge/webchat/speech_long_holdout_cases.json")
 	if err != nil || len(long) != 9 {
 		t.Fatalf("long corpus: %v", err)
 	}
-	original, _, err := load("../../examples/knowledge/webchat/grounding_advice_cases.json")
+	original, _, err := load("../../examples/regression/knowledge/webchat/grounding_advice_cases.json")
 	if err != nil {
 		t.Fatal(err)
 	}

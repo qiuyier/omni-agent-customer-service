@@ -72,9 +72,9 @@
 
 ~~~bash
 go run ./cmd/knowledge-eval -retriever keyword -format json
-go run ./cmd/knowledge-eval -retriever keyword -cases examples/knowledge/eval_holdout.json -format json
+go run ./cmd/knowledge-eval -retriever keyword -cases examples/regression/knowledge/eval_holdout.json -format json
 go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -timeout 5m -format json
-go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -cases examples/knowledge/eval_holdout.json -timeout 5m -format json
+go run ./cmd/knowledge-eval -retriever semantic -allow-embedding-api -cases examples/regression/knowledge/eval_holdout.json -timeout 5m -format json
 ~~~
 
 ## 尚未验证

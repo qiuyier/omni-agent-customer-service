@@ -25,7 +25,7 @@ schema v4 要求 `general` 项明确填写 `advice_kind`。若模型标记 `capa
 
 ## 固定样例与实际运行
 
-[十二题](grounding_advice_cases.json)在调用前固定：三条历史设备/图书馆题，
+[十二题](../../../regression/knowledge/webchat/grounding_advice_cases.json)在调用前固定：三条历史设备/图书馆题，
 加九条求证、门户能力配对、入口未知、条件语、否认未知、先确认能力、官方渠道操作题。
 模型仍为 `glm-5.3-flash`，推理级别 `low`，每题最多两次请求，预算最多 24 次。
 本轮不是隐藏测试集；没有修改旧题标签，也没有在看到结果后改规则。

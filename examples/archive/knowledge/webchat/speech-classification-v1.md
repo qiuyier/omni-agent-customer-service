@@ -35,7 +35,7 @@
 看不到样例 ID、预期类别或标注理由。使用 GLM `glm-5.3-flash`、`reasoning_effort=low`。
 预算十二次请求，实际十二次，无重试、无复核调用。运行后核对三个源码文件哈希与冻结记录一致。
 
-- [固定样例](speech_classification_cases.json)
+- [固定样例](../../../regression/knowledge/webchat/speech_classification_cases.json)
 - [冻结记录](eval_runs/2026-09-23/speech-v1/freeze.json)
 - [原始输出与完整标签](eval_runs/2026-09-23/speech-v1/results.json)
 - [进度](eval_runs/2026-09-23/speech-v1/progress.txt)及[退出记录](eval_runs/2026-09-23/speech-v1/exit.json)

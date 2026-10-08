@@ -47,7 +47,7 @@
 
 ## 证据与验证
 
-- [固定语料](speech_long_holdout_cases.json)
+- [固定语料](../../../regression/knowledge/webchat/speech_long_holdout_cases.json)
 - [冻结记录](eval_runs/2026-09-23/speech-long-v1/freeze.json)
 - [原始分类结果与完整标注](eval_runs/2026-09-23/speech-long-v1/results.json)
 - [事后逐字差异审计](eval_runs/2026-09-23/speech-long-v1/audit.json)

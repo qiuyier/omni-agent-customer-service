@@ -35,7 +35,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("knowledge-eval", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	faqPath := flags.String("faq", "examples/knowledge/faq.json", "local FAQ JSON file")
-	casesPath := flags.String("cases", "examples/knowledge/eval_cases.json", "human-labelled relevance cases")
+	casesPath := flags.String("cases", "examples/regression/knowledge/eval_cases.json", "human-labelled relevance cases")
 	topK := flags.Int("top-k", customerservice.MaxKnowledgeSnippets, "maximum references per query (1-3)")
 	format := flags.String("format", "text", "report format: text or json")
 	backend := flags.String("retriever", "keyword", "retriever: keyword or semantic")

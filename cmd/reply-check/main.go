@@ -122,7 +122,7 @@ func runWithFactory(ctx context.Context, args []string, stdout, stderr io.Writer
 	flags := flag.NewFlagSet("reply-check", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.StringVar(&opts.FAQ, "faq", "examples/knowledge/faq.json", "FAQ file sent to the embedding service")
-	flags.StringVar(&opts.Cases, "cases", "examples/knowledge/reply_cases.json", "1-10 labelled fictional or authorized cases")
+	flags.StringVar(&opts.Cases, "cases", "examples/regression/knowledge/reply_cases.json", "1-10 labelled fictional or authorized cases")
 	flags.BoolVar(&opts.AllowModel, "allow-model-api", false, "allow sending questions and references to the reply model; may incur charges")
 	flags.BoolVar(&opts.AllowEmbedding, "allow-embedding-api", false, "allow sending FAQ and questions to the embedding service; may incur charges")
 	flags.DurationVar(&opts.Timeout, "timeout", 10*time.Minute, "overall budget including index initialization (at most 30m)")

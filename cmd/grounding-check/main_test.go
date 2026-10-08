@@ -17,7 +17,7 @@ import (
 
 func TestOfflineDoesNotConstructJudge(t *testing.T) {
 	var out, progress bytes.Buffer
-	err := run(context.Background(), []string{"-cases", "../../examples/knowledge/webchat/grounding_judge_cases.json"}, &out, &progress, func() (judgeFunc, string, error) {
+	err := run(context.Background(), []string{"-cases", "../../examples/regression/knowledge/webchat/grounding_judge_cases.json"}, &out, &progress, func() (judgeFunc, string, error) {
 		t.Fatal("offline mode constructed network judge")
 		return nil, "", nil
 	})

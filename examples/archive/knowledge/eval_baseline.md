@@ -8,7 +8,7 @@
 从项目根目录执行：
 
 ```bash
-go run ./cmd/knowledge-eval -faq examples/knowledge/faq.json -cases examples/knowledge/eval_cases.json -top-k 3 -format json
+go run ./cmd/knowledge-eval -faq examples/knowledge/faq.json -cases examples/regression/knowledge/eval_cases.json -top-k 3 -format json
 ```
 
 输入文件 SHA-256：

@@ -182,7 +182,7 @@ HTTP 总计不含接收客户消息和索引初始化；首个 delta 包含检�
 
 ## 工具覆盖与人工判断
 
-样例为 [reply_cases.json](reply_cases.json)，使用现有的 3 条虚构 FAQ：
+样例为 [reply_cases.json](../../regression/knowledge/reply_cases.json)，使用现有的 3 条虚构 FAQ：
 
 - 有明确资料：忘记密码，应说明验证和重设步骤，不声称已执行改密。
 - 无相关资料：实时库存，应说明无法确认，不编造库存状态。
@@ -211,7 +211,7 @@ go run ./cmd/reply-check -allow-model-api -allow-embedding-api -timeout 10m
 ~~~
 
 两个许可参数缺一不可；FAQ 和标签在联网前校验。默认使用
-`examples/knowledge/faq.json` 和 `examples/knowledge/reply_cases.json`，
+`examples/knowledge/faq.json` 和 `examples/regression/knowledge/reply_cases.json`，
 可用 `-faq` / `-cases` 覆盖；每轮允许 1～10 条用例。
 命令固定使用语义检索，不受 `KNOWLEDGE_RETRIEVER=keyword` 影响；
 其余 Embedding 配置、阈值和查询超时仍由环境决定。

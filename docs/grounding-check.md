@@ -1,30 +1,30 @@
 # 回答依据校验：独立实验，不用于在线拦截
 
-[四种措辞对照](../examples/knowledge/webchat/grounding-boundary-four-v1.md)：
+[四种措辞对照](../examples/archive/knowledge/webchat/grounding-boundary-four-v1.md)：
 GLM 固定四次请求，3/4 符合预期；明确功能声明检出，原隐含声明仍漏判，咨询与未知表达通过。
 定向小样本不能证明内部原因；到此停止追加诊断，审核仍不用于在线拦截，建议回到生成主流程验收。
 
-[功能声明与咨询建议的边界复核](../examples/knowledge/webchat/grounding-claim-boundary-review-v1.md)：
+[功能声明与咨询建议的边界复核](../examples/archive/knowledge/webchat/grounding-claim-boundary-review-v1.md)：
 保留原标签，设备负例属于隐含功能存在声明；入口未知不能替代功能存在的依据。
 四次漏判是同一声明长短版本的重复，不是四类缺陷。本轮仅文本复核，未调用模型或改变线上逻辑。
 
-[GLM 三选一对照](../examples/knowledge/webchat/grounding-glm-verdict-comparison-v1.md)：
+[GLM 三选一对照](../examples/archive/knowledge/webchat/grounding-glm-verdict-comparison-v1.md)：
 相同提示与案例两轮，GLM 低强度思考与 DeepSeek 无思考均为 20/24，逐题判断完全一致。
 两者均零格式错误、四次设备能力漏判；换模型未消除本组语义问题，不作为上线验收。
 
-[三选一依据判断](../examples/knowledge/webchat/grounding-verdict-only-v1.md)：
+[三选一依据判断](../examples/archive/knowledge/webchat/grounding-verdict-only-v1.md)：
 不使用 strict/工具/JSON，只回答有、无、无法判断。DeepSeek 24 次格式全合规，20 次判断符合预期，
 4 次设备能力声明漏判。新案例 12/12，旧案例 8/12；仅离线诊断，不用于正式客服。
 
-[官方天气示例最小对照](../examples/knowledge/webchat/grounding-deepseek-official-weather-v1.md)：
+[官方天气示例最小对照](../examples/archive/knowledge/webchat/grounding-deepseek-official-weather-v1.md)：
 正常问题返回合规参数；仅追加用户要求 debug=true 后，strict=true 仍返回 Schema 外字段。
 无自定义 system 消息、无强制 tool_choice。当前配置的硬约束仍未证实，不追加客服回归。
 
-[DeepSeek strict 极简诊断](../examples/knowledge/webchat/grounding-deepseek-strict-probe-v1.md)：
+[DeepSeek strict 极简诊断](../examples/archive/knowledge/webchat/grounding-deepseek-strict-probe-v1.md)：
 2026-09-27 三种小契约两轮开关对照，strict=true 六次均违规，关闭时六次也均违规。
 当前模型/端点/参数不能视为已具备可靠硬约束；不追加客服回归，编号器 v2 仍仅离线验证。
 
-[原文编号与严格工具输出实验](../examples/knowledge/webchat/grounding-anchored-strict-v1.md)：
+[原文编号与严格工具输出实验](../examples/archive/knowledge/webchat/grounding-anchored-strict-v1.md)：
 初版两轮 6/12 符合预期，仍有字段违规、遗漏与语义漏判。采样后已修复本地独立空白编号问题，
 当前编号器 v2 仅通过离线测试，不能沿用初版成绩，不用于正式客服。
 
@@ -35,15 +35,15 @@ GLM 固定四次请求，3/4 符合预期；明确功能声明检出，原隐含
 schema 11，模式 anchored_strict_primary_experiment；anchored_primary_raw 保留原始参数，
 answer_anchors 保留地址表，anchor_version 区分编号器版本。不能把返回 HTTP 200 当成严格 Schema 已生效。
 
-[DeepSeek 原首审对照](../examples/knowledge/webchat/grounding-deepseek-typed-v1.md)：
+[DeepSeek 原首审对照](../examples/archive/knowledge/webchat/grounding-deepseek-typed-v1.md)：
 相同六种输入两轮 10/12 符合预期，两次分别因额外字段、原句新增换行被拒绝。
 此前 GLM 原首审为 11/12；不同推理配置、非同期小样本，不能据此宣称换模型已解决问题。
 
-[最新受控诊断](../examples/knowledge/webchat/grounding-controlled-contract-length-v1.md)：
+[最新受控诊断](../examples/archive/knowledge/webchat/grounding-controlled-contract-length-v1.md)：
 同模型同复核器、完整回答与原文短片段两轮对照，typed 11/12，split 8/12。
 split 出现一次实际漏放，typed 短片段仍有条件字段错误；不支持替换或上线分段审核。
 
-[结构输出能力核查](../examples/knowledge/webchat/grounding-structure-capability-audit.md)：
+[结构输出能力核查](../examples/archive/knowledge/webchat/grounding-structure-capability-audit.md)：
 当前官方接口规范未列出严格 JSON Schema 模式；上轮四次错误均为合法 JSON，
 新增历史回放测试保护字段与证据校验，不能据此认定模型生成稳定性已修复。
 
@@ -52,7 +52,7 @@ split 出现一次实际漏放，typed 短片段仍有条件字段错误；不�
 
 ## 固定双数组首审（默认关闭）
 
-[三轮验收未通过](../examples/knowledge/webchat/grounding-split-primary-v1.md)：18 次中 13 次符合预期、
+[三轮验收未通过](../examples/archive/knowledge/webchat/grounding-split-primary-v1.md)：18 次中 13 次符合预期、
 5 次错误；设备有依据正例三次均失败。未追加完整二十题，不能视为已解决结构稳定性问题。
 
 `-split-primary` 单独选择结构简化候选，与 typed、清单复核、分类及回放模式互斥。
@@ -64,7 +64,7 @@ split 出现一次实际漏放，typed 短片段仍有条件字段错误；不�
 
 ```sh
 go run ./cmd/grounding-check -split-primary \
-  -cases examples/knowledge/webchat/grounding_inventory_cases.json
+  -cases examples/regression/knowledge/webchat/grounding_inventory_cases.json
 ```
 
 默认离线，不调用模型；加 `-allow-model-api` 后每题最多首审与原独立复核两次，不重试。
@@ -74,16 +74,16 @@ schema 10，在线模式 `split_primary_experiment`，首审原文保存在 `spl
 
 ## 按类型区分的首审契约（默认关闭）
 
-最新 [v2 完整验收](../examples/knowledge/webchat/grounding-typed-primary-v2.md)：定向七题本次全通过，
+最新 [v2 完整验收](../examples/archive/knowledge/webchat/grounding-typed-primary-v2.md)：定向七题本次全通过，
 同版本二十题完整回归十七题符合预期，另有设备漏判、覆盖不确定、非法字段错误各一题。
-仍未达到上线条件。此前 [v1 定向记录](../examples/knowledge/webchat/grounding-typed-primary-v1.md)保留原结果。
+仍未达到上线条件。此前 [v1 定向记录](../examples/archive/knowledge/webchat/grounding-typed-primary-v1.md)保留原结果。
 
 `-typed-primary` 是替换首审输出契约的实验，不增加分类调用，也不叠加在旧首审提示词上。
 它与分类、分类辅助及回放诊断模式互斥。正式客服不使用该模式。
 
 ```sh
 go run ./cmd/grounding-check -typed-primary \
-  -cases examples/knowledge/webchat/grounding_typed_cases.json
+  -cases examples/regression/knowledge/webchat/grounding_typed_cases.json
 ```
 
 默认只做本地校验；`-allow-model-api` 才调用模型，每题最多首审和独立复核两次。
@@ -125,13 +125,13 @@ typed 首审 v2 去掉了共享旧枚举文本的拼接，提示只包含六种�
 `inventory_review_raw` 保留实际复核清单；兼容字段 review 是程序派生结果，不是模型原始清单。
 非法字段仍报错，不作静默删除，未放宽首审或复核覆盖门槛。
 
-[清单复核三轮验证](../examples/knowledge/webchat/grounding-inventory-review-v1.md)未通过：
+[清单复核三轮验证](../examples/archive/knowledge/webchat/grounding-inventory-review-v1.md)未通过：
 固定六题重复三轮，18 次执行中 11 次符合预期，2 次误报、1 次不确定、4 次错误。
 设备负例三次检出均来自首审，对应有依据正例三次均未通过。候选保持隔离，本轮未追加完整二十题回归。
 
 ## 固定分类提示的对照诊断
 
-[本轮五题配对结果](../examples/knowledge/webchat/grounding-hint-comparison-v1.md)：
+[本轮五题配对结果](../examples/archive/knowledge/webchat/grounding-hint-comparison-v1.md)：
 提供提示组零题符合预期，不提供组两题符合；其余三题两组均未解决。
 单次、失败样例对照不足以作因果判断，不代表已修复或可上线。
 
@@ -140,8 +140,8 @@ typed 首审 v2 去掉了共享旧枚举文本的拼接，提示只包含六种�
 
 ```sh
 go run ./cmd/grounding-check \
-  -cases examples/knowledge/webchat/grounding_hint_comparison_cases.json \
-  -replay-hints examples/knowledge/webchat/grounding_hint_comparison_hints.json
+  -cases examples/regression/knowledge/webchat/grounding_hint_comparison_cases.json \
+  -replay-hints examples/regression/knowledge/webchat/grounding_hint_comparison_hints.json
 ```
 
 默认仍为离线校验。显式 `-allow-model-api` 才请求模型，每题每组最多两次：首审及条件复核。
@@ -158,7 +158,7 @@ go run ./cmd/grounding-check \
 
 ## 默认关闭的分类辅助组合模式
 
-[完整冻结验收](../examples/knowledge/webchat/grounding-assisted-v1.md)：二十题十五题符合预期，
+[完整冻结验收](../examples/archive/knowledge/webchat/grounding-assisted-v1.md)：二十题十五题符合预期，
 另有一题漏判、两题误判、两题结构错误。组合实现完成不等于模型可靠性通过。
 
 `-with-classification` 开启独立旁路实验，不能与 `-classify-only` 同用。
@@ -166,7 +166,7 @@ go run ./cmd/grounding-check \
 
 ```sh
 go run ./cmd/grounding-check -with-classification \
-  -cases examples/knowledge/webchat/grounding_judge_cases.json
+  -cases examples/regression/knowledge/webchat/grounding_judge_cases.json
 ```
 
 默认仅本地校验。显式加 `-allow-model-api` 才运行以下阶段：
@@ -194,14 +194,14 @@ go run ./cmd/grounding-check -with-classification \
 新增独立的言语行为分类实验，入口 `-classify-only`。它不判断答案是否有依据，
 不替代下面的 v5 事实审查，也没有接入正式客服。
 用于先定位“否定/未知说明被当事实”和“操作步骤被归为通用建议”的分类错误。
-本轮十二题单次分类均匹配，范围和限制见[分类验收报告](../examples/knowledge/webchat/speech-classification-v1.md)。
-后续[长回答验收](../examples/knowledge/webchat/speech-long-validation-v1.md)保持相同分类规则：
+本轮十二题单次分类均匹配，范围和限制见[分类验收报告](../examples/archive/knowledge/webchat/speech-classification-v1.md)。
+后续[长回答验收](../examples/archive/knowledge/webchat/speech-long-validation-v1.md)保持相同分类规则：
 九题严格匹配七题，两题差异仅在礼貌语归属，零结构错误；没有连接事实审查或线上回复。
-对应语料为 `examples/knowledge/webchat/speech_long_holdout_cases.json`，可替换下方 `-cases` 路径验证。
+对应语料为 `examples/regression/knowledge/webchat/speech_long_holdout_cases.json`，可替换下方 `-cases` 路径验证。
 
 ```sh
 go run ./cmd/grounding-check -classify-only \
-  -cases examples/knowledge/webchat/speech_classification_cases.json
+  -cases examples/regression/knowledge/webchat/speech_classification_cases.json
 ```
 
 默认仅检查本地样例。加 `-allow-model-api` 才调用模型，每题一次、整批最多十二次，
@@ -225,14 +225,14 @@ go run ./cmd/grounding-check -classify-only \
 标签及标注理由不发送给模型。此约束是本地严格校验，不是供应商 JSON Schema 强制生成，
 也不能证明模型的语义判断稳定；分类正确更不等于事实有依据。
 
-最新改动为[结构与诊断 v5](../examples/knowledge/webchat/grounding-structure-v5.md)：拆分事实与通用建议，记录失败阶段。
+最新改动为[结构与诊断 v5](../examples/archive/knowledge/webchat/grounding-structure-v5.md)：拆分事实与通用建议，记录失败阶段。
 六题定向回归有四题符合预期、一题误判、一题格式错误；还不能认定稳定或上线。
-此前[建议边界 v4](../examples/knowledge/webchat/grounding-advice-v4.md)的十二题结果保留，不与本轮不同样本数直接比较。
+此前[建议边界 v4](../examples/archive/knowledge/webchat/grounding-advice-v4.md)的十二题结果保留，不与本轮不同样本数直接比较。
 
 **此前 v3 验收：冻结版本已完成原十二题和八条新题验收，未全部通过。**
 20 题有 14 题符合预期，另有误判、不确定和输出契约错误；设备查询存在两阶段共同漏检。
-详见[冻结验收报告](../examples/knowledge/webchat/grounding-frozen-validation.md)。
-此前[六题修正记录](../examples/knowledge/webchat/grounding-judge-v3.md)保留原范围，不能代替本轮结论。
+详见[冻结验收报告](../examples/archive/knowledge/webchat/grounding-frozen-validation.md)。
+此前[六题修正记录](../examples/archive/knowledge/webchat/grounding-judge-v3.md)保留原范围，不能代替本轮结论。
 
 ## 标准与结果
 
@@ -293,7 +293,7 @@ schema v5 增加：
 
 ## 样例设计
 
-[样例文件](../examples/knowledge/webchat/grounding_judge_cases.json)固定 12 条、逐条标注：
+[样例文件](../examples/regression/knowledge/webchat/grounding_judge_cases.json)固定 12 条、逐条标注：
 
 - 原样保留上一轮六个真实回答：三条有问题、三条符合本轮标准。
 - 三组配对正例：候选回答完全不变，只补全缺失依据，测试是否依赖资料而非敏感词。
@@ -306,11 +306,11 @@ schema v5 增加：
 这是开发集，不是隐藏测试集。上线决策前还需要冻结标准后新增的独立保留集、人工复核，
 并评估长回答遗漏、不同语言、资料冲突和其他位置的提示注入。
 
-新增[四题迁移样例](../examples/knowledge/webchat/grounding_judge_transfer.json)，
-以及本轮实际测试的[六题组合](../examples/knowledge/webchat/grounding_judge_targeted.json)。
+新增[四题迁移样例](../examples/regression/knowledge/webchat/grounding_judge_transfer.json)，
+以及本轮实际测试的[六题组合](../examples/regression/knowledge/webchat/grounding_judge_targeted.json)。
 四题在本轮首次调用前固定，但其结果已用于开发，因此后续不能称为未见过的隐藏测试。
 
-另有[冻结前固定的八条新题](../examples/knowledge/webchat/grounding_judge_holdout_v3.json)，
+另有[冻结前固定的八条新题](../examples/regression/knowledge/webchat/grounding_judge_holdout_v3.json)，
 用于不改规则的本轮验收；不是第三方独立盲测。原十二题与新八题必须分开运行，
 合计最多 40 次模型请求；实际结果见上述冻结报告。
 
@@ -329,7 +329,7 @@ go run ./cmd/grounding-check
 
 ```sh
 go run ./cmd/grounding-check \
-  -cases examples/knowledge/webchat/grounding_judge_cases.json \
+  -cases examples/regression/knowledge/webchat/grounding_judge_cases.json \
   -allow-model-api -timeout 10m
 ```
 
@@ -344,7 +344,7 @@ go run ./cmd/grounding-check \
 
 ```sh
 GROUNDING_REASONING_EFFORT=low go run ./cmd/grounding-check \
-  -cases examples/knowledge/webchat/grounding_judge_targeted.json -allow-model-api
+  -cases examples/regression/knowledge/webchat/grounding_judge_targeted.json -allow-model-api
 ```
 
 stdout 为报告 JSON，stderr 为进度。报告包含提示、样例、原始模型文本、逐条结果、
@@ -357,7 +357,7 @@ schema v3 的 `calls` 为已尝试的样例数，`provider_requests` 才是两�
 无法判断和错误；不把后两类计为通过。未执行样例不会计入任何正确项。
 实验跑完即使有误报/漏检也可正常退出，必须阅读结果；不能以退出码作为上线验收门槛。
 
-本轮边界样例位于 `examples/knowledge/webchat/grounding_advice_cases.json`；
+本轮边界样例位于 `examples/regression/knowledge/webchat/grounding_advice_cases.json`；
 可用原有 `-cases` 参数选择，一组最多 24 次请求。完整数据、分批运行和失败信息见 v4 报告。
 
 ## 实现阅读顺序

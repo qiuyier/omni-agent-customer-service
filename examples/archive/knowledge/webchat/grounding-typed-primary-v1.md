@@ -68,7 +68,7 @@ scope=information_seeking，而新结构只允许 inquiry 等六种标签，所�
 - 新测试覆盖非事实禁止 assessment（含 null）、业务事实禁止空证据、缺失细节覆盖 supported、
   非法类型/字段拒绝、全文覆盖保留、复核否决错误分类、原始输出保留、首审失败不复核、离线与模式互斥。
 
-证据：[固定七题](grounding_typed_cases.json)、
+证据：[固定七题](../../../regression/knowledge/webchat/grounding_typed_cases.json)、
 [冻结记录](eval_runs/2026-09-24/typed-primary-v1/freeze.json)、
 [完整摘要](eval_runs/2026-09-24/typed-primary-v1/summary.json)。
 同目录 0.json 至 6.json 为逐题原始报告，各自附带进度和退出记录。

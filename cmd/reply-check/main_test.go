@@ -19,7 +19,7 @@ import (
 )
 
 func acceptanceExampleArgs() []string {
-	return []string{"-faq", "../../examples/knowledge/faq.json", "-cases", "../../examples/knowledge/reply_cases.json", "-timeout", "15s"}
+	return []string{"-faq", "../../examples/knowledge/faq.json", "-cases", "../../examples/regression/knowledge/reply_cases.json", "-timeout", "15s"}
 }
 
 type fixtureGenerator struct {

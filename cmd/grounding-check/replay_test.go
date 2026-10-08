@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-const replayCorpus = "../../examples/knowledge/webchat/grounding_hint_comparison_cases.json"
-const replayFixture = "../../examples/knowledge/webchat/grounding_hint_comparison_hints.json"
+const replayCorpus = "../../examples/regression/knowledge/webchat/grounding_hint_comparison_cases.json"
+const replayFixture = "../../examples/regression/knowledge/webchat/grounding_hint_comparison_hints.json"
 
 func TestReplayFixturesAndOffline(t *testing.T) {
 	cases, _, err := load(replayCorpus)
