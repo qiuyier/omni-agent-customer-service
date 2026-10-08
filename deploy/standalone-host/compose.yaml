@@ -1,0 +1,21 @@
+name: omni-standalone-persistence-test
+
+services:
+  postgres:
+    image: postgres:16.15-bookworm
+    environment:
+      POSTGRES_DB: standalone_chat_acceptance
+      POSTGRES_USER: standalone_demo
+      POSTGRES_PASSWORD: standalone_local_test
+    ports:
+      - "127.0.0.1:15434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U standalone_demo -d standalone_chat_acceptance"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - standalone-test-data:/var/lib/postgresql/data
+
+volumes:
+  standalone-test-data:

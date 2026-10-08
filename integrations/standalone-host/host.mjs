@@ -10,7 +10,6 @@ const cookieName = 'standalone_login';
 const digest = value => createHash('sha256').update(value).digest('hex');
 const users = {lin:{id:'member-1001',display_name:'林澈'},zhou:{id:'member-1002',display_name:'周宁'}};
 const failure = (status,code) => Object.assign(Error(code),{status,code});
-const metadata = {demo:true,storage:'memory',reply_mode:'fake'};
 const routes = new Map([['/','index.html'],['/chat/','index.html'],['/assets/app.js','assets/app.js'],['/assets/app.css','assets/app.css']]);
 
 async function boundedBody(stream, limit) {
@@ -22,7 +21,9 @@ function strictObject(value, fields) {
   if(!value || Array.isArray(value) || typeof value!=='object' || Object.keys(value).some(k=>!fields.includes(k)))throw failure(400,'invalid_request');
   return value;
 }
-export async function startHost({gatewayOrigin,hostSecret,now=Date.now}) {
+export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='memory',port=0}) {
+  if(!['memory','postgres'].includes(storage)||!Number.isInteger(port)||port<0||port>65535)throw Error('invalid trusted local host configuration');
+  const metadata={demo:true,storage,reply_mode:'fake'};
   const upstream=new URL(gatewayOrigin);
   if(upstream.protocol!=='http:'||upstream.hostname!=='127.0.0.1'||!upstream.port||upstream.pathname!=='/'||upstream.search||upstream.hash||upstream.username||upstream.password)throw Error('private loopback gateway required');
   if(!/^[A-Za-z0-9_-]{32,128}$/.test(hostSecret)||hostSecret.startsWith('chat_'))throw Error('independent host credential required');
@@ -117,7 +118,7 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now}) {
     finally{active--;}
   });
   server.requestTimeout=20000;server.headersTimeout=5000;server.keepAliveTimeout=5000;server.maxHeadersCount=64;
-  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
   origin=`http://127.0.0.1:${server.address().port}`;
   return {origin,close:async()=>{sessions.clear();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
 }

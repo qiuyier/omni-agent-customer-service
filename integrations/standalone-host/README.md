@@ -39,7 +39,7 @@ Ctrl+C 停止本轮进程并删除临时构建目录。登录会话和消息都�
 
 ## 配置与安全责任
 
-startHost 接受后端可信 gatewayOrigin、hostSecret；本地只允许字面量 127.0.0.1 HTTP。样例的 storage=memory、reply_mode=fake 是固定的真实测试配置，换生产网关时必须同步由可信配置设置，不能误报。
+startHost 接受后端可信 gatewayOrigin、hostSecret，以及 storage（memory/postgres）和 port（回环监听端口）。默认 storage=memory、reply_mode=fake；持久化验收显式设置 postgres，回复仍固定为 fake，不支持用此元数据伪装真实 AI。参数不接受浏览器覆盖，本地只允许字面量127.0.0.1 HTTP。
 
 - 前端只能拿到短期受限凭证；业务后端缓存并绑定到登录会话，不能用其他账号的 Cookie 搭配该凭证。
 - Cookie 为 HttpOnly、SameSite=Strict；仅因回环 HTTP 演示不设置 Secure。生产必须 HTTPS、Secure Cookie、真实认证、CSRF 防护和独立会话存储。
@@ -51,6 +51,8 @@ startHost 接受后端可信 gatewayOrigin、hostSecret；本地只允许字面�
 不能从本样例推断共享多租户知识隔离、数据库灾备、附件、业务查询、工单或人工接管已实现。
 
 ## 验证
+
+后续已完成[独立 PostgreSQL、双进程重启及响应丢失验收](persistence-acceptance.md)。运行 `node integrations/standalone-host/persistence-check.mjs --allow-local-postgres` 会启动专用本地数据库、执行迁移和验收；结束后停止容器并保留数据卷，不调用真实模型。
 
 本轮执行结果见[验收记录](acceptance.md)，包括通过项和未覆盖边界。
 
