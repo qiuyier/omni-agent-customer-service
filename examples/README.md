@@ -4,6 +4,8 @@
 
 ## 阅读顺序
 
+要接入一个没有客服的业务后端，另见[独立 Node.js 接入样例与接口清单](../integrations/standalone-host/README.md)。
+
 1. 阅读[通用接入契约](../docs/integration-contract.md)，确认身份、会话和交付责任。
 2. 查看[接入知识样例](knowledge/README.md)，选择需要的资料格式；所有演示知识都不能直接当作真实业务政策。
 3. 查看[回归资料](regression/README.md)，了解测试输入与离线检查。

@@ -1,5 +1,7 @@
 # 无现成客服能力的系统：网页接入最小闭环
 
+需要查看另一种后端语言的接入方式，可运行[独立 Node.js 业务后端样例](../integrations/standalone-host/README.md)：它维护自己的模拟登录，通过 HTTP 调用私有客服网关，原样挂载既有聊天页；无需 CRMEB 或复制客服核心。
+
 非 CRMEB 的[设备维修样例](../integrations/device-repair/README.md)复用本篇宿主和聊天页，只替换知识与模型配置，提供本地 HTTP 隔离验收。
 
 CRMEB 的独立宿主适配样例见 [PHP 7.4 身份桥接](../integrations/crmeb/README.md)：
