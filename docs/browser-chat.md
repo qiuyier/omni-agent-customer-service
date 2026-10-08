@@ -1,5 +1,7 @@
 # 无现成客服能力的系统：网页接入最小闭环
 
+非 CRMEB 的[设备维修样例](../integrations/device-repair/README.md)复用本篇宿主和聊天页，只替换知识与模型配置，提供本地 HTTP 隔离验收。
+
 CRMEB 的独立宿主适配样例见 [PHP 7.4 身份桥接](../integrations/crmeb/README.md)：
 复用通用身份交换与会话网关，不改变本篇模拟宿主。后续[独立 H5 页面验收](../integrations/crmeb/H5-acceptance.md)通过，测试后恢复默认关闭。
 
