@@ -52,6 +52,8 @@ startHost 接受后端可信 gatewayOrigin、hostSecret，以及 storage（memor
 
 ## 验证
 
+进一步已完成[真实浏览器中断恢复验收](browser-acceptance.md)：实际页面上的凭证续期、重新登录、待确认重试和跨标签页账号隔离通过，附截图与网络证据。
+
 后续已完成[独立 PostgreSQL、双进程重启及响应丢失验收](persistence-acceptance.md)。运行 `node integrations/standalone-host/persistence-check.mjs --allow-local-postgres` 会启动专用本地数据库、执行迁移和验收；结束后停止容器并保留数据卷，不调用真实模型。
 
 本轮执行结果见[验收记录](acceptance.md)，包括通过项和未覆盖边界。
