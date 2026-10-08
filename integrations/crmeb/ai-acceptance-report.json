@@ -1,0 +1,75 @@
+{
+  "passed": true,
+  "checked_at": "2026-09-30T09:27:03.137Z",
+  "checks": [
+    "ai_session_0",
+    "ai_session_1",
+    "distinct_conversations",
+    "real_ai_reply_0_0",
+    "history_0_0",
+    "not_fake_0_0",
+    "no_other_account_marker_0_0",
+    "replay_same_ids_0_0",
+    "replay_unchanged_history_0_0",
+    "conflict_0_0",
+    "real_ai_reply_1_0",
+    "history_1_0",
+    "not_fake_1_0",
+    "no_other_account_marker_1_0",
+    "replay_same_ids_1_0",
+    "replay_unchanged_history_1_0",
+    "conflict_1_0",
+    "real_ai_reply_0_1",
+    "history_0_1",
+    "not_fake_0_1",
+    "no_other_account_marker_0_1",
+    "multi_turn_context_0",
+    "replay_same_ids_0_1",
+    "replay_unchanged_history_0_1",
+    "conflict_0_1",
+    "real_ai_reply_1_1",
+    "history_1_1",
+    "not_fake_1_1",
+    "no_other_account_marker_1_1",
+    "multi_turn_context_1",
+    "replay_same_ids_1_1",
+    "replay_unchanged_history_1_1",
+    "conflict_1_1",
+    "refresh_same_conversation",
+    "refresh_exact_history",
+    "cross_account_rejected"
+  ],
+  "successful_real_replies": 4,
+  "answers": [
+    {
+      "account": 1,
+      "turn": 1,
+      "question": "这是虚构的上下文隔离测试。本轮我的测试代号是“海棠-munwi61t”，我偏好简洁的文字说明。请简短确认，不要查询或执行任何业务操作。",
+      "answer": "收到，测试代号“海棠-munwi61t”已确认。本轮仅作简短确认，不查询、不执行任何业务操作。",
+      "elapsed_ms": 4204
+    },
+    {
+      "account": 2,
+      "turn": 1,
+      "question": "这是虚构的上下文隔离测试。本轮我的测试代号是“琥珀-munwi61t”，我偏好分步骤的文字说明。请简短确认，不要查询或执行任何业务操作。",
+      "answer": "好的，已收到你的说明。本轮仅作简短确认：我不会查询、核实或执行任何业务操作，也不会基于该测试代号推断系统能力。如有关于资料或操作指引的问题，欢迎继续提出。",
+      "elapsed_ms": 6999
+    },
+    {
+      "account": 1,
+      "turn": 2,
+      "question": "请根据我本轮刚才提供的信息，复述我的测试代号和说明偏好。",
+      "answer": "根据你本轮提供的信息：\n\n- 测试代号：“海棠-munwi61t”\n- 偏好：简洁的文字说明\n\n以上仅为复述你陈述的内容，未查询或执行任何业务操作。",
+      "elapsed_ms": 6186
+    },
+    {
+      "account": 2,
+      "turn": 2,
+      "question": "请根据我本轮刚才提供的信息，复述我的测试代号和说明偏好。",
+      "answer": "好的，根据你本轮提供的信息复述如下：\n\n- **测试代号**：琥珀-munwi61t\n- **说明偏好**：偏好分步骤的文字说明\n\n以上仅为复述你提供的内容，不代表系统已记录或验证这些信息，也不涉及任何业务查询或操作。",
+      "elapsed_ms": 6713
+    }
+  ],
+  "knowledge_enabled": false,
+  "notes": "Small synthetic-context sample, not a general answer-quality guarantee. Provider internal retries not counted."
+}

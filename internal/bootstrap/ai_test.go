@@ -224,6 +224,9 @@ func TestDefaultAISystemPromptStatesGuidanceOnlyCapabilities(t *testing.T) {
 	for _, fragment := range []string{
 		"常见产品经验不是当前系统事实",
 		"历史中助手自己的回答也不是独立证据",
+		"不证明旧回答当时没有依据",
+		"不要根据本轮资料推断上一轮拿到了什么资料",
+		"不要猜测发生过更新或撤回",
 		"资料明确给出的步骤应直接说明",
 		"没有实时库存、订单或排班查询工具",
 		"不得承诺由你查询、核实、跟进这些外部事项",

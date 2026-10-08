@@ -1,0 +1,1 @@
+{"passed":true,"checks":["nginx_original_uri_clean_exchange","distinct_users","send_0","isolated_history_0","send_1","isolated_history_1","mixed_credentials_rejected","browser_query_rejected","forged_body_rejected","foreign_origin_rejected","native_logout_invalidates_read","native_logout_invalidates_send","native_logout_invalidates_exchange"],"external_model_calls":0}

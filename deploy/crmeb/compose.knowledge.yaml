@@ -1,0 +1,8 @@
+services:
+  gateway:
+    environment:
+      KNOWLEDGE_FAQ_PATH: /knowledge/faq.json
+      KNOWLEDGE_RETRIEVER: keyword
+      KNOWLEDGE_RETRIEVAL_TIMEOUT: 2s
+    volumes:
+      - ../../knowledge.local/crmeb-webchat:/knowledge:ro

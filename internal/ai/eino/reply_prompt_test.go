@@ -104,6 +104,33 @@ func TestReplyPromptSeparatesUntrustedKnowledgeFromInstructionsAndHistory(t *tes
 	}
 }
 
+func TestReplyPromptPreservesHistoryWithoutInferringHistoricalEvidence(t *testing.T) {
+	for _, path := range []string{"chat_generate", "agentic_generate", "agentic_stream"} {
+		for _, replaced := range []bool{false, true} {
+			history := []customerservice.ReplyTurn{
+				{Role: customerservice.ReplyRoleUser, Content: "What were the documented hours?"},
+				{Role: customerservice.ReplyRoleAssistant, Content: "The earlier reference stated 10:20 to 16:40."},
+				{Role: customerservice.ReplyRoleUser, Content: "What can you confirm now?"},
+			}
+			knowledge := &customerservice.ReplyKnowledge{}
+			if replaced {
+				knowledge.Snippets = []customerservice.KnowledgeSnippet{{ID: "hours-v2", Title: "Updated hours", Source: "fixture/v2", Content: "Version 2 replaces version 1: 11:10 to 17:50."}}
+			}
+			prompt := recordedReplyPrompt(t, path, "support policy", customerservice.ReplyRequest{History: history, Knowledge: knowledge})
+			if !reflect.DeepEqual(prompt[3:], history) {
+				t.Fatal("knowledge changes rewrote historical conversation turns")
+			}
+			if !strings.Contains(prompt[1].Content, "correct a prior claim only when known information explicitly establishes that it was wrong") ||
+				!strings.Contains(prompt[1].Content, "does not prove that an earlier answer never had support") {
+				t.Fatal("historical evidence boundary missing from model instructions")
+			}
+			if strings.Contains(referenceJSON(t, prompt[2].Content), "10:20") {
+				t.Fatal("historical assistant text was promoted to current reference evidence")
+			}
+		}
+	}
+}
+
 func TestReplyPromptDistinguishesDisabledKnowledgeFromNoHits(t *testing.T) {
 	for _, path := range []string{"chat_generate", "agentic_generate", "agentic_stream"} {
 		for _, systemPrompt := range []string{"", " \t ", "support policy"} {
@@ -191,6 +218,10 @@ func TestReplyPromptCapabilityBoundariesAcrossModesAndKnowledgeStates(t *testing
 					for _, rule := range []string{
 						"Common product conventions are not evidence about this system",
 						"Earlier assistant answers are not independent evidence",
+						"The current reference set is not an audit of historical evidence",
+						"Never infer what was retrieved in a previous turn from what is available now",
+						"does not prove that an earlier answer never had support",
+						"do not invent an update or withdrawal",
 						"Give documented steps directly rather than refusing supported questions",
 						"no live inventory, order or staff-schedule lookup tools",
 						"Do not promise to look up, verify, follow up on",

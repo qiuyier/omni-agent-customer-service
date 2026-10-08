@@ -1,5 +1,8 @@
 # 无现成客服能力的系统：网页接入最小闭环
 
+CRMEB 的独立宿主适配样例见 [PHP 7.4 身份桥接](../integrations/crmeb/README.md)：
+复用通用身份交换与会话网关，不改变本篇模拟宿主。后续[独立 H5 页面验收](../integrations/crmeb/H5-acceptance.md)通过，测试后恢复默认关闭。
+
 这一步提供独立聊天页、宿主身份交换、受限会话接口和一个示例宿主。
 没有电商业务逻辑，不依赖 CRMEB 的客服模块，也没有修改 CRMEB。
 目前通过专用 `cmd/webchat-demo` 组装；**不会自动改变 `cmd/server` 的路由或配置**。

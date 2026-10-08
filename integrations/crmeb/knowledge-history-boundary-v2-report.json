@@ -1,0 +1,114 @@
+{
+  "passed": true,
+  "checked_at": "2026-09-30T12:38:42.245Z",
+  "checks": [
+    "login",
+    "session",
+    "ecommerce-v1_loaded",
+    "supported_reply",
+    "supported_history",
+    "supported_saved",
+    "unknown_reply",
+    "unknown_history",
+    "unknown_saved",
+    "followup_reply",
+    "followup_history",
+    "followup_saved",
+    "ecommerce-v2_loaded",
+    "reload_preserves_history",
+    "updated_reply",
+    "updated_history",
+    "updated_saved",
+    "withdraw_loaded",
+    "withdraw_preserves_history",
+    "withdrawn_reply",
+    "withdrawn_history",
+    "withdrawn_saved",
+    "ecommerce-v1_loaded",
+    "repair_login",
+    "repair_session",
+    "repair_supported_reply",
+    "repair_supported_saved",
+    "repair_unknown_reply",
+    "repair_unknown_saved",
+    "ecommerce-v1_loaded"
+  ],
+  "versions": [
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v1",
+      "version": "5a82b7776ba658f46af3e23caeb53408377aa840622a58ce151b6dde4e89fc6e",
+      "entries": 1
+    },
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v2",
+      "version": "9a14f9ec31efb09753aa71aaa3e27e061572c6ddd3fc67b538bbf4d919a3647f",
+      "entries": 1
+    },
+    {
+      "reloaded": true,
+      "fixture": "withdraw",
+      "version": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "entries": 0
+    },
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v1",
+      "version": "5a82b7776ba658f46af3e23caeb53408377aa840622a58ce151b6dde4e89fc6e",
+      "entries": 1
+    },
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v1",
+      "version": "5a82b7776ba658f46af3e23caeb53408377aa840622a58ce151b6dde4e89fc6e",
+      "entries": 1
+    }
+  ],
+  "answers": [
+    {
+      "label": "supported",
+      "question": "这是虚构资料验收，不询问真实商城。青禾测试商城的自提服务台什么时候开放，如何预约自提？",
+      "answer": "根据当前参考资料（来源：fictional/ecommerce/pickup/v1）：\n\n- **开放时间**：自提服务台周二至周六 10:20—16:40 开放。\n- **预约方式**：你自行在测试订单详情中选择“预约自提”，再选择页面上已有时段即可。我无法代你预约。\n\n本回答仅依据当前参考资料作答。资料未提供取消预约、退款、快递配送、节假日安排等其他操作说明。"
+    },
+    {
+      "label": "unknown",
+      "question": "虚构青禾测试商城的退款多久到账？请只回答当前资料明确支持的内容。",
+      "answer": "当前资料中没有关于退款的内容，因此无法确认虚构青禾测试商城的退款到账时间。\n\n资料仅说明了自提服务台的开放时间（周二至周六 10:20—16:40）和预约方式，未提供退款相关说明。"
+    },
+    {
+      "label": "followup",
+      "question": "那我应该点哪个按钮催退款？这是接着上一条退款问题问的，请不要猜测功能。",
+      "answer": "无法确认。当前资料中没有关于退款或“催退款”按钮的任何说明，因此我不能推荐未经证实的按钮或页面。如需了解是否存在此类功能，建议你自行向官方人工客服咨询或查阅官方发布的信息。"
+    },
+    {
+      "label": "updated",
+      "question": "请按当前有效资料重新回答：虚构青禾测试商城的自提服务台现在什么时候开放？",
+      "answer": "根据当前有效资料（来源：fictional/ecommerce/pickup/v2，该版本明确替代自提规则 v1）：\n\n- **开放时间**：自提服务台开放时间为**周三至周日 11:10—17:50**。\n\n由于 v2 明确替代 v1，开放时间以本版（周三至周日 11:10—17:50）为准。\n\n如需预约：你自行在测试订单详情中选择“预约自提”，再选择页面上已有时段即可，我无法代你预约。\n\n资料未提供取消预约、退款、快递配送、节假日安排等其他操作说明。"
+    },
+    {
+      "label": "withdrawn",
+      "question": "请按当前有效参考资料回答虚构青禾测试商城的自提服务台现在什么时候开放；若参考资料不足，请明确说明，不以旧回复作为依据。",
+      "answer": "当前参考资料中没有关于青禾测试商城自提服务台的内容（参考片段为空），因此**无法确认**其开放时间。\n\n本次回答仅依据当前参考资料作答，未以之前的回复作为依据。"
+    },
+    {
+      "label": "repair_supported",
+      "question": "虚构栖木维修服务的收件时段是什么？送修前需要做什么？",
+      "answer": "您好！根据现有资料，为您说明如下：\n\n**收件时段**\n- 周一和周四 13:15—16:25\n\n**送修前准备**\n- 请自行备份设备中的资料\n- 移除可拆卸存储卡\n\n**补充说明**：资料中未包含预约页面、上门服务、维修报价、保修范围、维修进度或完成日期等信息，客服也无法代办维修。如需了解这些方面的内容，建议向官方渠道咨询确认。\n\n需要说明的是，这份资料标注为接入验收用的虚构维修服务资料，不属于青禾商城的实际业务，请以官方发布的信息为准。"
+    },
+    {
+      "label": "repair_unknown",
+      "question": "虚构栖木维修是否支持上门，具体价格和预约入口是什么？",
+      "answer": "您好！根据现有资料，为您说明如下：\n\n**关于上门服务、维修报价和预约入口**\n现有资料中**未包含**以下内容，因此无法确认：\n- 是否支持上门服务\n- 具体维修价格/报价\n- 预约页面或预约入口\n\n资料中仅明确了收件时段（周一和周四 13:15—16:25）和送修前的准备事项（自行备份数据、移除可拆卸存储卡），没有预约页面、上门服务或维修报价的相关信息。客服也无法代办维修。\n\n如需了解是否支持上门、具体价格或预约方式，建议您向官方渠道咨询确认。"
+    }
+  ],
+  "quality_review": {
+    "reviewed_at": "2026-10-08",
+    "all_passed": true,
+    "passed_labels": ["supported", "unknown", "followup", "updated", "withdrawn", "repair_supported", "repair_unknown"],
+    "issue_labels": [],
+    "finding": "All seven saved replies satisfy the targeted historical-evidence boundary review. Restoring v1 did not invalidate earlier empty references; unknown and follow-up questions did not invent missing functions; v2 was described as replacing v1 without denying prior support; withdrawal declined to confirm without retrospectively discrediting previous evidence. Both repair cases retained supported guidance and refused undocumented claims.",
+    "scope": "Manual review of the saved 2026-09-30 run, not a new model run on the review date. One known seven-case regression, not a blind evaluation or a general factuality guarantee."
+  },
+  "notes": "Technical checks only; answers require review. Main fixture restored to ecommerce-v1; isolated repair process stopped."
+}

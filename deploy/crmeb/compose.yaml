@@ -1,0 +1,52 @@
+name: omni-crmeb-webchat-test
+
+services:
+  postgres:
+    image: postgres:16.15-bookworm
+    network_mode: container:php74
+    command: [postgres, -c, listen_addresses=127.0.0.1, -c, port=15434]
+    environment:
+      POSTGRES_DB: omni_crmeb_chat
+      POSTGRES_USER: omni_chat
+      POSTGRES_PASSWORD: ${OMNI_PG_PASSWORD:?run prepare.mjs first}
+    volumes:
+      - chat-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD, pg_isready, -h, 127.0.0.1, -p, '15434', -U, omni_chat, -d, omni_crmeb_chat]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    image: omni-crmeb-webchat-test:local
+    build: .
+    network_mode: container:php74
+    profiles: [tools]
+    entrypoint: [/migrate]
+    environment:
+      DATABASE_URL: postgres://omni_chat:${OMNI_PG_PASSWORD}@127.0.0.1:15434/omni_crmeb_chat?sslmode=disable
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  gateway:
+    image: omni-crmeb-webchat-test:local
+    build: .
+    network_mode: container:php74
+    environment:
+      DATABASE_URL: postgres://omni_chat:${OMNI_PG_PASSWORD}@127.0.0.1:15434/omni_crmeb_chat?sslmode=disable
+      WEBCHAT_HOST_ID: crmeb-local-test
+      WEBCHAT_HOST_SECRET: ${OMNI_HOST_SECRET:?run prepare.mjs first}
+      WEBCHAT_ADDRESS: 127.0.0.1:8093
+      WEBCHAT_REPLY_MODE: fake
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+volumes:
+  chat-data:

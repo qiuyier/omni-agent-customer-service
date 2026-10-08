@@ -1,0 +1,107 @@
+{
+  "passed": true,
+  "checked_at": "2026-09-30T12:35:48.297Z",
+  "checks": [
+    "login",
+    "session",
+    "ecommerce-v1_loaded",
+    "supported_reply",
+    "supported_history",
+    "supported_saved",
+    "unknown_reply",
+    "unknown_history",
+    "unknown_saved",
+    "followup_reply",
+    "followup_history",
+    "followup_saved",
+    "ecommerce-v2_loaded",
+    "reload_preserves_history",
+    "updated_reply",
+    "updated_history",
+    "updated_saved",
+    "withdraw_loaded",
+    "withdraw_preserves_history",
+    "withdrawn_reply",
+    "withdrawn_history",
+    "withdrawn_saved",
+    "ecommerce-v1_loaded",
+    "repair_login",
+    "repair_session",
+    "repair_supported_reply",
+    "repair_supported_saved",
+    "repair_unknown_reply",
+    "repair_unknown_saved",
+    "ecommerce-v1_loaded"
+  ],
+  "versions": [
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v1",
+      "version": "5a82b7776ba658f46af3e23caeb53408377aa840622a58ce151b6dde4e89fc6e",
+      "entries": 1
+    },
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v2",
+      "version": "9a14f9ec31efb09753aa71aaa3e27e061572c6ddd3fc67b538bbf4d919a3647f",
+      "entries": 1
+    },
+    {
+      "reloaded": true,
+      "fixture": "withdraw",
+      "version": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "entries": 0
+    },
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v1",
+      "version": "5a82b7776ba658f46af3e23caeb53408377aa840622a58ce151b6dde4e89fc6e",
+      "entries": 1
+    },
+    {
+      "reloaded": true,
+      "fixture": "ecommerce-v1",
+      "version": "5a82b7776ba658f46af3e23caeb53408377aa840622a58ce151b6dde4e89fc6e",
+      "entries": 1
+    }
+  ],
+  "answers": [
+    {
+      "label": "supported",
+      "question": "这是虚构资料验收，不询问真实商城。青禾测试商城的自提服务台什么时候开放，如何预约自提？",
+      "answer": "根据当前参考资料（来源：fictional/ecommerce/pickup/v1）：\n\n- **开放时间**：自提服务台周二至周六 10:20—16:40 开放。\n- **预约方式**：你自行在测试订单详情中选择“预约自提”，再选择页面已有时段即可。我无法代你预约。\n\n需要更正我上一条回答：当前参考资料中确实包含上述自提规则，之前说“参考资料为空”是不正确的；同时，我此前提到的 “v2 来源及 11:10—17:50” 在资料中并不存在，请以本次回答为准。\n\n资料未提供取消预约、退款、快递配送、节假日安排等其他操作说明。"
+    },
+    {
+      "label": "unknown",
+      "question": "虚构青禾测试商城的退款多久到账？请只回答当前资料明确支持的内容。",
+      "answer": "当前资料中没有关于退款的内容，因此无法确认青禾测试商城的退款到账时间。\n\n资料仅说明了自提服务台的开放时间（周二至周六 10:20—16:40）和预约方式，未提供退款相关说明。"
+    },
+    {
+      "label": "followup",
+      "question": "那我应该点哪个按钮催退款？这是接着上一条退款问题问的，请不要猜测功能。",
+      "answer": "无法确认。当前资料中没有关于退款或“催退款”按钮的任何说明，因此我不能推荐未经证实的按钮或页面。如需了解是否存在此类功能，建议你自行向官方人工客服咨询或查阅官方发布的信息。"
+    },
+    {
+      "label": "updated",
+      "question": "请按当前有效资料重新回答：虚构青禾测试商城的自提服务台现在什么时候开放？",
+      "answer": "根据当前有效资料（来源：fictional/ecommerce/pickup/v2，该版本明确替代自提规则 v1）：\n\n- **开放时间**：自提服务台开放时间为**周三至周日 11:10—17:50**。\n- **预约方式**：你自行在测试订单详情中选择“预约自提”，再选择页面上已有时段即可。我无法代你预约。\n\n由于 v2 明确替代 v1，开放时间以本版（周三至周日 11:10—17:50）为准。\n\n资料未提供取消预约、退款、快递配送、节假日安排等其他操作说明。"
+    },
+    {
+      "label": "withdrawn",
+      "question": "请按当前有效参考资料回答虚构青禾测试商城的自提服务台现在什么时候开放；若参考资料不足，请明确说明，不以旧回复作为依据。",
+      "answer": "当前参考资料中没有关于青禾测试商城自提服务台的内容（参考片段为空），因此**无法确认**其开放时间。\n\n本次回答仅依据当前参考资料作答，未以之前的回复作为依据。"
+    },
+    {
+      "label": "repair_supported",
+      "question": "虚构栖木维修服务的收件时段是什么？送修前需要做什么？",
+      "answer": "您好！根据维修服务的送修说明，为您提供以下信息：\n\n**收件时段**：每周一和周四的 13:15—16:25。\n\n**送修前需要做的准备**：\n1. 自行备份设备中的资料；\n2. 移除设备中的可拆卸存储卡。\n\n另外提醒您，客服无法代您办理维修。如需了解维修报价、保修范围、维修进度等其他信息，目前提供的资料中没有相关内容，暂时无法确认。\n\n还有其他问题欢迎随时咨询！"
+    },
+    {
+      "label": "repair_unknown",
+      "question": "虚构栖木维修是否支持上门，具体价格和预约入口是什么？",
+      "answer": "您好！很抱歉，目前我掌握的维修服务资料中没有以下内容，无法为您确认：\n\n- **是否支持上门服务**：资料未提及，无法确认；\n- **具体维修价格/报价**：资料中未提供；\n- **预约入口**：资料中没有预约页面或预约方式的相关信息。\n\n目前资料中能够确认的只有：\n\n1. **收件时段**：每周一和周四的 13:15—16:25；\n2. **送修前准备**：自行备份设备中的资料，并移除可拆卸存储卡；\n3. 客服无法代办维修。\n\n如需了解上门服务、报价或预约方式，建议您向维修服务的官方渠道咨询是否支持及具体安排。还有其他问题欢迎随时咨询！"
+    }
+  ],
+  "quality_review": {"all_passed":false,"passed_labels":["unknown","followup","updated","withdrawn","repair_supported","repair_unknown"],"issue_labels":["supported"],"finding":"The original three failures did not recur, but restoring v1 caused the first reply to incorrectly deny the previous turn's genuinely empty reference set and the earlier existence of v2. Six of seven satisfy this targeted review."},
+  "notes": "Technical checks only; answers require review. Main fixture restored to ecommerce-v1; isolated repair process stopped."
+}

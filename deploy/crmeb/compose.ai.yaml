@@ -1,0 +1,11 @@
+# Explicit opt-in; base compose remains fake by default.
+services:
+  gateway:
+    env_file:
+      - path: .ai.env
+        format: raw
+    environment:
+      WEBCHAT_REPLY_MODE: ai
+      AI_ALLOW_INSECURE_HTTP: 'false'
+      KNOWLEDGE_FAQ_PATH: ''
+      KNOWLEDGE_RETRIEVER: keyword

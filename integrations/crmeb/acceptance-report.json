@@ -1,0 +1,26 @@
+{
+    "passed": true,
+    "checks": [
+        "user_a_session",
+        "user_b_session",
+        "distinct_conversations",
+        "refresh_reuses_session",
+        "user_0_send",
+        "user_0_history",
+        "user_0_own_history_only",
+        "user_1_send",
+        "user_1_history",
+        "user_1_own_history_only",
+        "cross_user_capability_rejected",
+        "forged_identity_rejected",
+        "invalid_login_rejected",
+        "foreign_origin_rejected",
+        "native_logout_deleted_login",
+        "logged_out_history_rejected",
+        "logged_out_send_rejected",
+        "logged_out_exchange_rejected",
+        "other_user_still_valid"
+    ],
+    "external_model_calls": 0,
+    "scope": "real CRMEB login\/auth\/cache\/controller + real loopback memory gateway; not enabled public routing or UI"
+}
