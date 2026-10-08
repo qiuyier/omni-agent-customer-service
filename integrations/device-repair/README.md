@@ -20,6 +20,16 @@ node integrations/device-repair/demo.mjs
 
 ## 验证
 
+2026-10-08 已完成一轮真实 GLM 小批量验收，**未全通过**；见[逐题审阅](../../examples/archive/knowledge/device-repair/eval_runs/2026-10-08T07-33-24-112Z/review.md)。这与下方离线替身验收不同。
+
+如需重新执行，必须显式允许付费模型调用（最多 7 次、不重试；每次新建归档目录）：
+
+```sh
+node integrations/device-repair/live-check.mjs --allow-model-api
+```
+
+该命令只从仓库根 .env 读取当前模型配置，不合并 .env.local；当前要求 chat_completions、HTTPS 端点及无自定义 Prompt。6 个场景各自使用独立内存实例，只有多轮场景保留自身历史。转发器使用 custom 兼容协议、指定模型和供应商默认生成参数；不是所有供应商专属配置的等价复现。凭证仅用于转发器内存，不写入报告。
+
 本轮执行结果及未验证边界见[验收记录](acceptance.md)。
 
 ```sh

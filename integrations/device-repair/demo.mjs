@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const faq = fileURLToPath(new URL('../../examples/knowledge/device-repair/faq.json', import.meta.url));
-export async function startDemo() {
+export async function startDemo({forward, modelName = 'local-repair-fixture'} = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'omni-repair-'));
   const executable = join(directory, 'webchat-demo');
   const key = randomBytes(24).toString('hex');
@@ -49,6 +49,12 @@ export async function startDemo() {
         if (references.kind !== 'untrusted_knowledge_references' || !Array.isArray(references.snippets)) throw Error('invalid envelope');
         if (references.snippets.some(s => !['repair-intake','repair-hours'].includes(s.id))) throw Error('foreign knowledge');
         calls.push(messages);
+        if (forward) {
+          const result = await forward(payload);
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify(result));
+          return;
+        }
         const content = '【本地模型替身：只验证接入，不代表 AI 质量】' + (references.snippets.length
           ? references.snippets.map(s => s.content).join('\n')
           : '当前资料无法确认，且没有实时查询或代办工具。');
@@ -58,7 +64,7 @@ export async function startDemo() {
     });
     await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
     // Do not load .env, CRMEB credentials, databases or provider configuration.
-    const env = {PATH:process.env.PATH, AI_PROVIDER:'custom', AI_PROTOCOL:'chat_completions', AI_MODEL:'local-repair-fixture', AI_API_KEY:key,
+    const env = {PATH:process.env.PATH, AI_PROVIDER:'custom', AI_PROTOCOL:'chat_completions', AI_MODEL:modelName, AI_API_KEY:key,
       AI_BASE_URL:`http://127.0.0.1:${server.address().port}/v1`, KNOWLEDGE_FAQ_PATH:faq, KNOWLEDGE_RETRIEVER:'keyword'};
     child = spawn(executable, ['-address','127.0.0.1:0','-storage','memory','-reply','ai'], {cwd:root,env,stdio:['ignore','pipe','pipe']});
     exitPromise = new Promise(resolve => child.once('close',resolve));
