@@ -5,21 +5,26 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {startDemo} from './demo.mjs';
 
-if (process.argv.length !== 3 || process.argv[2] !== '--allow-model-api') throw Error('Requires --allow-model-api (maximum 7 provider requests)');
+const transfer=process.argv.length===4 && process.argv[3]==='--cross-domain';
+if (process.argv[2] !== '--allow-model-api' || (!transfer && process.argv.length!==3)) throw Error('Requires --allow-model-api [--cross-domain] (maximum 7 or 8 provider requests)');
+const suite=transfer?'cross-domain':'device-repair';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const settings=parseEnv(fs.readFileSync(root+'.env','utf8'));
 if(settings.AI_PROTOCOL!=='chat_completions'||!settings.AI_API_KEY||!settings.AI_MODEL||settings.AI_SYSTEM_PROMPT) throw Error('Requires explicit chat_completions configuration without prompt override');
 const endpoint=new URL(settings.AI_BASE_URL.replace(/\/$/,'')+'/chat/completions');
 if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||endpoint.search||endpoint.hash)throw Error('Expected HTTPS provider endpoint without embedded credentials');
-const corpus='examples/regression/knowledge/device-repair/live-cases.json';
+const corpus='examples/regression/knowledge/'+suite+'/live-cases.json';
 const cases=JSON.parse(fs.readFileSync(root+corpus));
-const budget=7;
+const budget=transfer?8:7;
+const faqFiles=transfer?['examples/knowledge/cross-domain/library.json','examples/knowledge/cross-domain/venue.json']:['examples/knowledge/device-repair/faq.json'];
+const faqFor=c=>transfer?({library:faqFiles[0],venue:faqFiles[1]})[c.domain]:faqFiles[0];
+if(cases.some(c=>!faqFor(c)))throw Error('Unknown frozen domain');
 if(cases.length!==6||cases.reduce((n,c)=>n+c.questions.length,0)!==budget)throw Error('Frozen case count does not match budget');
-const output=root+'examples/archive/knowledge/device-repair/eval_runs/'+new Date().toISOString().replace(/[:.]/g,'-');
+const output=root+'examples/archive/knowledge/'+suite+'/eval_runs/'+new Date().toISOString().replace(/[:.]/g,'-');
 fs.mkdirSync(output,{recursive:true});
 const hash=f=>createHash('sha256').update(fs.readFileSync(root+f)).digest('hex');
-const frozenFiles=[corpus,'examples/knowledge/device-repair/faq.json','internal/bootstrap/ai.go','internal/ai/eino/reply_prompt.go','integrations/device-repair/demo.mjs','integrations/device-repair/live-check.mjs'];
-const report={started_at:new Date().toISOString(),provider:settings.AI_PROVIDER,model:settings.AI_MODEL,protocol:settings.AI_PROTOCOL,transport:'custom chat_completions via bounded local relay; provider defaults otherwise',budget,provider_requests:0,retries:false,complete:false,quality_review:'pending manual review',sha256:Object.fromEntries(frozenFiles.map(f=>[f,hash(f)])),cases,results:[]};
+const frozenFiles=[corpus,...faqFiles,'internal/bootstrap/ai.go','internal/ai/eino/reply_prompt.go','integrations/device-repair/demo.mjs','integrations/device-repair/live-check.mjs'];
+const report={suite,started_at:new Date().toISOString(),provider:settings.AI_PROVIDER,model:settings.AI_MODEL,protocol:settings.AI_PROTOCOL,transport:'custom chat_completions via bounded local relay; provider defaults otherwise',budget,provider_requests:0,retries:false,complete:false,quality_review:'pending manual review',sha256:Object.fromEntries(frozenFiles.map(f=>[f,hash(f)])),cases,results:[]};
 const save=()=>fs.writeFileSync(output+'/report.json',JSON.stringify(report,null,2)+'\n',{mode:0o600});
 save();
 let active;
@@ -31,7 +36,7 @@ try {
   for(const c of cases){
     if(abort.signal.aborted)throw Error('run_cancelled');
     const result={id:c.id,turns:[],provider_calls:[]};report.results.push(result);save();
-    active=await startDemo({modelName:settings.AI_MODEL,forward:async payload=>{
+    active=await startDemo({faqPath:root+faqFor(c),modelName:settings.AI_MODEL,forward:async payload=>{
       if(abort.signal.aborted||report.provider_requests>=budget)throw Error('budget_or_cancelled');
       const messages=payload.messages.map(m=>({...m,content:Array.isArray(m.content)?m.content.map(p=>p.text||'').join(''):m.content}));
       const envelope=messages.find(m=>m.role==='user'&&m.content?.startsWith('BEGIN_UNTRUSTED_KNOWLEDGE_JSON\n'));

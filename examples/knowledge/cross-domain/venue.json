@@ -1,0 +1,24 @@
+[
+  {
+    "id": "venue-reservation",
+    "title": "虚构场馆：预约",
+    "source": "synthetic/venue/reservation",
+    "content": "这是虚构测试资料。用户可在“参观服务 → 预约入场”选择日期和票种，自行提交预约。客服没有代预约工具；资料未说明取消、改期或退款方式。",
+    "keywords": [
+      "预约",
+      "预约入场"
+    ]
+  },
+  {
+    "id": "venue-entry",
+    "title": "虚构场馆：入场时间",
+    "source": "synthetic/venue/entry",
+    "content": "这是虚构测试资料。普通票入场时间为09:00，夜场票为18:00（北京时间）。此信息不表示有余票或预约成功。",
+    "keywords": [
+      "几点入场",
+      "入场时间",
+      "夜场票",
+      "普通票"
+    ]
+  }
+]

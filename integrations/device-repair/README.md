@@ -20,6 +20,8 @@ node integrations/device-repair/demo.mjs
 
 ## 验证
 
+后续[图书馆与场馆迁移验收](../../examples/knowledge/cross-domain/README.md)复用此工具，以 `--cross-domain` 选择另一组固定资料与8次请求预算；不更改通用提示词，维修模式仍为7次预算。
+
 后续已完成[通用边界修正与同题复测](../../examples/archive/knowledge/device-repair/eval_runs/2026-10-08T07-50-26-457Z/review.md)：上轮渠道/能力承诺和无效追问本次未复现，有资料的步骤与时间仍可回答；两条回复仍有泛化服务邀约，未宣称所有规则全过。修改的是通用提示规则，没有维修专用分支，常驻服务未部署重启。
 
 2026-10-08 已完成一轮真实 GLM 小批量验收，**未全通过**；见[逐题审阅](../../examples/archive/knowledge/device-repair/eval_runs/2026-10-08T07-33-24-112Z/review.md)。这与下方离线替身验收不同。

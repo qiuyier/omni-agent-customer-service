@@ -1,0 +1,24 @@
+[
+  {
+    "id": "library-records",
+    "title": "虚构图书馆：借阅记录",
+    "source": "synthetic/library/records",
+    "content": "这是虚构测试资料。读者可在官网的“我的借阅 → 借阅记录”查看到期日期；此资料不提供续借、缴费或人工查询规则。",
+    "keywords": [
+      "到期日期",
+      "借阅记录"
+    ]
+  },
+  {
+    "id": "library-duration",
+    "title": "虚构图书馆：借期",
+    "source": "synthetic/library/duration",
+    "content": "这是虚构测试资料。成人读者证的借期为30天，少儿读者证的借期为14天；这两种借期按读者证类别区分，不按图书类别区分。",
+    "keywords": [
+      "借多久",
+      "借期",
+      "少儿读者证",
+      "成人读者证"
+    ]
+  }
+]

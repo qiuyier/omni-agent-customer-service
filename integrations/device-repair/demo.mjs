@@ -1,7 +1,7 @@
 // Local protocol fixture, NOT an AI model or production host authentication.
 import http from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const faq = fileURLToPath(new URL('../../examples/knowledge/device-repair/faq.json', import.meta.url));
-export async function startDemo({forward, modelName = 'local-repair-fixture'} = {}) {
+export async function startDemo({forward, modelName = 'local-repair-fixture', faqPath = faq} = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'omni-repair-'));
   const executable = join(directory, 'webchat-demo');
   const key = randomBytes(24).toString('hex');
@@ -32,6 +32,7 @@ export async function startDemo({forward, modelName = 'local-repair-fixture'} = 
     await rm(directory, {recursive:true, force:true});
   };
   try {
+    const allowedIDs = new Set(JSON.parse(await readFile(faqPath, 'utf8')).map(s => s.id));
     await promisify(execFile)('go', ['build', '-o', executable, './cmd/webchat-demo'], {cwd:root, timeout:120000});
     server = http.createServer(async (req, res) => {
       try {
@@ -47,7 +48,7 @@ export async function startDemo({forward, modelName = 'local-repair-fixture'} = 
         if (!envelope) throw Error('missing reference envelope');
         const references = JSON.parse(envelope.content.split('\n')[1]);
         if (references.kind !== 'untrusted_knowledge_references' || !Array.isArray(references.snippets)) throw Error('invalid envelope');
-        if (references.snippets.some(s => !['repair-intake','repair-hours'].includes(s.id))) throw Error('foreign knowledge');
+        if (references.snippets.some(s => !allowedIDs.has(s.id))) throw Error('foreign knowledge');
         calls.push(messages);
         if (forward) {
           const result = await forward(payload);
@@ -65,7 +66,7 @@ export async function startDemo({forward, modelName = 'local-repair-fixture'} = 
     await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
     // Do not load .env, CRMEB credentials, databases or provider configuration.
     const env = {PATH:process.env.PATH, AI_PROVIDER:'custom', AI_PROTOCOL:'chat_completions', AI_MODEL:modelName, AI_API_KEY:key,
-      AI_BASE_URL:`http://127.0.0.1:${server.address().port}/v1`, KNOWLEDGE_FAQ_PATH:faq, KNOWLEDGE_RETRIEVER:'keyword'};
+      AI_BASE_URL:`http://127.0.0.1:${server.address().port}/v1`, KNOWLEDGE_FAQ_PATH:faqPath, KNOWLEDGE_RETRIEVER:'keyword'};
     child = spawn(executable, ['-address','127.0.0.1:0','-storage','memory','-reply','ai'], {cwd:root,env,stdio:['ignore','pipe','pipe']});
     exitPromise = new Promise(resolve => child.once('close',resolve));
     // Startup diagnostics are deliberately not copied into reports or the browser.

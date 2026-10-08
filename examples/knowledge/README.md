@@ -1,5 +1,7 @@
 # 接入知识样例
 
+[图书馆与场馆迁移验收](cross-domain/README.md)使用同一通用规则，检验已知入口、条件澄清和无资料边界。
+
 [设备维修接入样例](../../integrations/device-repair/README.md)提供非 CRMEB 的本地启动与身份、知识、历史隔离验收，使用本地模型替身。
 
 先看 [faq.json](faq.json) 的最小格式，再看 [webchat/faq.json](webchat/faq.json) 的跨业务知识样例。接入步骤见[通用接入契约](../../docs/integration-contract.md)和[网页客服 AI 文档](../../docs/webchat-ai.md)。
