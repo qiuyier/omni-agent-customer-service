@@ -40,9 +40,10 @@ func runCommand(ctx context.Context, args []string, lookup func(string) (string,
 	flags.SetOutput(io.Discard)
 	address := flags.String("address", "", "literal loopback listen address (overrides WEBCHAT_ADDRESS)")
 	check := flags.Bool("check-config", false, "validate settings only; do not connect or listen")
+	resources := flags.Bool("check-resources", false, "validate settings, local FAQ and PostgreSQL; never call models or listen")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			_, err = fmt.Fprintln(output, "Usage: webchat-server [-address IP:PORT] [-check-config]\nRequires WEBCHAT_HOST_ID, WEBCHAT_HOST_SECRET and DATABASE_URL. PostgreSQL required; replies default to fake. WEBCHAT_REPLY_MODE=ai explicitly enables configured AI and optional knowledge.")
+			_, err = fmt.Fprintln(output, "Usage: webchat-server [-address IP:PORT] [-check-config | -check-resources]\nRequires WEBCHAT_HOST_ID, WEBCHAT_HOST_SECRET and DATABASE_URL. PostgreSQL required; replies default to fake. WEBCHAT_REPLY_MODE=ai explicitly enables configured AI and optional knowledge.\n-check-config is offline format validation. -check-resources also reads the configured FAQ and checks PostgreSQL connectivity/schema; neither calls models or embeddings, migrates the database or starts a listener.")
 			if err == nil {
 				return nil
 			}
@@ -53,6 +54,9 @@ func runCommand(ctx context.Context, args []string, lookup func(string) (string,
 	if flags.NArg() != 0 {
 		return errors.New("unexpected command-line arguments")
 	}
+	if *check && *resources {
+		return errors.New("choose only one of -check-config and -check-resources")
+	}
 	config, err := resolveConfig(lookup, *address)
 	if err != nil {
 		return err
@@ -62,6 +66,9 @@ func runCommand(ctx context.Context, args []string, lookup func(string) (string,
 			return errors.New("cannot display configuration status")
 		}
 		return nil
+	}
+	if *resources {
+		return checkResources(ctx, config, output, deps)
 	}
 	return runServer(ctx, config, output, deps)
 }

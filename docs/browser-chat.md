@@ -1,5 +1,7 @@
 # 无现成客服能力的系统：网页接入最小闭环
 
+正式接入请先阅读[配置、资源预检与业务实现清单](host-onboarding.md)：提供配置模板及不调用模型的两层检查，区分测试示例与接入方必须承担的生产责任。
+
 独立后端的[真实浏览器中断恢复验收](../integrations/standalone-host/browser-acceptance.md)已完成：在页面实际验证两端重启、响应断开后的手动原键重试，以及跨标签页账号切换，不仅是HTTP脚本模拟。
 
 独立 Node 业务后端现已完成[PostgreSQL 与进程重启恢复验收](../integrations/standalone-host/persistence-acceptance.md)：验证已保存回复的原事件恢复、旧凭证失效与重新登录隔离，固定回复，不代表真实模型费用恰好一次。
