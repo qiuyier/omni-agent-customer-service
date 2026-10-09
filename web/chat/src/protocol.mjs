@@ -91,23 +91,24 @@ export function createChatAPI(fetcher = globalThis.fetch) {
       throw new APIError('account_changed');
     }
     token = result.access_token;
-    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage), reply_mode: normalizeReplyMode(result.reply_mode) };
+    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage), reply_mode: normalizeReplyMode(result.reply_mode), human_enabled: result.human_enabled===true };
     return current;
   };
-  const authorized = async (method, body, signal) => {
+  const authorized = async (method, body, signal, path='/chat/v1/messages') => {
     if (!current || !token) throw new APIError('unauthorized', 401);
     const expected = current.conversation_id;
     try {
-      return await requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      return await requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
     } catch (error) {
       if (error.status !== 401) throw error;
       await acquire(signal, expected);
       // The same body object (and event_id) is reused after token renewal.
-      return requestJSON('/chat/v1/messages', { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      return requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
     }
   };
   return {
     open: (signal) => acquire(signal),
+    handoff: (signal) => authorized('POST',{},signal,'/chat/v1/handoff'),
     history: (signal) => authorized('GET', undefined, signal),
     send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
     clear: () => { revision++; token = ''; current = null; },

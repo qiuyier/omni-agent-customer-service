@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MAX_BYTES, byteLength, validContent, pendingKey, readPending, savePending, probeStorage, createChatAPI, requestJSON, errorMessage, normalizeStorage, normalizeReplyMode } from './protocol.mjs';
 import { demoPresentation } from './demo.mjs';
+import { Desk } from './desk.jsx';
 
 function Icon({ name, className = 'size-5', ...props }) {
   const paths = {
@@ -44,6 +45,7 @@ function Home() {
   const [user, setUser] = useState(null);
   const [storage, setStorage] = useState(null);
   const [replyMode, setReplyMode] = useState(null);
+  const [humanEnabled,setHumanEnabled]=useState(false);
   const [phase, setPhase] = useState('loading');
   const [error, setError] = useState('');
   const controller = useRef(null);
@@ -53,7 +55,7 @@ function Home() {
     const c = new AbortController(); controller.current = c;
     const version = ++generation.current;
     requestJSON('/host/me', { signal: c.signal }).then((data) => {
-      if (version === generation.current) { setUser(data.user); setStorage(normalizeStorage(data.storage)); setReplyMode(normalizeReplyMode(data.reply_mode)); setPhase('ready'); }
+      if (version === generation.current) { setUser(data.user); setStorage(normalizeStorage(data.storage)); setReplyMode(normalizeReplyMode(data.reply_mode)); setHumanEnabled(data.human_enabled===true); setPhase('ready'); }
     }).catch((e) => { if (version === generation.current && e.name !== 'AbortError') { setError(errorMessage(e)); setPhase('ready'); } });
     return () => { ++generation.current; controller.current?.abort(); };
   }, []);
@@ -69,7 +71,7 @@ function Home() {
       const data = await requestJSON(account ? '/demo/login' : '/demo/logout', { method: 'POST', body: account ? { account } : {}, signal: c.signal });
       if (version === generation.current) {
         setUser(data?.user || null);
-        if (account) { setStorage(normalizeStorage(data?.storage)); setReplyMode(normalizeReplyMode(data?.reply_mode)); }
+        if (account) { setStorage(normalizeStorage(data?.storage)); setReplyMode(normalizeReplyMode(data?.reply_mode)); setHumanEnabled(data.human_enabled===true); }
         announceAccountChange();
       }
     } catch (e) {
@@ -81,7 +83,7 @@ function Home() {
   }
 
   const busy = phase !== 'ready';
-  const demo = demoPresentation(storage, replyMode);
+  const demo = demoPresentation(storage, replyMode,humanEnabled);
   return <div className="min-h-[100dvh] bg-[#f6f5f1]">
     <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-6 md:px-10"><Brand /><span className="hidden text-xs text-stone-500 sm:block">EXAMPLE / HOST SITE</span></header>
     <main className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 pb-16 pt-12 md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-10 md:pb-24 md:pt-24">
@@ -110,6 +112,7 @@ function Home() {
 }
 
 function useChat() {
+  const [requestingHuman,setRequestingHuman]=useState(false);
   const api = useRef(null);
   if (!api.current) api.current = createChatAPI();
   const operation = useRef({ id: 0, controller: null });
@@ -257,7 +260,7 @@ function useChat() {
       try { window.sessionStorage.removeItem(pendingKey(session.conversation_id)); }
       catch { storageWarning = '浏览器未能清理待确认缓存，请勿在其他页面重复提交这条消息。'; setStorageAvailable(false); }
       setMessages((items) => items.some((item) => item.id === result.message_id) ? items : [...items, { id: result.message_id, role: 'customer', content: outgoing.content, created_at: new Date().toISOString() }]);
-      const confirmed = result.outcome === 'waiting_human' ? '消息已接受并标记为待人工处理；此入口不提供人工转接或坐席服务。' : result.outcome === 'superseded' ? '消息已接受；回复状态已发生变化，请查看最新记录。' : '消息已发送。';
+      const confirmed = result.outcome === 'waiting_human' ? (session.human_enabled?'消息已接受，交由人工处理。请刷新记录查看回复。':'消息已接受并标记为待人工处理；此入口不提供人工转接或坐席服务。') : result.outcome === 'superseded' ? '消息已接受；回复状态已发生变化，请查看最新记录。' : '消息已发送。';
       setNotice([confirmed, storageWarning].filter(Boolean).join(' '));
       try {
         const data = await api.current.history(task.signal);
@@ -270,7 +273,13 @@ function useChat() {
     } finally { if (task.active()) { busyRef.current = false; setSending(false); } }
   }
 
-  return { session, phase, messages, status, truncated, error, notice, pending, storageAvailable, identityChecking, sending, refreshing, draft, setDraft, mustReload, initialize, refresh, send };
+  async function handoff(){
+    if(!session||requestingHuman||mustReload)return;
+    const owner=session.user.id;setRequestingHuman(true);
+    try{const result=await api.current.handoff();if(identity.current===owner){setStatus(result.status);setNotice('已申请人工处理。请刷新记录查看后续回复；不承诺等待时间。');}}
+    catch(e){if(identity.current===owner)report(e);}finally{setRequestingHuman(false);}
+  }
+  return { session, phase, messages, status, truncated, error, notice, pending, storageAvailable, identityChecking, sending, refreshing, draft, setDraft, mustReload, initialize, refresh, send, handoff, requestingHuman };
 }
 
 function ChatSkeleton() {
@@ -292,7 +301,7 @@ function Message({ message }) {
 
 function Chat() {
   const chat = useChat();
-  const demo = demoPresentation(chat.session?.storage, chat.session?.reply_mode);
+  const demo = demoPresentation(chat.session?.storage, chat.session?.reply_mode,chat.session?.human_enabled);
   const end = useRef(null);
   const composer = useRef(null);
   const [nearBottom, setNearBottom] = useState(true);
@@ -308,6 +317,7 @@ function Chat() {
       <aside className="px-2 pt-2 md:px-0 md:pt-8">
         <p className="hidden font-mono text-[10px] tracking-[0.16em] text-stone-400 md:block">02 / INDEPENDENT CHAT</p>
         <h1 className="text-2xl font-medium tracking-tight text-stone-900 md:mt-6 md:text-[2rem] md:leading-snug">有问题，<br className="hidden md:block" />从这里开始。</h1>
+        {chat.session?.human_enabled&&<div className="mt-5"><button className="secondary-button" onClick={chat.handoff} disabled={chat.requestingHuman||chat.status!=='bot_active'||chat.mustReload}>{chat.requestingHuman?'正在申请…':chat.status==='waiting_human'?'等待人工接管':chat.status==='human_active'?'人工正在处理':closed?'会话已结束':'申请人工处理'}</button><p className="mt-2 text-xs leading-6 text-stone-500">接管后由坐席回复。点击刷新记录查看新消息。</p></div>}
         <p className="mt-3 hidden text-sm leading-7 text-stone-500 md:block">一个独立的聊天入口，沿用你在示例站点选择的身份。</p>
         <div className="mt-8 hidden border-t border-stone-300/70 pt-6 md:block"><p className="mb-3 text-[11px] text-stone-400">当前演示身份</p>{chat.session ? <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-[#e9e9df] text-sm text-stone-600">{chat.session.user.display_name.slice(0, 1)}</span><div><p className="text-sm font-medium text-stone-800">{chat.session.user.display_name}</p><a href="/" className="mt-1 inline-block text-xs text-stone-400 underline-offset-4 hover:underline">返回站点切换账号</a></div></div> : <p className="text-sm text-stone-500">{chat.phase === 'loading' ? '正在读取…' : '尚未连接'}</p>}</div>
         <div className="mt-10 hidden space-y-5 text-xs leading-6 text-stone-500 md:block"><div className="flex gap-2.5"><Icon name="note" className="mt-0.5 size-4 shrink-0" /><p>{demo.description}</p></div><div className="flex gap-2.5"><Icon name="shield" className="mt-0.5 size-4 shrink-0" /><p>{demo.capabilities}</p></div></div>
@@ -341,4 +351,4 @@ function Chat() {
   </div>;
 }
 
-createRoot(document.getElementById('root')).render(location.pathname === '/chat/' || location.pathname === '/chat' ? <Chat /> : <Home />);
+createRoot(document.getElementById('root')).render(location.pathname === '/desk/' ? <Desk /> : location.pathname === '/chat/' || location.pathname === '/chat' ? <Chat /> : <Home />);

@@ -39,6 +39,22 @@ function client(origin) {
   };
 }
 
+test('desk login is separate, hides secrets and rejects late responses after logout', {timeout:30000},async t=>{
+ const hostSecret='h'.repeat(43),agentSecret='a'.repeat(43);let release,entered;const waiting=new Promise(r=>entered=r);
+ const upstream=http.createServer(async(req,res)=>{assert.equal(req.headers.authorization,'Bearer '+agentSecret);assert.equal(req.url,'/internal/chat/desk/queue');await new Promise(r=>{release=r;entered();});res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({items:[{conversation_id:'private-old-desk-data'}]}));});
+ await new Promise(r=>upstream.listen(0,'127.0.0.1',r));t.after(()=>{release?.();upstream.closeAllConnections();return new Promise(r=>upstream.close(r));});
+ const host=await startHost({gatewayOrigin:`http://127.0.0.1:${upstream.address().port}`,hostSecret,agents:[{id:'a',name:'测试坐席',secret:agentSecret}]});t.after(()=>host.close());const call=client(host.origin);
+ assert.equal((await call('/desk/queue')).status,401);
+ assert.doesNotMatch(JSON.stringify((await call('/desk/me')).data),new RegExp(agentSecret));
+ const customer=await call('/demo/login',{method:'POST',body:{account:'lin'}});assert.equal((await call('/desk/queue',{cookie:customer.cookie})).status,401);
+ assert.equal((await call('/desk/login',{method:'POST',body:{account:'a',secret:agentSecret}})).status,400);
+ assert.equal((await call('/desk/login',{method:'POST',body:{account:'a'},headers:{Origin:'http://foreign.invalid'}})).status,403);
+ const staff=await call('/desk/login',{method:'POST',body:{account:'a'}});assert.match(staff.cookieHeader,/HttpOnly/);assert.doesNotMatch(JSON.stringify(staff.data),new RegExp(agentSecret));
+ assert.equal((await call('/host/chat-session',{method:'POST',body:{},cookie:staff.cookie})).status,401);
+ assert.equal((await call('/desk/action',{method:'POST',cookie:staff.cookie,body:{conversation_id:'x',action:'history',agent_id:'other'}})).status,400);
+ const late=call('/desk/queue',{cookie:staff.cookie});await waiting;assert.equal((await call('/desk/logout',{method:'POST',body:{},cookie:staff.cookie})).status,204);release();const result=await late;assert.equal(result.status,401);assert.doesNotMatch(JSON.stringify(result.data),/private-old-desk-data/);
+});
+
 test('independent Node login backend and actual Go gateway', {timeout:180000}, async t=>{
   const sample=await startSample();t.after(()=>sample.stop());const call=client(sample.origin);
   for(const path of ['/','/chat/','/assets/app.js','/assets/app.css']) {

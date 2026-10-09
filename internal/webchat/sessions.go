@@ -174,7 +174,8 @@ func (g *Gateway) acquire(r *http.Request) (identity, func(), string) {
 		g.mu.Unlock()
 		return identity{}, nil, "unauthorized"
 	}
-	if p.busy || g.active >= g.config.MaxConcurrent {
+	exclusive := r.URL.Path != "/chat/v1/handoff"
+	if (exclusive && p.busy) || g.active >= g.config.MaxConcurrent {
 		g.mu.Unlock()
 		return identity{}, nil, "busy"
 	}
@@ -182,8 +183,17 @@ func (g *Gateway) acquire(r *http.Request) (identity, func(), string) {
 		g.mu.Unlock()
 		return identity{}, nil, "rate_limited"
 	}
-	p.busy = true
+	if exclusive {
+		p.busy = true
+	}
 	g.active++
 	g.mu.Unlock()
-	return s.identity, func() { g.mu.Lock(); p.busy = false; g.active--; g.mu.Unlock() }, ""
+	return s.identity, func() {
+		g.mu.Lock()
+		if exclusive {
+			p.busy = false
+		}
+		g.active--
+		g.mu.Unlock()
+	}, ""
 }

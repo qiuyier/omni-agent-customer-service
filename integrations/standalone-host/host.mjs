@@ -21,9 +21,13 @@ function strictObject(value, fields) {
   if(!value || Array.isArray(value) || typeof value!=='object' || Object.keys(value).some(k=>!fields.includes(k)))throw failure(400,'invalid_request');
   return value;
 }
-export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='memory',replyMode='fake',port=0}) {
+export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='memory',replyMode='fake',agents=[],port=0}) {
   if(!['fake','ai'].includes(replyMode)||!['memory','postgres'].includes(storage)||!Number.isInteger(port)||port<0||port>65535)throw Error('invalid trusted local host configuration');
-  const metadata={demo:true,storage,reply_mode:replyMode};
+  if(!Array.isArray(agents)||agents.length>32||agents.some(a=>!a||!['string'].includes(typeof a.id)||!a.id||!a.name||!/^[A-Za-z0-9_-]{32,128}$/.test(a.secret)||a.secret===hostSecret)||new Set(agents.map(a=>a.id)).size!==agents.length||new Set(agents.map(a=>a.secret)).size!==agents.length)throw Error('invalid trusted agents');
+  const metadata={demo:true,storage,reply_mode:replyMode,human_enabled:agents.length>0};
+  const deskSessions=new Map();
+  const deskCookie='standalone_desk';
+  const deskLogin=req=>{const cookies=(req.headers.cookie||'').split(';').map(v=>v.trim()).filter(v=>v.startsWith(deskCookie+'='));if(cookies.length!==1)return null;const raw=cookies[0].slice(deskCookie.length+1);if(!/^[A-Za-z0-9_-]{43}$/.test(raw))return null;const key=digest(raw),s=deskSessions.get(key);return s&&s.expires>now()?{key,...s}:null;};
   const upstream=new URL(gatewayOrigin);
   if(upstream.protocol!=='http:'||upstream.hostname!=='127.0.0.1'||!upstream.port||upstream.pathname!=='/'||upstream.search||upstream.hash||upstream.username||upstream.password)throw Error('private loopback gateway required');
   if(!/^[A-Za-z0-9_-]{32,128}$/.test(hostSecret)||hostSecret.startsWith('chat_'))throw Error('independent host credential required');
@@ -62,16 +66,33 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
       if(req.method==='POST'&&(req.headers.origin!==origin))throw failure(403,'origin_required');
       if(req.method==='POST'&&(count('content-type')!==1||req.headers['content-type'].split(';')[0].trim()!=='application/json'))throw failure(415,'json_required');
       const url=req.url;
-      if(req.method==='GET'&&routes.has(url)) {
-        const data=await readFile(assets+routes.get(url));
+      if(req.method==='GET'&&(routes.has(url)||(url==='/desk/'&&agents.length))) {
+        const data=await readFile(assets+(routes.get(url)||'index.html'));
         res.writeHead(200,{'Content-Type':url.endsWith('.js')?'text/javascript':url.endsWith('.css')?'text/css':'text/html; charset=utf-8'});res.end(data);return;
       }
-      const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST']};
+      const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST'],...(agents.length?{'/chat/v1/handoff':['POST'],'/desk/me':['GET'],'/desk/login':['POST'],'/desk/logout':['POST'],'/desk/queue':['GET'],'/desk/action':['POST']}:{})};
       if(!Object.hasOwn(allowed,url))throw failure(404,'not_found');
       if(!allowed[url].includes(req.method))throw failure(405,'method_not_allowed');
       let body;
       if(req.method==='POST') {try{body=JSON.parse((await boundedBody(req,32768)).toString());}catch(e){if(e.status)throw e;throw failure(400,'invalid_request');}}
       const login=loginSession(req);
+      if(url.startsWith('/desk/')) {
+        const currentDesk=deskLogin(req);
+        if(url==='/desk/me'){respond(res,200,{agent:currentDesk?{id:currentDesk.agent.id,name:currentDesk.agent.name}:null,accounts:agents.map(a=>({id:a.id,name:a.name}))});return;}
+        if(url==='/desk/login'){
+          strictObject(body,['account']);const agent=agents.find(a=>a.id===body.account);if(!agent)throw failure(400,'invalid_request');
+          for(const [k,v] of deskSessions)if(v.expires<=now())deskSessions.delete(k);
+          if(now()-loginWindow>=3600000){loginWindow=now();loginIssues=0;}if(++loginIssues>128||deskSessions.size>=128)throw failure(429,'login_limit');
+          if(currentDesk)deskSessions.delete(currentDesk.key);const raw=randomBytes(32).toString('base64url');deskSessions.set(digest(raw),{agent,expires:now()+1800000});
+          res.setHeader('Set-Cookie',`${deskCookie}=${raw}; Path=/; HttpOnly; SameSite=Strict; Max-Age=1800`);respond(res,200,{agent:{id:agent.id,name:agent.name}});return;
+        }
+        if(url==='/desk/logout'){strictObject(body,[]);if(currentDesk)deskSessions.delete(currentDesk.key);res.setHeader('Set-Cookie',`${deskCookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`);respond(res,204);return;}
+        if(!currentDesk)throw failure(401,'desk_login_required');
+        if(url==='/desk/action')strictObject(body,['conversation_id','action','revision','event_id','content']);
+        const result=await remote(url==='/desk/queue'?'/internal/chat/desk/queue':'/internal/chat/desk/action',req.method,currentDesk.agent.secret,body);
+        if(deskSessions.get(currentDesk.key)?.agent!==currentDesk.agent||currentDesk.expires<=now())throw failure(401,'desk_login_required');
+        respond(res,200,result);return;
+      }
       if(url==='/host/me'){respond(res,200,{user:login?.value.user||null,...metadata});return;}
       if(url==='/demo/login') {
         strictObject(body,['account']);if(typeof body.account!=='string'||!Object.hasOwn(users,body.account))throw failure(400,'unknown_demo_account');
@@ -106,6 +127,10 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
       }
       if(count('authorization')!==1||!s.cap||Date.parse(s.cap.expires_at)<=now()||req.headers.authorization!=='Bearer '+s.cap.access_token)throw failure(401,'chat_session_required');
       const cap=s.cap;
+      if(url==='/chat/v1/handoff'){
+        strictObject(body,[]);const result=await remote(url,'POST',cap.access_token,{});
+        if(!current(login)||s.cap!==cap)throw failure(401,'chat_session_required');respond(res,200,result);return;
+      }
       if(req.method==='POST') {
         strictObject(body,['event_id','content']);
         if(typeof body.event_id!=='string'||typeof body.content!=='string'||!body.content.trim()||Buffer.byteLength(body.content)>4000)throw failure(400,'invalid_request');
@@ -122,5 +147,5 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
   server.requestTimeout=20000;server.headersTimeout=5000;server.keepAliveTimeout=5000;server.maxHeadersCount=64;
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
   origin=`http://127.0.0.1:${server.address().port}`;
-  return {origin,close:async()=>{sessions.clear();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
+  return {origin,close:async()=>{sessions.clear();deskSessions.clear();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
 }

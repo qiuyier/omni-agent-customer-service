@@ -30,10 +30,11 @@ func validConfig(t *testing.T) serverConfig {
 }
 
 func TestConfigDefaultsArePostgresAndFakeOnly(t *testing.T) {
+	// Agent configuration is trusted server-side, independent of model settings.
 	allowed := map[string]bool{"WEBCHAT_ADDRESS": true, "WEBCHAT_HOST_ID": true, "WEBCHAT_HOST_SECRET": true, "DATABASE_URL": true, "WEBCHAT_REPLY_MODE": true, "STORAGE_DRIVER": true}
 	values := validEnvironment()
 	config, err := resolveConfig(func(key string) (string, bool) {
-		if !allowed[key] {
+		if !allowed[key] && key != "WEBCHAT_AGENTS_JSON" {
 			t.Fatalf("unexpected environment lookup %s", key)
 		}
 		return mapLookup(values)(key)

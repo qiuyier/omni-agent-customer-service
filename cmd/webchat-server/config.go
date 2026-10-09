@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -10,11 +12,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
+	"github.com/qiuyier/omni-agent-customer-service/internal/webchat"
 )
 
 const defaultServerAddress = "127.0.0.1:8093"
 
 type serverConfig struct {
+	Agents      []webchat.Agent
 	Address     string
 	HostID      string
 	HostSecret  string
@@ -48,6 +52,13 @@ func resolveConfig(lookup func(string) (string, bool), addressOverride string) (
 		return serverConfig{}, errors.New("STORAGE_DRIVER must be postgres or postgresql; memory storage is not supported")
 	}
 	var err error
+	if raw := value("WEBCHAT_AGENTS_JSON"); raw != "" {
+		decoder := json.NewDecoder(strings.NewReader(raw))
+		decoder.DisallowUnknownFields()
+		if len(raw) > 16384 || decoder.Decode(&config.Agents) != nil || decoder.Decode(new(any)) != io.EOF {
+			return serverConfig{}, errors.New("WEBCHAT_AGENTS_JSON must contain valid agent configuration")
+		}
+	}
 	config.Reply, err = bootstrap.ResolveWebchatReplyConfig(config.ReplyMode, lookup)
 	if err != nil {
 		return serverConfig{}, err
@@ -82,6 +93,11 @@ func (c serverConfig) validate() error {
 	}
 	if err := c.Reply.Validate(); err != nil {
 		return err
+	}
+	if len(c.Agents) > 0 {
+		if err := webchat.ValidateAgentConfiguration(c.Agents, []webchat.Host{{SourceID: c.HostID, Secret: c.HostSecret}}); err != nil {
+			return errors.New("WEBCHAT_AGENTS_JSON is invalid; use distinct agent IDs and independent credentials for this host")
+		}
 	}
 	host, port, err := net.SplitHostPort(c.Address)
 	if err != nil {

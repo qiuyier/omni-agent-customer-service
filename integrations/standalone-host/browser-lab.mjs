@@ -11,7 +11,8 @@ import http from 'node:http';
 import readline from 'node:readline';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const ai=process.argv.includes('--allow-real-ai');
-if(process.argv[2]!=='--allow-local-postgres'||process.argv.length!==(ai?4:3)||(ai&&process.argv[3]!=='--allow-real-ai'))throw Error('Requires --allow-local-postgres [--allow-real-ai]');
+const human=process.argv.includes('--allow-human-desk');
+if(process.argv[2]!=='--allow-local-postgres'||process.argv.length!==((ai||human)?4:3)||(ai&&human)||((ai||human)&&!['--allow-real-ai','--allow-human-desk'].includes(process.argv[3])))throw Error('Requires --allow-local-postgres [--allow-real-ai | --allow-human-desk]');
 // Parse data, never source shell code. Only explicitly selected model settings
 // enter the gateway. Database/host/knowledge settings cannot come from .env.
 const aiEnv={};
@@ -35,6 +36,9 @@ const run=promisify(execFile);
 const env={PATH:process.env.PATH};
 const docker=(...args)=>run('docker',['--context','desktop-linux','compose','--env-file','/dev/null','-f',compose,...args],{cwd:root,env:{...env,HOME:process.env.HOME},timeout:120000,maxBuffer:1024*1024});
 const secret=randomBytes(32).toString('base64url');
+const agents=human?[{id:'qiao',name:'乔杉',secret:randomBytes(32).toString('base64url')},{id:'wen',name:'温宁',secret:randomBytes(32).toString('base64url')}]:[];
+report.human_enabled=human;
+const agentEnv={WEBCHAT_AGENTS_JSON:JSON.stringify(agents.map(a=>({id:a.id,source_id:report.source_id,secret:a.secret}))),STANDALONE_AGENTS_JSON:JSON.stringify(agents)};
 let gateway,host,proxy,modelProxy,modelDown=false,dbStarted=false;
 const children=[];
 async function launch(binary,args,environment,pattern,role){
@@ -56,10 +60,10 @@ async function stop(entry,signal='SIGTERM'){
   entry.record.stopped=true;save();
 }
 const startGateway=async(port=0)=>{
-  const entry=await launch(join(directory,'gateway'),['-address','127.0.0.1:'+port],{...env,...aiEnv,DATABASE_URL:dsn,WEBCHAT_HOST_ID:report.source_id,WEBCHAT_HOST_SECRET:secret,WEBCHAT_REPLY_MODE:ai?'ai':'fake',...(ai?{KNOWLEDGE_FAQ_PATH:root+'integrations/standalone-host/ai-faq.json',KNOWLEDGE_RETRIEVER:'keyword'}:{})},/Web chat server: (http:\/\/127\.0\.0\.1:\d+)\n/,'gateway');
+  const entry=await launch(join(directory,'gateway'),['-address','127.0.0.1:'+port],{...env,...aiEnv,WEBCHAT_AGENTS_JSON:agentEnv.WEBCHAT_AGENTS_JSON,DATABASE_URL:dsn,WEBCHAT_HOST_ID:report.source_id,WEBCHAT_HOST_SECRET:secret,WEBCHAT_REPLY_MODE:ai?'ai':'fake',...(ai?{KNOWLEDGE_FAQ_PATH:root+'integrations/standalone-host/ai-faq.json',KNOWLEDGE_RETRIEVER:'keyword'}:{})},/Web chat server: (http:\/\/127\.0\.0\.1:\d+)\n/,'gateway');
   const ready=await fetch(entry.origin+'/readyz',{signal:AbortSignal.timeout(5000)});ensure(ready.status===200,'gateway_ready');await ready.body?.cancel();return entry;
 };
-const startBackend=(port=0)=>launch(process.execPath,['integrations/standalone-host/host-worker.mjs'],{...env,STANDALONE_GATEWAY_ORIGIN:gateway.origin,STANDALONE_HOST_SECRET:secret,STANDALONE_REPLY_MODE:ai?'ai':'fake',STANDALONE_PUBLIC_PORT:String(port)},/^(http:\/\/127\.0\.0\.1:\d+)\n/,'business-backend');
+const startBackend=(port=0)=>launch(process.execPath,['integrations/standalone-host/host-worker.mjs'],{...env,STANDALONE_AGENTS_JSON:agentEnv.STANDALONE_AGENTS_JSON,STANDALONE_GATEWAY_ORIGIN:gateway.origin,STANDALONE_HOST_SECRET:secret,STANDALONE_REPLY_MODE:ai?'ai':'fake',STANDALONE_PUBLIC_PORT:String(port)},/^(http:\/\/127\.0\.0\.1:\d+)\n/,'business-backend');
 
 try {
   if(ai){
@@ -101,6 +105,7 @@ try {
       const upstream=await fetch(host.origin+req.url,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:body,redirect:'manual',signal:AbortSignal.timeout(ai?130000:25000)});
       const data=Buffer.from(await upstream.arrayBuffer());
       const entry={method:req.method,path:req.url,status:upstream.status};
+      if(req.method==='POST'&&['/chat/v1/handoff','/desk/action'].includes(req.url)){try{entry.request=JSON.parse(body);entry.result=JSON.parse(data);}catch{}}
       if(req.url==='/chat/v1/messages'&&req.method==='POST'){
         try{const sent=JSON.parse(body);entry.event_id=sent.event_id;entry.content=sent.content;const result=JSON.parse(data);entry.message_id=result.message_id;entry.reply_message_id=result.reply_message_id;entry.result=result;}catch{}
       }

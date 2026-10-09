@@ -43,6 +43,7 @@ type Host struct{ SourceID, Secret string }
 // Config limits process-local capabilities and request work. Zero values use
 // conservative demo defaults. This is not a distributed session/rate store.
 type Config struct {
+	Agents         []Agent
 	Hosts          []Host
 	SessionTTL     time.Duration
 	MaxSessions    int
@@ -52,6 +53,7 @@ type Config struct {
 }
 
 type Gateway struct {
+	agents     []trustedAgent
 	repo       conversation.Repository
 	app        Application
 	config     Config
@@ -94,7 +96,18 @@ func New(repo conversation.Repository, app Application, config Config) (*Gateway
 		return nil, err
 	}
 	config.Hosts = nil // Do not retain plaintext credentials.
+	agents, err := configureAgents(config.Agents, hosts)
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) > 0 {
+		if _, ok := repo.(conversation.HumanQueue); !ok {
+			return nil, errors.New("webchat: human queue repository required")
+		}
+	}
+	config.Agents = nil
 	return &Gateway{repo: repo, app: app, config: config, now: time.Now, hosts: hosts,
+		agents:   agents,
 		sessions: make(map[[32]byte]session), principals: make(map[string]*principal)}, nil
 }
 
@@ -115,6 +128,30 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.URL.Path {
+	case "/internal/chat/desk/queue", "/internal/chat/desk/action":
+		g.desk(w, r)
+	case "/chat/v1/handoff":
+		if len(g.agents) == 0 {
+			problem(w, 404, "not_found")
+			return
+		}
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w, "POST")
+			return
+		}
+		claims, release, code := g.acquire(r)
+		if code != "" {
+			status := 429
+			if code == "unauthorized" {
+				status = 401
+			}
+			problem(w, status, code)
+			return
+		}
+		defer release()
+		ctx, cancel := context.WithTimeout(r.Context(), g.config.RequestTimeout)
+		defer cancel()
+		g.handoff(w, r.WithContext(ctx), claims)
 	case SessionPath:
 		if r.Method != http.MethodPost {
 			methodNotAllowed(w, "POST")

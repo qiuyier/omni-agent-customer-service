@@ -124,6 +124,7 @@ func newGatewayContext(ctx context.Context, repository conversation.Repository, 
 		return nil, errors.New("cannot initialize the web chat application")
 	}
 	gateway, err := webchat.New(repository, service, webchat.Config{
+		Agents:         config.Agents,
 		Hosts:          []webchat.Host{{SourceID: config.HostID, Secret: config.HostSecret}},
 		RequestTimeout: config.Reply.RequestTimeout(),
 	})

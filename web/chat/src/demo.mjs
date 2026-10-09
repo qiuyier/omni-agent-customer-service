@@ -34,8 +34,9 @@ const replies = {
 };
 
 // Capability and persistence claims require explicit, separately validated server metadata.
-export function demoPresentation(storage, replyMode) {
+export function demoPresentation(storage, replyMode, humanEnabled=false) {
   const persistence = presentations[normalizeStorage(storage) || 'unknown'];
   const reply = replies[normalizeReplyMode(replyMode) || 'unknown'];
-  return { ...persistence, label: `${persistence.label} · ${reply.label}`, capabilities: reply.capabilities, emptyDescription: reply.emptyDescription };
+  const capabilities=humanEnabled===true?reply.capabilities.replace('不提供业务查询、业务执行或人工转接。','不提供业务查询或业务执行。可申请人工处理，等待时间不作承诺；请刷新记录查看坐席回复。'):reply.capabilities;
+  return { ...persistence, label: `${persistence.label} · ${reply.label}`, capabilities, emptyDescription: reply.emptyDescription };
 }
