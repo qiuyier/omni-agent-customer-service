@@ -4,6 +4,33 @@ import http from 'node:http';
 import {startSample} from './run.mjs';
 import {startHost} from './host.mjs';
 
+test('trusted AI mode survives a reply longer than the old 15s budget and sanitizes failure', {timeout:30000}, async t=>{
+  const secret='h'.repeat(43),token='chat_'+'t'.repeat(43),conversation='wbc_'+'a'.repeat(64);
+  let fail=true;
+  const upstream=http.createServer(async(req,res)=>{
+    for await(const chunk of req){};
+    res.setHeader('Content-Type','application/json');
+    if(req.url==='/internal/chat/sessions'){res.end(JSON.stringify({access_token:token,expires_at:new Date(Date.now()+300000).toISOString(),conversation_id:conversation}));return;}
+    if(fail){res.writeHead(503).end(JSON.stringify({error:'provider-secret-must-not-escape'}));return;}
+    await new Promise(resolve=>setTimeout(resolve,16000));
+    res.end(JSON.stringify({outcome:'replied',message_id:'customer-test',reply_message_id:'bot-test'}));
+  });
+  await new Promise(resolve=>upstream.listen(0,'127.0.0.1',resolve));
+  t.after(()=>{upstream.closeAllConnections();return new Promise(resolve=>upstream.close(resolve));});
+  const config={gatewayOrigin:`http://127.0.0.1:${upstream.address().port}`,hostSecret:secret};
+  await assert.rejects(startHost({...config,replyMode:'unknown'}),/invalid trusted/);
+  const host=await startHost({...config,replyMode:'ai',storage:'postgres'});t.after(()=>host.close());const call=client(host.origin);
+  assert.equal((await call('/host/me')).data.reply_mode,'ai');
+  assert.equal((await call('/demo/login',{method:'POST',body:{account:'lin',reply_mode:'fake'}})).status,400);
+  const login=await call('/demo/login',{method:'POST',body:{account:'lin'}});
+  assert.equal(login.data.reply_mode,'ai');
+  const session=await call('/host/chat-session',{method:'POST',body:{},cookie:login.cookie});assert.equal(session.data.reply_mode,'ai');
+  const request={method:'POST',body:{event_id:'ai-recovery',content:'test'},cookie:login.cookie,token};
+  const failed=await call('/chat/v1/messages',request);assert.equal(failed.status,503);assert.doesNotMatch(JSON.stringify(failed.data),/provider-secret/);
+  fail=false;
+  const result=await call('/chat/v1/messages',request);assert.equal(result.status,200);assert.equal(result.data.outcome,'replied');
+});
+
 function client(origin) {
   return async(path,{method='GET',body,cookie,token,headers={}}={})=>{
     const response=await fetch(origin+path,{method,headers:{...(method==='POST'?{Origin:origin,'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(20000)});

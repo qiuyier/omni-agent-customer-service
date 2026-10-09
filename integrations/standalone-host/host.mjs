@@ -21,9 +21,9 @@ function strictObject(value, fields) {
   if(!value || Array.isArray(value) || typeof value!=='object' || Object.keys(value).some(k=>!fields.includes(k)))throw failure(400,'invalid_request');
   return value;
 }
-export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='memory',port=0}) {
-  if(!['memory','postgres'].includes(storage)||!Number.isInteger(port)||port<0||port>65535)throw Error('invalid trusted local host configuration');
-  const metadata={demo:true,storage,reply_mode:'fake'};
+export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='memory',replyMode='fake',port=0}) {
+  if(!['fake','ai'].includes(replyMode)||!['memory','postgres'].includes(storage)||!Number.isInteger(port)||port<0||port>65535)throw Error('invalid trusted local host configuration');
+  const metadata={demo:true,storage,reply_mode:replyMode};
   const upstream=new URL(gatewayOrigin);
   if(upstream.protocol!=='http:'||upstream.hostname!=='127.0.0.1'||!upstream.port||upstream.pathname!=='/'||upstream.search||upstream.hash||upstream.username||upstream.password)throw Error('private loopback gateway required');
   if(!/^[A-Za-z0-9_-]{32,128}$/.test(hostSecret)||hostSecret.startsWith('chat_'))throw Error('independent host credential required');
@@ -42,7 +42,9 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
   async function remote(path,method,token,body) {
     let response;
     try {
-      response=await fetch(upstream.origin+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),redirect:'manual',signal:AbortSignal.timeout(15000)});
+      // AI gateway budget is 110s; the business proxy must outlive it.
+      const timeout=replyMode==='ai'&&path==='/chat/v1/messages'&&method==='POST'?120000:15000;
+      response=await fetch(upstream.origin+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),redirect:'manual',signal:AbortSignal.timeout(timeout)});
       if(!response.headers.get('content-type')?.startsWith('application/json'))throw Error('invalid type');
       const data=JSON.parse((await boundedBody(response.body,1<<20)).toString());
       if(![200,201].includes(response.status))throw failure([400,401,403,409,412,429,503,504].includes(response.status)?response.status:502,'gateway_unavailable');

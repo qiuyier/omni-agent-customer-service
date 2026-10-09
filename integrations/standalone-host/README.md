@@ -39,7 +39,7 @@ Ctrl+C 停止本轮进程并删除临时构建目录。登录会话和消息都�
 
 ## 配置与安全责任
 
-startHost 接受后端可信 gatewayOrigin、hostSecret，以及 storage（memory/postgres）和 port（回环监听端口）。默认 storage=memory、reply_mode=fake；持久化验收显式设置 postgres，回复仍固定为 fake，不支持用此元数据伪装真实 AI。参数不接受浏览器覆盖，本地只允许字面量127.0.0.1 HTTP。
+startHost 接受后端可信 gatewayOrigin、hostSecret，以及 storage（memory/postgres）、replyMode（fake/ai）和 port（回环监听端口）。默认 storage=memory、replyMode=fake；参数不接受浏览器覆盖，本地只允许字面量127.0.0.1 HTTP。replyMode 必须与实际网关一致，不是模型可用性探针；AI 验收启动器统一设置网关和业务后端。AI 发送代理等待上限120秒（网关处理上限110秒），其余请求仍为15秒。默认 run.mjs 和原固定回复验收不读取 .env、不调用模型。
 
 - 前端只能拿到短期受限凭证；业务后端缓存并绑定到登录会话，不能用其他账号的 Cookie 搭配该凭证。
 - Cookie 为 HttpOnly、SameSite=Strict；仅因回环 HTTP 演示不设置 Secure。生产必须 HTTPS、Secure Cookie、真实认证、CSRF 防护和独立会话存储。
@@ -51,6 +51,14 @@ startHost 接受后端可信 gatewayOrigin、hostSecret，以及 storage（memor
 不能从本样例推断共享多租户知识隔离、数据库灾备、附件、业务查询、工单或人工接管已实现。
 
 ## 验证
+
+最新完成[独立业务接入真实 AI 验收](ai-acceptance.md)：6次真实模型调用，覆盖知识、多轮、未知问题、人工能力边界、模型故障恢复、回复重放与双账号隔离。默认启动方式不变，只有下面的显式模式读取根目录 .env 中的 AI_PROVIDER、AI_PROTOCOL、AI_MODEL、AI_BASE_URL、AI_API_KEY（不执行shell、不加载数据库或知识配置）：
+
+```sh
+node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --allow-real-ai
+```
+
+本轮使用 Node.js 26.7.0；AI 验收工具需要支持 node:util 的 parseEnv。仅支持显式 HTTPS Chat Completions 端点与通用 AI_API_KEY，真实请求最多12次。使用本目录 ai-faq.json 虚构资料、keyword 检索及核心默认提示；不向 embedding 发送数据。终端 model-down/model-up 控制本机故障注入，drop-next 丢弃下一次成功回复的响应，stop 关闭本轮服务及专用测试数据库并保留数据卷。故障代理仅供回环测试，不可生产部署；报告不自动宣称浏览器验收通过。
 
 进一步已完成[真实浏览器中断恢复验收](browser-acceptance.md)：实际页面上的凭证续期、重新登录、待确认重试和跨标签页账号隔离通过，附截图与网络证据。
 
