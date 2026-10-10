@@ -24,7 +24,7 @@ function strictObject(value, fields) {
 export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='memory',replyMode='fake',agents=[],port=0}) {
   if(!['fake','ai'].includes(replyMode)||!['memory','postgres'].includes(storage)||!Number.isInteger(port)||port<0||port>65535)throw Error('invalid trusted local host configuration');
   if(!Array.isArray(agents)||agents.length>32||agents.some(a=>!a||!['string'].includes(typeof a.id)||!a.id||!a.name||!/^[A-Za-z0-9_-]{32,128}$/.test(a.secret)||a.secret===hostSecret)||new Set(agents.map(a=>a.id)).size!==agents.length||new Set(agents.map(a=>a.secret)).size!==agents.length)throw Error('invalid trusted agents');
-  const metadata={demo:true,storage,reply_mode:replyMode,human_enabled:agents.length>0};
+  const metadata={demo:true,storage,reply_mode:replyMode,human_enabled:agents.length>0,new_consultation_enabled:true};
   const deskSessions=new Map();
   const deskCookie='standalone_desk';
   const deskLogin=req=>{const cookies=(req.headers.cookie||'').split(';').map(v=>v.trim()).filter(v=>v.startsWith(deskCookie+'='));if(cookies.length!==1)return null;const raw=cookies[0].slice(deskCookie.length+1);if(!/^[A-Za-z0-9_-]{43}$/.test(raw))return null;const key=digest(raw),s=deskSessions.get(key);return s&&s.expires>now()?{key,...s}:null;};
@@ -70,7 +70,7 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
         const data=await readFile(assets+(routes.get(url)||'index.html'));
         res.writeHead(200,{'Content-Type':url.endsWith('.js')?'text/javascript':url.endsWith('.css')?'text/css':'text/html; charset=utf-8'});res.end(data);return;
       }
-      const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST'],...(agents.length?{'/chat/v1/handoff':['POST'],'/desk/me':['GET'],'/desk/login':['POST'],'/desk/logout':['POST'],'/desk/queue':['GET'],'/desk/action':['POST']}:{})};
+      const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST'],'/chat/v1/consultations':['POST'],'/chat/v1/previous-consultation':['GET'],...(agents.length?{'/chat/v1/handoff':['POST'],'/desk/me':['GET'],'/desk/login':['POST'],'/desk/logout':['POST'],'/desk/queue':['GET'],'/desk/action':['POST']}:{})};
       if(!Object.hasOwn(allowed,url))throw failure(404,'not_found');
       if(!allowed[url].includes(req.method))throw failure(405,'method_not_allowed');
       let body;
@@ -127,6 +127,17 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
       }
       if(count('authorization')!==1||!s.cap||Date.parse(s.cap.expires_at)<=now()||req.headers.authorization!=='Bearer '+s.cap.access_token)throw failure(401,'chat_session_required');
       const cap=s.cap;
+      if(url==='/chat/v1/consultations'||url==='/chat/v1/previous-consultation'){
+        if(req.method==='POST')strictObject(body,[]);
+        let result;
+        try{result=await remote(url,req.method,cap.access_token,body);}
+        catch(e){if(e.status===401&&s.cap===cap)s.cap=null;throw e;}
+        if(!current(login)||s.cap!==cap)throw failure(401,'chat_session_required');
+        // Only this old capability is invalidated. The next host exchange
+        // resolves the persisted latest round, including after a lost response.
+        if(url==='/chat/v1/consultations')s.cap=null;
+        respond(res,200,result);return;
+      }
       if(url==='/chat/v1/handoff'){
         strictObject(body,[]);const result=await remote(url,'POST',cap.access_token,{});
         if(!current(login)||s.cap!==cap)throw failure(401,'chat_session_required');respond(res,200,result);return;

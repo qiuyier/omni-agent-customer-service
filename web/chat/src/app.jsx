@@ -112,6 +112,10 @@ function Home() {
 }
 
 function useChat() {
+  const [startingRound,setStartingRound]=useState(false);
+  const [previous,setPrevious]=useState(null);
+  const [previousLoaded,setPreviousLoaded]=useState(false);
+  const round = useRef(null);
   const [requestingHuman,setRequestingHuman]=useState(false);
   const api = useRef(null);
   if (!api.current) api.current = createChatAPI();
@@ -148,6 +152,7 @@ function useChat() {
 
   async function initialize() {
     const task = start(); busyRef.current = true;
+    setPrevious(null);setPreviousLoaded(false);setStartingRound(false);round.current=null;
     setPhase('loading'); setError(''); setNotice(''); setMustReload(false); setPending(null); setMessages([]); setSession(null); setDraft(''); setSending(false); setRefreshing(false); setIdentityChecking(false);
     identity.current = null;
     api.current.clear();
@@ -155,6 +160,7 @@ function useChat() {
       const opened = await api.current.open(task.signal);
       if (!task.active()) return;
       setSession(opened);
+      round.current=opened.conversation_id;
       identity.current = opened.user.id;
       try {
         const storage = window.sessionStorage;
@@ -275,11 +281,37 @@ function useChat() {
 
   async function handoff(){
     if(!session||requestingHuman||mustReload)return;
-    const owner=session.user.id;setRequestingHuman(true);
-    try{const result=await api.current.handoff();if(identity.current===owner){setStatus(result.status);setNotice('已申请人工处理。请刷新记录查看后续回复；不承诺等待时间。');}}
-    catch(e){if(identity.current===owner)report(e);}finally{setRequestingHuman(false);}
+    const owner=session.conversation_id;setRequestingHuman(true);
+    try{const result=await api.current.handoff();if(round.current===owner&&result.conversation_id===owner){setStatus(result.status);setNotice('已申请人工处理。请刷新记录查看后续回复；不承诺等待时间。');}}
+    catch(e){if(round.current===owner)report(e);}finally{setRequestingHuman(false);}
   }
-  return { session, phase, messages, status, truncated, error, notice, pending, storageAvailable, identityChecking, sending, refreshing, draft, setDraft, mustReload, initialize, refresh, send, handoff, requestingHuman };
+  async function nextRound(){
+    if(busyRef.current||!session||status!=='closed'||mustReload||requestingHuman)return;
+    busyRef.current=true;const task=start();setStartingRound(true);setError('');
+    try{
+      const result=await api.current.nextRound(task.signal);
+      if(!task.active())return;
+      if(!result?.conversation_id||result.conversation_id===session.conversation_id)throw new Error('invalid_round');
+      // Explicit user action alone permits selecting a new round. Old pending
+      // storage is retained under its original key, never copied or replayed.
+      await initialize();
+    }catch(e){if(task.active()&&e.name!=='AbortError')report(e);}
+    finally{if(task.active()){busyRef.current=false;setStartingRound(false);}}
+  }
+  async function loadPrevious(){
+    if(busyRef.current||!session||mustReload)return;
+    busyRef.current=true;const task=start();setRefreshing(true);setError('');
+    try{
+      const data=await api.current.previousRound(task.signal);
+      if(!task.active())return;
+      if(data?.history!==null&&(!data?.history?.conversation_id||!Array.isArray(data.history.messages)))throw new Error('invalid_history');
+      let oldPending=null;
+      if(data.history){try{oldPending=readPending(window.sessionStorage,data.history.conversation_id);}catch{/* History remains readable if local storage is unavailable. */}}
+      setPrevious(data.history?{...data.history,pending:oldPending}:null);setPreviousLoaded(true);
+    }catch(e){if(task.active()&&e.name!=='AbortError')report(e);}
+    finally{if(task.active()){busyRef.current=false;setRefreshing(false);}}
+  }
+  return { session, phase, messages, status, truncated, error, notice, pending, storageAvailable, identityChecking, sending, refreshing, draft, setDraft, mustReload, initialize, refresh, send, handoff, requestingHuman, nextRound, startingRound, loadPrevious, previous, previousLoaded };
 }
 
 function ChatSkeleton() {
@@ -307,7 +339,7 @@ function Chat() {
   const [nearBottom, setNearBottom] = useState(true);
   const bytes = byteLength(chat.draft);
   const closed = chat.status === 'closed';
-  const blocked = chat.phase !== 'ready' || chat.sending || chat.refreshing || Boolean(chat.pending) || closed || chat.mustReload;
+  const blocked = chat.phase !== 'ready' || chat.sending || chat.refreshing || chat.startingRound || Boolean(chat.pending) || closed || chat.mustReload;
   useEffect(() => { if (nearBottom) end.current?.scrollIntoView({ block: 'end', behavior: 'instant' }); }, [chat.messages.length, chat.sending]);
   const prompt = (value) => { chat.setDraft(value); composer.current?.focus(); };
   if (chat.identityChecking) return <div className="min-h-[100dvh] bg-[#f6f5f1]"><header className="mx-auto max-w-7xl px-5 py-6 md:px-10"><Brand compact /></header><main className="mx-auto max-w-3xl px-5 py-8"><p role="status" className="mb-6 text-sm text-stone-500">正在核对当前登录身份，确认后再显示会话。</p><div className="rounded-3xl border border-stone-200 bg-white"><ChatSkeleton /></div></main></div>;
@@ -317,14 +349,21 @@ function Chat() {
       <aside className="px-2 pt-2 md:px-0 md:pt-8">
         <p className="hidden font-mono text-[10px] tracking-[0.16em] text-stone-400 md:block">02 / INDEPENDENT CHAT</p>
         <h1 className="text-2xl font-medium tracking-tight text-stone-900 md:mt-6 md:text-[2rem] md:leading-snug">有问题，<br className="hidden md:block" />从这里开始。</h1>
+        {chat.session?.new_consultation_enabled&&<div className="mt-5 space-y-3">
+          {closed&&<><button type="button" className="primary-button" onClick={chat.nextRound} disabled={chat.phase!=='ready'||chat.startingRound||chat.sending||chat.refreshing||chat.requestingHuman||chat.mustReload}>{chat.startingRound?'正在建立新咨询…':'发起新咨询'}</button><p className="text-xs leading-6 text-stone-500">旧会话保持关闭。新咨询从机器人接待开始，不继承原坐席或消息。{chat.pending?'旧待确认内容保留在上一轮，不会自动发送。':''}</p></>}
+          <button type="button" className="secondary-button" onClick={chat.loadPrevious} disabled={chat.phase!=='ready'||chat.startingRound||chat.sending||chat.refreshing||chat.mustReload}>{chat.refreshing?'正在读取…':'查看上一轮记录'}</button>
+          {chat.previousLoaded&&!chat.previous&&<p role="status" className="text-xs leading-6 text-stone-500">还没有上一轮咨询。</p>}
+          {chat.mustReload&&<button type="button" className="secondary-button" onClick={chat.initialize}>重新载入当前咨询</button>}
+        </div>}
         {chat.session?.human_enabled&&<div className="mt-5"><button className="secondary-button" onClick={chat.handoff} disabled={chat.requestingHuman||chat.status!=='bot_active'||chat.mustReload}>{chat.requestingHuman?'正在申请…':chat.status==='waiting_human'?'等待人工接管':chat.status==='human_active'?'人工正在处理':closed?'会话已结束':'申请人工处理'}</button><p className="mt-2 text-xs leading-6 text-stone-500">接管后由坐席回复。点击刷新记录查看新消息。</p></div>}
         <p className="mt-3 hidden text-sm leading-7 text-stone-500 md:block">一个独立的聊天入口，沿用你在示例站点选择的身份。</p>
         <div className="mt-8 hidden border-t border-stone-300/70 pt-6 md:block"><p className="mb-3 text-[11px] text-stone-400">当前演示身份</p>{chat.session ? <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-[#e9e9df] text-sm text-stone-600">{chat.session.user.display_name.slice(0, 1)}</span><div><p className="text-sm font-medium text-stone-800">{chat.session.user.display_name}</p><a href="/" className="mt-1 inline-block text-xs text-stone-400 underline-offset-4 hover:underline">返回站点切换账号</a></div></div> : <p className="text-sm text-stone-500">{chat.phase === 'loading' ? '正在读取…' : '尚未连接'}</p>}</div>
         <div className="mt-10 hidden space-y-5 text-xs leading-6 text-stone-500 md:block"><div className="flex gap-2.5"><Icon name="note" className="mt-0.5 size-4 shrink-0" /><p>{demo.description}</p></div><div className="flex gap-2.5"><Icon name="shield" className="mt-0.5 size-4 shrink-0" /><p>{demo.capabilities}</p></div></div>
       </aside>
-      <section aria-label="聊天窗口" className="flex min-h-[650px] min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white shadow-[0_12px_48px_-30px_rgba(60,54,44,0.18)] md:h-[calc(100dvh-120px)] md:min-h-[660px]">
+      <section aria-label="聊天窗口" className="flex min-h-[650px] min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white shadow-[0_12px_48px_-30px_rgba(60,54,44,0.18)] md:col-start-2 md:h-[calc(100dvh-120px)] md:min-h-[660px]">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-200/80 px-5 py-4 md:px-8"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-[#f0f1e9] text-emerald-900"><Icon name="chat" className="size-5" /></span><div><h2 className="text-sm font-medium text-stone-900">演示助手</h2><div className="mt-1"><DemoLabel storage={chat.session?.storage} replyMode={chat.session?.reply_mode} /></div></div></div><button type="button" aria-label="刷新消息记录" onClick={chat.refresh} disabled={!chat.session || chat.phase !== 'ready' || chat.sending || chat.refreshing || chat.mustReload} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900 active:scale-[0.98] disabled:opacity-40"><Icon name="refresh" className="size-4" /><span className="hidden sm:inline">{chat.refreshing ? '读取中…' : '刷新记录'}</span></button></div>
         <div className="border-b border-stone-100 px-5 py-2 text-[11px] text-stone-400 md:px-8">{chat.session ? <>当前：{chat.session.user.display_name} <span className="mx-2 text-stone-300">/</span> {closed ? '会话已结束' : chat.status === 'waiting_human' ? '等待人工处理' : '独立会话'}</> : '正在建立当前账号的独立会话'}</div>
+        {chat.previous&&<section aria-label="上一轮只读记录" className="shrink-0 border-b border-stone-200 bg-stone-50 px-5 py-3 md:px-8"><details open key={chat.previous.conversation_id}><summary className="cursor-pointer text-xs font-medium text-stone-700">上一轮咨询 · 只读（点击收起）</summary><p className="mt-2 text-xs leading-6 text-stone-500">旧记录不属于当前咨询，不会自动发送。{chat.previous.truncated?'仅显示最近部分记录。':''}</p><div className="mt-3 max-h-40 space-y-4 overflow-y-auto">{chat.previous.messages.length===0&&<p className="text-xs text-stone-500">上一轮没有消息。</p>}{chat.previous.messages.map(message=><Message key={message.id} message={message}/>)}{chat.previous.pending&&<div className="border-t border-stone-200 pt-3"><p className="text-xs text-stone-500">上一轮本地待确认内容（不代表已送达）</p><p className="mt-2 whitespace-pre-wrap break-words text-sm text-stone-600 [overflow-wrap:anywhere]">{chat.previous.pending.content}</p></div>}</div></details></section>}
         <div onScroll={(event) => { const node = event.currentTarget; setNearBottom(node.scrollHeight - node.scrollTop - node.clientHeight < 100); }} className="min-h-56 flex-1 overflow-y-auto overscroll-contain scroll-smooth motion-reduce:scroll-auto" tabIndex={0} aria-label="消息记录">
           {chat.phase === 'loading' ? <ChatSkeleton /> : !chat.session ? <div className="px-6 py-14 md:px-9"><span className="mb-5 grid size-12 place-items-center rounded-2xl bg-stone-100 text-stone-500"><Icon name="shield" /></span><h3 className="text-lg font-medium text-stone-800">{chat.phase === 'unauthorized' ? '先选择一个演示账号' : '还没有连上会话'}</h3><p className="mt-3 max-w-sm text-sm leading-7 text-stone-500">{chat.phase === 'unauthorized' ? '聊天页不会替你自动登录。请回到示例站点选择身份，再来开始对话。' : '可以重新尝试连接；这不会发送任何消息。'}</p><div className="mt-6 flex gap-3"><a href="/" className="primary-button inline-flex items-center gap-2">返回示例站点<Icon name="arrow" className="size-4" /></a>{chat.phase !== 'unauthorized' && <button type="button" onClick={chat.initialize} className="secondary-button">重新连接</button>}</div></div> : <div className="space-y-6 px-5 py-7 md:px-8" role="log" aria-label="会话消息" aria-live="polite" aria-relevant="additions text" aria-busy={chat.refreshing}>
             {chat.truncated && <p className="text-center text-[11px] leading-6 text-stone-400">仅显示最近的消息，较早记录未在此页展示。</p>}

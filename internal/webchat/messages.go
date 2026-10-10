@@ -1,6 +1,7 @@
 package webchat
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -33,10 +34,19 @@ type SendResult struct {
 }
 
 func (g *Gateway) history(w http.ResponseWriter, r *http.Request, claims identity) {
+	result, err := g.readHistory(r.Context(), claims)
+	if err != nil {
+		applicationError(w, err)
+		return
+	}
+	writeJSON(w, 200, result)
+}
+
+func (g *Gateway) readHistory(ctx context.Context, claims identity) (History, error) {
 	result := History{ConversationID: claims.conversation, Status: conversation.StatusBotActive, Messages: []Message{}}
 	// Ownership and the history snapshot share the repository's conversation
 	// lock. System/tool content and sender identities never leave this adapter.
-	err := g.repo.WithinTx(r.Context(), func(tx conversation.Transaction) error {
+	err := g.repo.WithinTx(ctx, func(tx conversation.Transaction) error {
 		current, err := tx.FindConversation(claims.conversation)
 		if errors.Is(err, conversation.ErrConversationNotFound) {
 			return nil
@@ -87,11 +97,7 @@ func (g *Gateway) history(w http.ResponseWriter, r *http.Request, claims identit
 		}
 		return nil
 	})
-	if err != nil {
-		applicationError(w, err)
-		return
-	}
-	writeJSON(w, 200, result)
+	return result, err
 }
 
 func (g *Gateway) send(w http.ResponseWriter, r *http.Request, claims identity) {

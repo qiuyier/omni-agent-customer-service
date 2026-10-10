@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 	"net/http"
 	"strings"
 	"time"
@@ -60,7 +61,7 @@ func configureHosts(config []Host) ([]trustedHost, error) {
 }
 
 // Versioned tuple encoding avoids delimiter collisions. Raw host/customer IDs
-// never become public core identifiers. There is one thread per host/customer.
+// never become public core identifiers. The first round retains its stable ID.
 func mapped(kind string, values ...string) string {
 	parts := append([]string{"browser-chat/v1", kind}, values...)
 	encoded, _ := json.Marshal(parts)
@@ -105,6 +106,15 @@ func (g *Gateway) exchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	claims := identify(host.source, request.CustomerID)
+	if rounds, ok := g.repo.(conversation.Rounds); ok {
+		latest, err := rounds.FindLatestRound(r.Context(), claims.customer, claims.channel, time.Time{})
+		if err == nil {
+			claims.conversation = latest.ID()
+		} else if !errors.Is(err, conversation.ErrConversationNotFound) {
+			applicationError(w, err)
+			return
+		}
+	}
 	var random [32]byte
 	if _, err := rand.Read(random[:]); err != nil {
 		problem(w, 503, "unavailable")

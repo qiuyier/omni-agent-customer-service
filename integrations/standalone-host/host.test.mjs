@@ -4,6 +4,37 @@ import http from 'node:http';
 import {startSample} from './run.mjs';
 import {startHost} from './host.mjs';
 
+test('new consultation invalidates only old capability; lost receipt retries the old round',async t=>{
+ const oldToken='chat_'+'a'.repeat(43),newToken='chat_'+'b'.repeat(43);
+ const oldID='wbc_'+'a'.repeat(64),newID='wbc_'+'b'.repeat(64);
+ let created=false,lose=true;const requests=[];
+ const upstream=http.createServer(async(req,res)=>{
+  const chunks=[];for await(const chunk of req)chunks.push(chunk);
+  requests.push({path:req.url,auth:req.headers.authorization,body:Buffer.concat(chunks).toString()});
+  res.setHeader('Content-Type','application/json');
+  if(req.url==='/internal/chat/sessions'){res.end(JSON.stringify({access_token:created?newToken:oldToken,conversation_id:created?newID:oldID,expires_at:new Date(Date.now()+300000).toISOString()}));return;}
+  if(req.url==='/chat/v1/consultations'){
+   assert.equal(req.headers.authorization,'Bearer '+oldToken);created=true;
+   if(lose){lose=false;res.writeHead(503).end('{}');return;}
+   res.end(JSON.stringify({conversation_id:newID}));return;
+  }
+  assert.equal(req.url,'/chat/v1/previous-consultation');assert.equal(req.headers.authorization,'Bearer '+newToken);res.end(JSON.stringify({history:{conversation_id:oldID,messages:[]}}));
+ });
+ await new Promise(r=>upstream.listen(0,'127.0.0.1',r));t.after(()=>{upstream.closeAllConnections();return new Promise(r=>upstream.close(r));});
+ const host=await startHost({gatewayOrigin:`http://127.0.0.1:${upstream.address().port}`,hostSecret:'h'.repeat(43)});t.after(()=>host.close());const call=client(host.origin);
+ const login=await call('/demo/login',{method:'POST',body:{account:'lin'}});const cookie=login.cookie;
+ const session=()=>call('/host/chat-session',{method:'POST',body:{},cookie});
+ assert.equal((await session()).data.conversation_id,oldID);
+ const next=body=>call('/chat/v1/consultations',{method:'POST',body,cookie,token:oldToken});
+ assert.equal((await next({conversation_id:'forged'})).status,400);
+ assert.equal((await next({})).status,503);assert.equal((await session()).data.conversation_id,oldID);
+ assert.equal((await next({})).data.conversation_id,newID);
+ assert.equal((await session()).data.conversation_id,newID);
+ assert.equal((await next({})).status,401);
+ assert.equal((await call('/chat/v1/previous-consultation',{cookie,token:newToken})).data.history.conversation_id,oldID);
+ assert.deepEqual(requests.filter(r=>r.path==='/chat/v1/consultations').map(r=>r.body),['{}','{}']);
+});
+
 test('trusted AI mode survives a reply longer than the old 15s budget and sanitizes failure', {timeout:30000}, async t=>{
   const secret='h'.repeat(43),token='chat_'+'t'.repeat(43),conversation='wbc_'+'a'.repeat(64);
   let fail=true;

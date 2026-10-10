@@ -93,7 +93,7 @@ try {
   await run(join(directory,'migrate'),[],{cwd:root,env:{...env,DATABASE_URL:dsn},timeout:30000});
   gateway=await startGateway();host=await startBackend();
   const gatewayPort=Number(new URL(gateway.origin).port),hostPort=Number(new URL(host.origin).port);
-  let publicOrigin,dropNext=false;
+  let publicOrigin,dropNext=false,dropNextConsultation=false;
   report.browser_network=[];
   proxy=http.createServer(async(req,res)=>{
     try {
@@ -105,12 +105,13 @@ try {
       const upstream=await fetch(host.origin+req.url,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:body,redirect:'manual',signal:AbortSignal.timeout(ai?130000:25000)});
       const data=Buffer.from(await upstream.arrayBuffer());
       const entry={method:req.method,path:req.url,status:upstream.status};
-      if(req.method==='POST'&&['/chat/v1/handoff','/desk/action'].includes(req.url)){try{entry.request=JSON.parse(body);entry.result=JSON.parse(data);}catch{}}
+      if(req.method==='POST'&&['/chat/v1/handoff','/chat/v1/consultations','/desk/action'].includes(req.url)){try{entry.request=JSON.parse(body);entry.result=JSON.parse(data);}catch{}}
       if(req.url==='/chat/v1/messages'&&req.method==='POST'){
         try{const sent=JSON.parse(body);entry.event_id=sent.event_id;entry.content=sent.content;const result=JSON.parse(data);entry.message_id=result.message_id;entry.reply_message_id=result.reply_message_id;entry.result=result;}catch{}
       }
       if(req.url==='/host/chat-session'&&upstream.status===200){const result=JSON.parse(data);entry.user=result.user?.id;entry.conversation=result.conversation_id;}
       if(req.url==='/chat/v1/messages'&&req.method==='POST'&&dropNext&&upstream.status===200){dropNext=false;entry.response_dropped=true;report.browser_network.push(entry);save();res.destroy();return;}
+      if(req.url==='/chat/v1/consultations'&&req.method==='POST'&&dropNextConsultation&&upstream.status===200){dropNextConsultation=false;entry.response_dropped=true;report.browser_network.push(entry);save();res.destroy();return;}
       report.browser_network.push(entry);save();
       for(const name of ['content-type','cache-control','content-security-policy','x-content-type-options','referrer-policy','set-cookie']){const value=upstream.headers.get(name);if(value)res.setHeader(name,value);}
       res.writeHead(upstream.status);res.end(data);
@@ -118,7 +119,7 @@ try {
   });
   await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));publicOrigin='http://127.0.0.1:'+proxy.address().port;
   report.browser_origin=publicOrigin;save();
-  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,commands:['restart-gateway','restart-backend','drop-next',...(ai?['model-down','model-up']:[]),'stop']}));
+  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,commands:['restart-gateway','restart-backend','drop-next','drop-next-consultation',...(ai?['model-down','model-up']:[]),'stop']}));
   const lines=readline.createInterface({input:process.stdin});
   for await(const line of lines){
     const command=line.trim();
@@ -126,6 +127,7 @@ try {
     if(command==='restart-gateway'){await stop(gateway,'SIGKILL');gateway=await startGateway(gatewayPort);}
     else if(command==='restart-backend'){await stop(host,'SIGKILL');host=await startBackend(hostPort);}
     else if(command==='drop-next')dropNext=true;
+    else if(command==='drop-next-consultation')dropNextConsultation=true;
     else if(ai&&command==='model-down')modelDown=true;
     else if(ai&&command==='model-up')modelDown=false;
     else {console.log('unknown command');continue;}

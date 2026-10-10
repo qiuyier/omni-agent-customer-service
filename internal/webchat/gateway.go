@@ -1,6 +1,6 @@
 // Package webchat is a small browser-facing channel adapter. Host credentials
 // attest customer identity; opaque browser credentials can only read/send in
-// that identity's single support conversation. It does not add tenant auth to
+// one pinned support conversation. It does not add tenant auth to
 // the existing service-wide /v1 API or partition knowledge/model configuration.
 package webchat
 
@@ -158,7 +158,21 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		g.exchange(w, r)
-	case MessagesPath:
+	case NextRoundPath, PreviousRoundPath, MessagesPath:
+		if r.URL.Path != MessagesPath {
+			if _, ok := g.repo.(conversation.Rounds); !ok {
+				problem(w, 404, "not_found")
+				return
+			}
+			method := http.MethodPost
+			if r.URL.Path == PreviousRoundPath {
+				method = http.MethodGet
+			}
+			if r.Method != method {
+				methodNotAllowed(w, method)
+				return
+			}
+		}
 		if r.Method != http.MethodGet && r.Method != http.MethodPost {
 			methodNotAllowed(w, "GET, POST")
 			return
@@ -177,6 +191,14 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer release()
 		ctx, cancel := context.WithTimeout(r.Context(), g.config.RequestTimeout)
 		defer cancel()
+		if r.URL.Path == NextRoundPath {
+			g.nextRound(w, r.WithContext(ctx), claims)
+			return
+		}
+		if r.URL.Path == PreviousRoundPath {
+			g.previousRound(w, r.WithContext(ctx), claims)
+			return
+		}
 		if r.Method == http.MethodGet {
 			g.history(w, r.WithContext(ctx), claims)
 		} else {

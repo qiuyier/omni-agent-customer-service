@@ -5,6 +5,23 @@ import { byteLength, validContent, savePending, readPending, pendingKey, probeSt
 const reply = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 const session = (id = 'conversation-lin', token = 'short-lived-test-token') => ({ access_token: token, conversation_id: id, user: { id: 'lin', display_name: '林知夏' }, demo: true });
 
+test('explicit next round uses empty body; an old send never renews into the new round',async()=>{
+ const calls=[];
+ const responses=[reply({...session('old'),new_consultation_enabled:true}),reply({conversation_id:'new'}),reply({error:'unauthorized'},401),reply(session('new'))];
+ const api=createChatAPI(async(path,options)=>{calls.push({path,...options});return responses.shift();});
+ assert.equal((await api.open()).new_consultation_enabled,true);
+ assert.equal((await api.nextRound()).conversation_id,'new');
+ assert.equal(calls[1].path,'/chat/v1/consultations');assert.equal(calls[1].body,'{}');
+ await assert.rejects(api.send({event_id:'old-event',content:'old pending'}),{code:'account_changed'});
+ assert.equal(calls.filter(c=>c.path==='/chat/v1/messages').length,1);
+});
+test('previous round is read only and cannot select an arbitrary ID',async()=>{
+ const calls=[];const responses=[reply(session()),reply({history:null})];
+ const api=createChatAPI(async(path,options)=>{calls.push({path,...options});return responses.shift();});
+ await api.open();assert.deepEqual(await api.previousRound(),{history:null});
+ assert.equal(calls[1].path,'/chat/v1/previous-consultation');assert.equal(calls[1].method,'GET');assert.equal(calls[1].body,undefined);
+});
+
 test('content limit counts UTF-8 bytes, not JavaScript characters', () => {
   assert.equal(byteLength('你好'), 6);
   assert.equal(validContent('   '), false);

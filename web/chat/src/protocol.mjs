@@ -91,7 +91,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
       throw new APIError('account_changed');
     }
     token = result.access_token;
-    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage), reply_mode: normalizeReplyMode(result.reply_mode), human_enabled: result.human_enabled===true };
+    current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage), reply_mode: normalizeReplyMode(result.reply_mode), human_enabled: result.human_enabled===true, new_consultation_enabled:result.new_consultation_enabled===true };
     return current;
   };
   const authorized = async (method, body, signal, path='/chat/v1/messages') => {
@@ -109,6 +109,8 @@ export function createChatAPI(fetcher = globalThis.fetch) {
   return {
     open: (signal) => acquire(signal),
     handoff: (signal) => authorized('POST',{},signal,'/chat/v1/handoff'),
+    nextRound: (signal) => authorized('POST',{},signal,'/chat/v1/consultations'),
+    previousRound: (signal) => authorized('GET',undefined,signal,'/chat/v1/previous-consultation'),
     history: (signal) => authorized('GET', undefined, signal),
     send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
     clear: () => { revision++; token = ''; current = null; },
@@ -117,7 +119,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
 
 export const errorMessage = (error) => ({
   unauthorized: '登录已失效。请返回示例站点重新选择演示账号。',
-  account_changed: '演示账号已发生变化。请重新载入当前页面，确认账号后继续。',
+  account_changed: '账号或咨询轮次已发生变化。请重新载入当前页面，确认后继续；旧消息不会自动重发。',
   invalid_request: '消息未被接受，请检查内容后重试。',
   busy: '当前会话正在处理另一条消息，请稍后重试。',
   rate_limited: '发送得有些频繁，请稍等片刻再重试。',
