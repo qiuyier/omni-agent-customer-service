@@ -5,6 +5,13 @@ import { byteLength, validContent, savePending, readPending, pendingKey, probeSt
 const reply = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 const session = (id = 'conversation-lin', token = 'short-lived-test-token') => ({ access_token: token, conversation_id: id, user: { id: 'lin', display_name: '林知夏' }, demo: true });
 
+test('late poll 401 after clear never renews or overwrites a new capability',async()=>{
+ let resolve;const calls=[];
+ const api=createChatAPI(async(path)=>{calls.push(path);if(path==='/host/chat-session')return reply(session(calls.length===1?'old':'new'));return new Promise(r=>resolve=r);});
+ await api.open();const old=api.history();api.clear();await api.open();resolve(reply({error:'unauthorized'},401));
+ await assert.rejects(old,{name:'AbortError'});assert.deepEqual(calls,['/host/chat-session','/chat/v1/messages','/host/chat-session']);
+});
+
 test('explicit next round uses empty body; an old send never renews into the new round',async()=>{
  const calls=[];
  const responses=[reply({...session('old'),new_consultation_enabled:true}),reply({conversation_id:'new'}),reply({error:'unauthorized'},401),reply(session('new'))];

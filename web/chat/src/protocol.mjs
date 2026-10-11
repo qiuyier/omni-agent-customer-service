@@ -96,14 +96,20 @@ export function createChatAPI(fetcher = globalThis.fetch) {
   };
   const authorized = async (method, body, signal, path='/chat/v1/messages') => {
     if (!current || !token) throw new APIError('unauthorized', 401);
+    const started=revision;
+    const check=()=>{if(started!==revision||signal?.aborted)throw new DOMException('Aborted','AbortError');};
     const expected = current.conversation_id;
     try {
-      return await requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      const result=await requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      check();return result;
     } catch (error) {
+      check();
       if (error.status !== 401) throw error;
       await acquire(signal, expected);
+      check();
       // The same body object (and event_id) is reused after token renewal.
-      return requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      const result=await requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      check();return result;
     }
   };
   return {
