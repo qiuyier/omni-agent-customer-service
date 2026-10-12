@@ -1,0 +1,127 @@
+=== RUN   TestDatabaseDeskMixedSoak
+    desk_soak_test.go:279: elapsed_s=60.0 cycles=48 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=12 interval_acquire_ms=30.607
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=48 p50_ms=6.510 p95_ms=7.811 max_ms=8.151
+    desk_soak_test.go:283: op=close interval_n=48 total_n=48 p50_ms=4.321 p95_ms=4.813 max_ms=5.448
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=48 p50_ms=1.300 p95_ms=1.545 max_ms=2.063
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=48 p50_ms=7.929 p95_ms=12.731 max_ms=24.737
+    desk_soak_test.go:283: op=history interval_n=144 total_n=144 p50_ms=6.365 p95_ms=10.454 max_ms=17.614
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=48 p50_ms=1.294 p95_ms=1.655 max_ms=1.737
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=480 p50_ms=14.805 p95_ms=17.561 max_ms=22.754
+    desk_soak_test.go:283: op=read interval_n=96 total_n=96 p50_ms=5.265 p95_ms=8.811 max_ms=12.829
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=96 p50_ms=5.131 p95_ms=7.487 max_ms=9.153
+    desk_soak_test.go:283: op=send interval_n=144 total_n=144 p50_ms=6.164 p95_ms=10.477 max_ms=15.445
+    desk_soak_test.go:283: op=session interval_n=48 total_n=48 p50_ms=1.991 p95_ms=4.271 max_ms=6.141
+    desk_soak_test.go:279: elapsed_s=120.0 cycles=96 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=9 interval_acquire_ms=25.728
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=96 p50_ms=6.910 p95_ms=8.566 max_ms=8.867
+    desk_soak_test.go:283: op=close interval_n=48 total_n=96 p50_ms=4.384 p95_ms=4.864 max_ms=5.469
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=96 p50_ms=1.383 p95_ms=1.724 max_ms=1.794
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=96 p50_ms=8.330 p95_ms=28.956 max_ms=67.770
+    desk_soak_test.go:283: op=history interval_n=144 total_n=288 p50_ms=6.220 p95_ms=11.065 max_ms=31.909
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=96 p50_ms=1.288 p95_ms=1.874 max_ms=2.172
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=960 p50_ms=14.653 p95_ms=17.671 max_ms=64.475
+    desk_soak_test.go:283: op=read interval_n=96 total_n=192 p50_ms=5.298 p95_ms=8.389 max_ms=12.485
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=192 p50_ms=5.401 p95_ms=7.432 max_ms=9.773
+    desk_soak_test.go:283: op=send interval_n=144 total_n=288 p50_ms=7.062 p95_ms=11.118 max_ms=15.192
+    desk_soak_test.go:283: op=session interval_n=48 total_n=96 p50_ms=1.772 p95_ms=5.335 max_ms=12.084
+    desk_soak_test.go:279: elapsed_s=180.0 cycles=144 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=0 interval_acquire_ms=2.070
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=144 p50_ms=6.905 p95_ms=8.066 max_ms=8.330
+    desk_soak_test.go:283: op=close interval_n=48 total_n=144 p50_ms=4.396 p95_ms=5.110 max_ms=5.905
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=144 p50_ms=1.358 p95_ms=2.229 max_ms=2.520
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=144 p50_ms=9.591 p95_ms=11.977 max_ms=13.721
+    desk_soak_test.go:283: op=history interval_n=144 total_n=432 p50_ms=6.720 p95_ms=12.721 max_ms=15.387
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=144 p50_ms=1.320 p95_ms=2.456 max_ms=3.393
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=1440 p50_ms=14.969 p95_ms=17.551 max_ms=20.750
+    desk_soak_test.go:283: op=read interval_n=96 total_n=288 p50_ms=4.934 p95_ms=8.193 max_ms=8.410
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=288 p50_ms=5.514 p95_ms=7.787 max_ms=9.014
+    desk_soak_test.go:283: op=send interval_n=144 total_n=432 p50_ms=8.065 p95_ms=11.173 max_ms=15.791
+    desk_soak_test.go:283: op=session interval_n=48 total_n=144 p50_ms=2.224 p95_ms=4.041 max_ms=4.059
+    desk_soak_test.go:279: elapsed_s=240.0 cycles=192 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=18 interval_acquire_ms=51.385
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=192 p50_ms=7.680 p95_ms=8.703 max_ms=14.280
+    desk_soak_test.go:283: op=close interval_n=48 total_n=192 p50_ms=4.389 p95_ms=6.751 max_ms=11.381
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=192 p50_ms=1.314 p95_ms=1.987 max_ms=2.458
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=192 p50_ms=9.752 p95_ms=13.520 max_ms=14.078
+    desk_soak_test.go:283: op=history interval_n=144 total_n=576 p50_ms=6.454 p95_ms=11.695 max_ms=12.638
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=192 p50_ms=1.312 p95_ms=1.839 max_ms=2.289
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=1920 p50_ms=15.056 p95_ms=17.856 max_ms=22.785
+    desk_soak_test.go:283: op=read interval_n=96 total_n=384 p50_ms=5.692 p95_ms=10.481 max_ms=11.747
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=384 p50_ms=5.652 p95_ms=8.129 max_ms=11.433
+    desk_soak_test.go:283: op=send interval_n=144 total_n=576 p50_ms=8.057 p95_ms=13.210 max_ms=14.361
+    desk_soak_test.go:283: op=session interval_n=48 total_n=192 p50_ms=2.322 p95_ms=2.868 max_ms=3.457
+    desk_soak_test.go:279: elapsed_s=300.0 cycles=240 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=0 interval_acquire_ms=2.370
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=240 p50_ms=7.450 p95_ms=8.971 max_ms=10.453
+    desk_soak_test.go:283: op=close interval_n=48 total_n=240 p50_ms=4.376 p95_ms=7.591 max_ms=8.193
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=240 p50_ms=1.341 p95_ms=2.609 max_ms=3.449
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=240 p50_ms=9.229 p95_ms=11.956 max_ms=12.829
+    desk_soak_test.go:283: op=history interval_n=144 total_n=720 p50_ms=6.432 p95_ms=11.569 max_ms=15.286
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=240 p50_ms=1.255 p95_ms=1.632 max_ms=2.171
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=2400 p50_ms=14.807 p95_ms=17.256 max_ms=62.915
+    desk_soak_test.go:283: op=read interval_n=96 total_n=480 p50_ms=5.124 p95_ms=8.679 max_ms=10.330
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=480 p50_ms=5.286 p95_ms=7.272 max_ms=7.800
+    desk_soak_test.go:283: op=send interval_n=144 total_n=720 p50_ms=7.766 p95_ms=11.563 max_ms=13.179
+    desk_soak_test.go:283: op=session interval_n=48 total_n=240 p50_ms=2.237 p95_ms=2.829 max_ms=3.360
+    desk_soak_test.go:279: elapsed_s=360.0 cycles=288 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=0 interval_acquire_ms=2.648
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=288 p50_ms=7.645 p95_ms=9.458 max_ms=13.067
+    desk_soak_test.go:283: op=close interval_n=48 total_n=288 p50_ms=4.328 p95_ms=4.920 max_ms=5.113
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=288 p50_ms=1.417 p95_ms=1.930 max_ms=2.204
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=288 p50_ms=9.381 p95_ms=11.917 max_ms=12.062
+    desk_soak_test.go:283: op=history interval_n=144 total_n=864 p50_ms=6.530 p95_ms=11.689 max_ms=13.646
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=288 p50_ms=1.302 p95_ms=1.801 max_ms=2.034
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=2880 p50_ms=15.216 p95_ms=17.750 max_ms=62.809
+    desk_soak_test.go:283: op=read interval_n=96 total_n=576 p50_ms=5.174 p95_ms=9.746 max_ms=11.297
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=576 p50_ms=5.432 p95_ms=7.524 max_ms=10.150
+    desk_soak_test.go:283: op=send interval_n=144 total_n=864 p50_ms=8.184 p95_ms=11.522 max_ms=14.142
+    desk_soak_test.go:283: op=session interval_n=48 total_n=288 p50_ms=2.298 p95_ms=3.525 max_ms=3.851
+    desk_soak_test.go:279: elapsed_s=420.0 cycles=336 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=0 interval_acquire_ms=2.719
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=336 p50_ms=7.703 p95_ms=9.772 max_ms=10.452
+    desk_soak_test.go:283: op=close interval_n=48 total_n=336 p50_ms=4.256 p95_ms=4.776 max_ms=5.091
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=336 p50_ms=1.341 p95_ms=1.978 max_ms=4.659
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=336 p50_ms=9.312 p95_ms=11.290 max_ms=14.105
+    desk_soak_test.go:283: op=history interval_n=144 total_n=1008 p50_ms=6.480 p95_ms=11.581 max_ms=14.624
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=336 p50_ms=1.313 p95_ms=1.636 max_ms=4.243
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=3360 p50_ms=15.773 p95_ms=18.140 max_ms=20.678
+    desk_soak_test.go:283: op=read interval_n=96 total_n=672 p50_ms=5.440 p95_ms=8.494 max_ms=10.198
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=672 p50_ms=5.440 p95_ms=7.527 max_ms=10.146
+    desk_soak_test.go:283: op=send interval_n=144 total_n=1008 p50_ms=7.659 p95_ms=11.254 max_ms=15.090
+    desk_soak_test.go:283: op=session interval_n=48 total_n=336 p50_ms=2.248 p95_ms=3.011 max_ms=4.282
+    desk_soak_test.go:279: elapsed_s=480.0 cycles=384 failures=0 pool_acquired=0 pool_total=4 interval_acquires=1968 interval_empty_acquires=0 interval_acquire_ms=2.532
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=384 p50_ms=8.122 p95_ms=10.792 max_ms=11.130
+    desk_soak_test.go:283: op=close interval_n=48 total_n=384 p50_ms=4.247 p95_ms=5.096 max_ms=7.909
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=384 p50_ms=1.339 p95_ms=1.687 max_ms=1.690
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=384 p50_ms=9.232 p95_ms=12.811 max_ms=13.238
+    desk_soak_test.go:283: op=history interval_n=144 total_n=1152 p50_ms=6.530 p95_ms=12.094 max_ms=13.898
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=384 p50_ms=1.256 p95_ms=1.525 max_ms=1.639
+    desk_soak_test.go:283: op=queue interval_n=480 total_n=3840 p50_ms=15.840 p95_ms=18.300 max_ms=22.581
+    desk_soak_test.go:283: op=read interval_n=96 total_n=768 p50_ms=5.428 p95_ms=9.335 max_ms=10.109
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=768 p50_ms=5.665 p95_ms=7.792 max_ms=8.471
+    desk_soak_test.go:283: op=send interval_n=144 total_n=1152 p50_ms=8.479 p95_ms=11.612 max_ms=14.399
+    desk_soak_test.go:283: op=session interval_n=48 total_n=384 p50_ms=2.397 p95_ms=3.992 max_ms=5.638
+    desk_soak_test.go:279: elapsed_s=540.0 cycles=432 failures=0 pool_acquired=1 pool_total=4 interval_acquires=1968 interval_empty_acquires=0 interval_acquire_ms=2.361
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=432 p50_ms=7.831 p95_ms=9.108 max_ms=10.566
+    desk_soak_test.go:283: op=close interval_n=48 total_n=432 p50_ms=4.492 p95_ms=5.340 max_ms=6.880
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=432 p50_ms=1.352 p95_ms=1.855 max_ms=2.153
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=432 p50_ms=8.993 p95_ms=13.153 max_ms=13.504
+    desk_soak_test.go:283: op=history interval_n=144 total_n=1296 p50_ms=6.592 p95_ms=12.079 max_ms=17.426
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=432 p50_ms=1.263 p95_ms=1.642 max_ms=1.706
+    desk_soak_test.go:283: op=queue interval_n=478 total_n=4318 p50_ms=15.314 p95_ms=17.722 max_ms=23.253
+    desk_soak_test.go:283: op=read interval_n=96 total_n=864 p50_ms=6.037 p95_ms=9.249 max_ms=10.152
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=864 p50_ms=5.588 p95_ms=8.717 max_ms=10.800
+    desk_soak_test.go:283: op=send interval_n=144 total_n=1296 p50_ms=7.981 p95_ms=11.792 max_ms=13.367
+    desk_soak_test.go:283: op=session interval_n=48 total_n=432 p50_ms=2.371 p95_ms=3.570 max_ms=3.873
+    desk_soak_test.go:279: elapsed_s=600.0 cycles=480 failures=0 pool_acquired=2 pool_total=4 interval_acquires=1966 interval_empty_acquires=0 interval_acquire_ms=2.633
+    desk_soak_test.go:283: op=claim interval_n=48 total_n=480 p50_ms=7.795 p95_ms=9.281 max_ms=9.533
+    desk_soak_test.go:283: op=close interval_n=48 total_n=480 p50_ms=4.471 p95_ms=6.479 max_ms=7.916
+    desk_soak_test.go:283: op=foreign_history interval_n=48 total_n=480 p50_ms=1.393 p95_ms=2.188 max_ms=2.236
+    desk_soak_test.go:283: op=handoff interval_n=48 total_n=480 p50_ms=9.215 p95_ms=14.304 max_ms=14.905
+    desk_soak_test.go:283: op=history interval_n=144 total_n=1440 p50_ms=6.661 p95_ms=11.395 max_ms=12.088
+    desk_soak_test.go:283: op=other_agent_history interval_n=48 total_n=480 p50_ms=1.353 p95_ms=3.196 max_ms=3.809
+    desk_soak_test.go:283: op=queue interval_n=478 total_n=4796 p50_ms=15.704 p95_ms=18.057 max_ms=108.563
+    desk_soak_test.go:283: op=read interval_n=96 total_n=960 p50_ms=5.897 p95_ms=8.872 max_ms=9.819
+    desk_soak_test.go:283: op=reply interval_n=96 total_n=960 p50_ms=5.647 p95_ms=7.820 max_ms=8.506
+    desk_soak_test.go:283: op=send interval_n=144 total_n=1440 p50_ms=8.037 p95_ms=11.512 max_ms=12.446
+    desk_soak_test.go:283: op=session interval_n=48 total_n=480 p50_ms=2.464 p95_ms=3.347 max_ms=3.479
+    desk_soak_test.go:279: elapsed_s=601.0 cycles=480 failures=0 pool_acquired=0 pool_total=4 interval_acquires=0 interval_empty_acquires=0 interval_acquire_ms=0.000
+    desk_soak_test.go:283: op=queue interval_n=2 total_n=4798 p50_ms=15.172 p95_ms=15.711 max_ms=15.711
+    desk_soak_test.go:322: FINAL duration_s=601.0 cycles=480 messages=19440 closed=480 receipts=960 models=0 acquired=0
+--- PASS: TestDatabaseDeskMixedSoak (601.43s)
+PASS
+ok  	github.com/qiuyier/omni-agent-customer-service/internal/persistence/postgres	602.024s
