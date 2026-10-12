@@ -1,0 +1,40 @@
+=== RUN   TestDeskSQLLongHistoryMeasurement
+    history_page_test.go:182: baseline_full_history rows=10000 body_bytes=10240000 median_ms=70.856 max_ms=350.546 mean_alloc_bytes=19413698
+    history_page_test.go:182: database_page rows=100 body_bytes=102400 median_ms=3.183 max_ms=7.171 mean_alloc_bytes=204344
+    history_page_test.go:182: baseline_attention_full_history rows=10000 body_bytes=10240000 median_ms=65.366 max_ms=86.039 mean_alloc_bytes=19411905
+    history_page_test.go:182: database_attention_preview rows=1 body_bytes=161 median_ms=3.438 max_ms=4.669 mean_alloc_bytes=4125
+    history_page_test.go:249: plan_0:
+        Limit  (cost=0.29..18.18 rows=100 width=24) (actual time=0.004..0.035 rows=100 loops=1)
+          Buffers: shared hit=17
+          ->  Index Scan Backward using messages_sequence_no_key on messages  (cost=0.29..1789.79 rows=10000 width=24) (actual time=0.004..0.025 rows=100 loops=1)
+                Filter: ((conversation_id = 'sql-measure'::text) AND (sender = ANY ('{customer,bot,human_agent}'::text[])))
+                Buffers: shared hit=17
+        Planning:
+          Buffers: shared hit=78
+        Planning Time: 0.254 ms
+        Execution Time: 0.051 ms
+    history_page_test.go:249: plan_1:
+        Aggregate  (cost=1767.89..1767.90 rows=1 width=16) (actual time=3.196..3.197 rows=1 loops=1)
+          Buffers: shared hit=1431
+          ->  Hash Anti Join  (cost=12.69..1717.91 rows=9996 width=8) (actual time=0.021..2.793 rows=10000 loops=1)
+                Hash Cond: (m.id = r.message_id)
+                Buffers: shared hit=1431
+                ->  Seq Scan on messages m  (cost=0.00..1579.00 rows=10000 width=20) (actual time=0.004..1.769 rows=10000 loops=1)
+                      Filter: ((conversation_id = 'sql-measure'::text) AND (sender = 'customer'::text))
+                      Buffers: shared hit=1429
+                ->  Hash  (cost=12.64..12.64 rows=4 width=32) (actual time=0.002..0.003 rows=0 loops=1)
+                      Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                      Buffers: shared hit=2
+                      ->  Bitmap Heap Scan on desk_read_receipts r  (cost=4.18..12.64 rows=4 width=32) (actual time=0.002..0.002 rows=0 loops=1)
+                            Recheck Cond: (agent_id = 'agent'::text)
+                            Buffers: shared hit=2
+                            ->  Bitmap Index Scan on desk_read_receipts_pkey  (cost=0.00..4.18 rows=4 width=0) (actual time=0.002..0.002 rows=0 loops=1)
+                                  Index Cond: (agent_id = 'agent'::text)
+                                  Buffers: shared hit=2
+        Planning:
+          Buffers: shared hit=78
+        Planning Time: 0.154 ms
+        Execution Time: 3.218 ms
+--- PASS: TestDeskSQLLongHistoryMeasurement (2.24s)
+PASS
+ok  	github.com/qiuyier/omni-agent-customer-service/internal/persistence/postgres	2.870s

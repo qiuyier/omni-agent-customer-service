@@ -280,12 +280,25 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 			return errDeskDenied
 		}
 		if body.Action == "history" {
-			all, err := tx.ListMessages(c.ID())
-			if err != nil {
-				return err
-			}
-			if err = deskHistory(all, body.Before, body.After, body.From, &result); err != nil {
-				return err
+			if pager, ok := tx.(conversation.MessagePager); ok {
+				page, err := pager.PageMessages(c.ID(), body.Before, body.After, body.From)
+				if err != nil {
+					return err
+				}
+				result.HasOlder = page.HasOlder
+				result.HasNewer = page.HasNewer
+				result.Messages = []Message{}
+				for _, m := range page.Messages {
+					result.Messages = append(result.Messages, Message{ID: m.ID(), Role: m.Sender(), Content: m.Content(), CreatedAt: m.CreatedAt(), ContentTruncated: page.Truncated[m.ID()]})
+				}
+			} else {
+				all, err := tx.ListMessages(c.ID())
+				if err != nil {
+					return err
+				}
+				if err = deskHistory(all, body.Before, body.After, body.From, &result); err != nil {
+					return err
+				}
 			}
 		} else if body.Action == "reply" {
 			if c.AgentID() != a.id {
@@ -372,7 +385,19 @@ func (g *Gateway) fillAttention(ctx context.Context, a *trustedAgent, result *de
 	if !ok {
 		return nil
 	}
-	info, err := port.DeskAttention(ctx, result.ID, a.channel, a.id, nil)
+	var info conversation.Attention
+	var err error
+	if reader, ok := g.repo.(conversation.DeskAttentionReader); ok {
+		ids := make([]string, 0, len(result.Messages))
+		for _, m := range result.Messages {
+			if m.Role == conversation.SenderCustomer {
+				ids = append(ids, m.ID)
+			}
+		}
+		info, err = reader.ReadDeskAttention(ctx, result.ID, a.channel, a.id, ids)
+	} else {
+		info, err = port.DeskAttention(ctx, result.ID, a.channel, a.id, nil)
+	}
 	if err != nil {
 		return err
 	}

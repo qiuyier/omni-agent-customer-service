@@ -1,12 +1,11 @@
 package webchat
 
 import (
-	"errors"
 	"github.com/qiuyier/omni-agent-customer-service/internal/conversation"
 	"unicode/utf8"
 )
 
-var errHistoryCursor = errors.New("invalid history cursor")
+var errHistoryCursor = conversation.ErrHistoryCursor
 
 // Storage append order is authoritative; timestamps and lexical message IDs are not cursors.
 func deskHistory(all []conversation.Message, before, after, from string, out *deskState) error {
