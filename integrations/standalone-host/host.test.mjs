@@ -62,6 +62,22 @@ test('trusted AI mode survives a reply longer than the old 15s budget and saniti
   const result=await call('/chat/v1/messages',request);assert.equal(result.status,200);assert.equal(result.data.outcome,'replied');
 });
 
+test('read acknowledgement is pinned to server-authenticated staff, not a stale tab',async t=>{
+ let forwarded=[];
+ const upstream=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;forwarded.push({auth:req.headers.authorization,body:JSON.parse(raw)});res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({conversation_id:'conv',acknowledged:true}));});
+ await new Promise(r=>upstream.listen(0,'127.0.0.1',r));t.after(()=>{upstream.closeAllConnections();return new Promise(r=>upstream.close(r));});
+ const host=await startHost({gatewayOrigin:`http://127.0.0.1:${upstream.address().port}`,hostSecret:'h'.repeat(43),agents:[{id:'a',name:'甲',secret:'a'.repeat(43)},{id:'b',name:'乙',secret:'b'.repeat(43)}]});t.after(()=>host.close());const call=client(host.origin);
+ const a=await call('/desk/login',{method:'POST',body:{account:'a'}});
+ const body={action:'read',conversation_id:'conv',message_ids:['seen'],expected_agent_id:'a'};
+ assert.equal((await call('/desk/action',{method:'POST',cookie:a.cookie,body})).status,200);
+ assert.deepEqual(forwarded,[{auth:'Bearer '+'a'.repeat(43),body:{action:'read',conversation_id:'conv',message_ids:['seen']}}]);
+ const b=await call('/desk/login',{method:'POST',cookie:a.cookie,body:{account:'b'}});
+ assert.equal((await call('/desk/action',{method:'POST',cookie:b.cookie,body})).status,409);
+ assert.equal((await call('/desk/action',{method:'POST',cookie:a.cookie,body})).status,401);
+ assert.equal((await call('/desk/action',{method:'POST',cookie:b.cookie,body:{action:'read',conversation_id:'conv',message_ids:['seen']}})).status,409);
+ assert.equal(forwarded.length,1);
+});
+
 function client(origin) {
   return async(path,{method='GET',body,cookie,token,headers={}}={})=>{
     const response=await fetch(origin+path,{method,headers:{...(method==='POST'?{Origin:origin,'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(20000)});

@@ -69,10 +69,14 @@ func configureAgents(input []Agent, hosts []trustedHost) ([]trustedAgent, error)
 }
 
 type deskState struct {
-	ID       string              `json:"conversation_id"`
-	Status   conversation.Status `json:"status"`
-	Revision uint64              `json:"revision"`
-	Messages []Message           `json:"messages,omitempty"`
+	AttentionEnabled bool                `json:"attention_enabled"`
+	Unread           int                 `json:"unread_count"`
+	UnreadIDs        []string            `json:"unread_message_ids,omitempty"`
+	Latest           *Message            `json:"latest_message,omitempty"`
+	ID               string              `json:"conversation_id"`
+	Status           conversation.Status `json:"status"`
+	Revision         uint64              `json:"revision"`
+	Messages         []Message           `json:"messages,omitempty"`
 }
 
 var errDeskDenied = errors.New("desk denied")
@@ -177,7 +181,15 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 		}
 		out := []deskState{}
 		for _, c := range rows {
-			out = append(out, deskState{ID: c.ID(), Status: c.Status(), Revision: c.Revision()})
+			row := deskState{ID: c.ID(), Status: c.Status(), Revision: c.Revision()}
+			if err := g.fillAttention(ctx, a, &row); err != nil {
+				if errors.Is(err, conversation.ErrAttentionDenied) || errors.Is(err, conversation.ErrConversationNotFound) {
+					continue
+				}
+				applicationError(w, err)
+				return
+			}
+			out = append(out, row)
 		}
 		writeJSON(w, 200, map[string]any{"items": out, "limit": 100})
 		return
@@ -187,20 +199,51 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		ID       string `json:"conversation_id"`
-		Action   string `json:"action"`
-		Revision uint64 `json:"revision"`
-		Event    string `json:"event_id"`
-		Content  string `json:"content"`
+		ID         string   `json:"conversation_id"`
+		Action     string   `json:"action"`
+		Revision   uint64   `json:"revision"`
+		Event      string   `json:"event_id"`
+		Content    string   `json:"content"`
+		MessageIDs []string `json:"message_ids"`
 	}
-	if !decode(w, r, &body, "conversation_id", "action", "revision", "event_id", "content") {
+	if !decode(w, r, &body, "conversation_id", "action", "revision", "event_id", "content", "message_ids") {
 		return
 	}
-	if !validID(body.ID) || (body.Action != "claim" && body.Action != "history" && body.Action != "reply" && body.Action != "close") {
+	if !validID(body.ID) || (body.Action != "read" && body.Action != "claim" && body.Action != "history" && body.Action != "reply" && body.Action != "close") {
 		problem(w, 400, "invalid_request")
 		return
 	}
 	if body.Action == "reply" && (!validID(body.Event) || strings.TrimSpace(body.Content) == "" || !utf8.ValidString(body.Content) || len(body.Content) > MaxContentBytes) {
+		problem(w, 400, "invalid_request")
+		return
+	}
+	if body.Action == "read" {
+		port, ok := g.repo.(conversation.DeskAttention)
+		if !ok {
+			problem(w, 404, "not_found")
+			return
+		}
+		if len(body.MessageIDs) == 0 || len(body.MessageIDs) > 100 {
+			problem(w, 400, "invalid_request")
+			return
+		}
+		_, err := port.DeskAttention(ctx, body.ID, a.channel, a.id, body.MessageIDs)
+		if errors.Is(err, conversation.ErrAttentionDenied) {
+			problem(w, 403, "forbidden")
+			return
+		}
+		if errors.Is(err, conversation.ErrInvalidArgument) {
+			problem(w, 400, "invalid_request")
+			return
+		}
+		if err != nil {
+			applicationError(w, err)
+			return
+		}
+		writeJSON(w, 200, map[string]any{"conversation_id": body.ID, "acknowledged": true})
+		return
+	}
+	if len(body.MessageIDs) > 0 {
 		problem(w, 400, "invalid_request")
 		return
 	}
@@ -302,5 +345,41 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 		applicationError(w, err)
 		return
 	}
+	if err := g.fillAttention(ctx, a, &result); err != nil {
+		if errors.Is(err, conversation.ErrAttentionDenied) {
+			problem(w, 403, "forbidden")
+			return
+		}
+		applicationError(w, err)
+		return
+	}
 	writeJSON(w, 200, result)
+}
+
+func (g *Gateway) fillAttention(ctx context.Context, a *trustedAgent, result *deskState) error {
+	port, ok := g.repo.(conversation.DeskAttention)
+	if !ok {
+		return nil
+	}
+	info, err := port.DeskAttention(ctx, result.ID, a.channel, a.id, nil)
+	if err != nil {
+		return err
+	}
+	result.AttentionEnabled = true
+	result.Unread = info.Unread
+	for _, m := range result.Messages {
+		if m.Role == conversation.SenderCustomer && !info.Seen[m.ID] {
+			result.UnreadIDs = append(result.UnreadIDs, m.ID)
+		}
+	}
+	if info.HasLatest {
+		m := info.Latest
+		content := []rune(m.Content())
+		truncated := len(content) > 160
+		if truncated {
+			content = content[:160]
+		}
+		result.Latest = &Message{ID: m.ID(), Role: m.Sender(), Content: string(content), CreatedAt: m.CreatedAt(), ContentTruncated: truncated}
+	}
+	return nil
 }

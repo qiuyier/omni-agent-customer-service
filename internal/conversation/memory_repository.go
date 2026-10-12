@@ -14,7 +14,8 @@ type externalMessageKey struct {
 // MemoryRepository is a concurrency-safe, transactional in-memory Repository.
 // It is intended for tests and local development, not durable production data.
 type MemoryRepository struct {
-	mu sync.RWMutex
+	deskSeen map[string]map[string]bool
+	mu       sync.RWMutex
 
 	conversations           map[string]*Conversation
 	messages                map[string]Message

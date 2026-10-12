@@ -1,5 +1,7 @@
 # 通用人工接管最小闭环
 
+后续已补充[自动更新](automatic-updates.md)和[客服未读提醒](desk-attention.md)。未读使用消息级确认，后台历史读取不清除提醒；数据库需升级至版本2。下方日期验收保留当时范围。
+
 本轮新增的是通用网页渠道能力，不依赖CRMEB。用户显式申请后进入人工队列，坐席查看历史、接管、回复，最后关闭会话。未配置坐席时默认关闭，不按用户自然语言自动触发，不把模型说“已转人工”视为执行结果。
 
 ## 本地体验
@@ -22,7 +24,7 @@ WEBCHAT_AGENTS_JSON 是可选的服务端JSON数组，每项只有 source_id、i
 | --- | --- | --- |
 | POST /chat/v1/handoff | 当前客户短期凭证 | 只接收{}，只能申请自己的会话，不接受conversation_id或agent_id |
 | GET /internal/chat/desk/queue | 独立坐席凭证，仅服务端 | 最多100条，按更新时间/id排序；只返回同来源等待人工及本人接管的会话 |
-| POST /internal/chat/desk/action | 独立坐席凭证，仅服务端 | conversation_id/action；action为history、claim、reply、close；角色由凭证决定，不接收agent_id |
+| POST /internal/chat/desk/action | 独立坐席凭证，仅服务端 | conversation_id/action；action为history、claim、reply、close、read；角色由凭证决定，不接收agent_id |
 
 claim/close传revision，事务内校验状态和版本，已完成的同坐席同状态重试可安全返回；reply传event_id/content，最多4000 UTF-8字节，重复相同事件返回成功，改内容返回409。history最多返回最近100条且总正文预算128 KiB，只含客户、机器人和人工消息；当前数据层仍读取完整历史后裁剪，不是数据库分页。
 

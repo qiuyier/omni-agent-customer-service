@@ -7,5 +7,5 @@ const (
 
 	// CurrentVersion is the schema version required by this application build.
 	// Increment it whenever a new sequential migration is added.
-	CurrentVersion int32 = 1
+	CurrentVersion int32 = 2
 )

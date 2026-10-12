@@ -88,7 +88,12 @@ export async function startHost({gatewayOrigin,hostSecret,now=Date.now,storage='
         }
         if(url==='/desk/logout'){strictObject(body,[]);if(currentDesk)deskSessions.delete(currentDesk.key);res.setHeader('Set-Cookie',`${deskCookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`);respond(res,204);return;}
         if(!currentDesk)throw failure(401,'desk_login_required');
-        if(url==='/desk/action')strictObject(body,['conversation_id','action','revision','event_id','content']);
+        if(url==='/desk/action'){
+          strictObject(body,['conversation_id','action','revision','event_id','content','message_ids','expected_agent_id']);
+          // A stale browser tab must not acknowledge messages as a different staff member.
+          if(body.action==='read'&&body.expected_agent_id!==currentDesk.agent.id)throw failure(409,'desk_identity_changed');
+          const {expected_agent_id,...forward}=body;body=forward;
+        }
         const result=await remote(url==='/desk/queue'?'/internal/chat/desk/queue':'/internal/chat/desk/action',req.method,currentDesk.agent.secret,body);
         if(deskSessions.get(currentDesk.key)?.agent!==currentDesk.agent||currentDesk.expires<=now())throw failure(401,'desk_login_required');
         respond(res,200,result);return;

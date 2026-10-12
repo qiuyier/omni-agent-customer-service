@@ -107,14 +107,16 @@ func (r *Repository) CheckSchema(ctx context.Context) error {
 		version              int32
 		conversationsPresent bool
 		messagesPresent      bool
+		receiptsPresent      bool
 	)
 	err := r.pool.QueryRow(ctx, `
 SELECT
     version,
     to_regclass('customer_service.conversations') IS NOT NULL,
-    to_regclass('customer_service.messages') IS NOT NULL
+    to_regclass('customer_service.messages') IS NOT NULL,
+    to_regclass('customer_service.desk_read_receipts') IS NOT NULL
 FROM `+schema.VersionTable+`
-`).Scan(&version, &conversationsPresent, &messagesPresent)
+`).Scan(&version, &conversationsPresent, &messagesPresent, &receiptsPresent)
 	if err != nil {
 		if contextErr := ctx.Err(); contextErr != nil {
 			return contextErr
@@ -129,7 +131,7 @@ FROM `+schema.VersionTable+`
 			schema.CurrentVersion,
 		)
 	}
-	if !conversationsPresent || !messagesPresent {
+	if !conversationsPresent || !messagesPresent || !receiptsPresent {
 		return fmt.Errorf(
 			"%w: required business tables are missing; run cmd/migrate",
 			ErrSchemaNotReady,

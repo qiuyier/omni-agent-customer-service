@@ -512,7 +512,7 @@ func openTestRepository(t *testing.T, reset bool) *postgresrepository.Repository
 	if reset {
 		if _, err := connection.Exec(
 			ctx,
-			"TRUNCATE customer_service.messages, customer_service.conversations RESTART IDENTITY",
+			"TRUNCATE customer_service.desk_read_receipts, customer_service.messages, customer_service.conversations RESTART IDENTITY",
 		); err != nil {
 			_ = connection.Close(ctx)
 			t.Fatalf("reset database: %v", err)
