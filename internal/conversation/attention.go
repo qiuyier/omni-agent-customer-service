@@ -8,10 +8,11 @@ import (
 var ErrAttentionDenied = errors.New("conversation: attention denied")
 
 type Attention struct {
-	Unread    int
-	Latest    Message
-	HasLatest bool
-	Seen      map[string]bool
+	FirstUnreadID string
+	Unread        int
+	Latest        Message
+	HasLatest     bool
+	Seen          map[string]bool
 }
 
 // Exact message receipts: reading an older snapshot never clears newer arrivals.
@@ -27,6 +28,9 @@ func SummarizeAttention(all []Message, seen map[string]bool) Attention {
 	for _, m := range all {
 		if m.Sender() == SenderCustomer && !seen[m.ID()] {
 			out.Unread++
+			if out.FirstUnreadID == "" {
+				out.FirstUnreadID = m.ID()
+			}
 		}
 		if m.Sender() == SenderCustomer || m.Sender() == SenderBot || m.Sender() == SenderHumanAgent {
 			out.Latest = m

@@ -1,8 +1,9 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {requestJSON} from './protocol.mjs';
 import {createReadReceipts} from './read-receipts.mjs';
 
-export function ReadReceipts({agent,conversation,ids,enabled,root,locked}){
+export function ReadReceipts({agent,conversation,ids,enabled,root,locked,onRead}){
+ const acknowledged=useRef(onRead);acknowledged.current=onRead;
  const [failed,setFailed]=useState(false),[retry,setRetry]=useState(0);
  const idKey=JSON.stringify(ids||[]);
  useEffect(()=>{
@@ -13,6 +14,7 @@ export function ReadReceipts({agent,conversation,ids,enabled,root,locked}){
    send:async message_ids=>{
     const result=await requestJSON('/desk/action',{method:'POST',signal:controller.signal,body:{action:'read',conversation_id:conversation,expected_agent_id:agent,message_ids}});
     if(result.conversation_id!==conversation||result.acknowledged!==true)throw Error('invalid read acknowledgement');
+    if(alive)acknowledged.current?.(message_ids);
    }
   });
   const unread=new Set(JSON.parse(idKey));

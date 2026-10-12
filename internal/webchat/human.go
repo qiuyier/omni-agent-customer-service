@@ -69,6 +69,9 @@ func configureAgents(input []Agent, hosts []trustedHost) ([]trustedAgent, error)
 }
 
 type deskState struct {
+	FirstUnreadID    string              `json:"first_unread_id,omitempty"`
+	HasOlder         bool                `json:"has_older"`
+	HasNewer         bool                `json:"has_newer"`
 	AttentionEnabled bool                `json:"attention_enabled"`
 	Unread           int                 `json:"unread_count"`
 	UnreadIDs        []string            `json:"unread_message_ids,omitempty"`
@@ -205,11 +208,28 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 		Event      string   `json:"event_id"`
 		Content    string   `json:"content"`
 		MessageIDs []string `json:"message_ids"`
+		Before     string   `json:"before_message_id"`
+		After      string   `json:"after_message_id"`
+		From       string   `json:"from_message_id"`
 	}
-	if !decode(w, r, &body, "conversation_id", "action", "revision", "event_id", "content", "message_ids") {
+	if !decode(w, r, &body, "conversation_id", "action", "revision", "event_id", "content", "message_ids", "before_message_id", "after_message_id", "from_message_id") {
 		return
 	}
 	if !validID(body.ID) || (body.Action != "read" && body.Action != "claim" && body.Action != "history" && body.Action != "reply" && body.Action != "close") {
+		problem(w, 400, "invalid_request")
+		return
+	}
+	count := 0
+	for _, cursor := range []string{body.Before, body.After, body.From} {
+		if cursor != "" {
+			count++
+			if !validID(cursor) {
+				problem(w, 400, "invalid_request")
+				return
+			}
+		}
+	}
+	if count > 1 || (count > 0 && body.Action != "history") {
 		problem(w, 400, "invalid_request")
 		return
 	}
@@ -264,21 +284,8 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return err
 			}
-			result.Messages = []Message{}
-			remaining := 128 << 10
-			for i := len(all) - 1; i >= 0 && len(result.Messages) < 100; i-- {
-				m := all[i]
-				if m.Sender() != conversation.SenderCustomer && m.Sender() != conversation.SenderBot && m.Sender() != conversation.SenderHumanAgent {
-					continue
-				}
-				if len(m.Content()) > remaining {
-					break
-				}
-				remaining -= len(m.Content())
-				result.Messages = append(result.Messages, Message{ID: m.ID(), Role: m.Sender(), Content: m.Content(), CreatedAt: m.CreatedAt()})
-			}
-			for i, j := 0, len(result.Messages)-1; i < j; i, j = i+1, j-1 {
-				result.Messages[i], result.Messages[j] = result.Messages[j], result.Messages[i]
+			if err = deskHistory(all, body.Before, body.After, body.From, &result); err != nil {
+				return err
 			}
 		} else if body.Action == "reply" {
 			if c.AgentID() != a.id {
@@ -333,6 +340,10 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 		result.Revision = c.Revision()
 		return nil
 	})
+	if errors.Is(err, errHistoryCursor) {
+		problem(w, 400, "invalid_cursor")
+		return
+	}
 	if errors.Is(err, errDeskDenied) {
 		problem(w, 403, "forbidden")
 		return
@@ -367,8 +378,9 @@ func (g *Gateway) fillAttention(ctx context.Context, a *trustedAgent, result *de
 	}
 	result.AttentionEnabled = true
 	result.Unread = info.Unread
+	result.FirstUnreadID = info.FirstUnreadID
 	for _, m := range result.Messages {
-		if m.Role == conversation.SenderCustomer && !info.Seen[m.ID] {
+		if m.Role == conversation.SenderCustomer && !m.ContentTruncated && !info.Seen[m.ID] {
 			result.UnreadIDs = append(result.UnreadIDs, m.ID)
 		}
 	}

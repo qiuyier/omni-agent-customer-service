@@ -18,13 +18,13 @@ export function createPoller({read,onState=()=>{},visible=()=>true,subscribe=()=
 
 // Staff history is a read-only action despite its existing POST transport.
 // Check the actor before ever requesting a selected conversation's history.
-export async function readDeskSnapshot(request,agentID,conversationID,signal){
+export async function readDeskSnapshot(request,agentID,conversationID,signal,historyCursor={}){
  const me=await request('/desk/me',{signal});
  if(me.agent?.id!==agentID)return {me,changed:true};
  if(!me.agent)return {me,queue:[],selected:null};
  const queue=await request('/desk/queue',{signal});
  let selected=null;
- if(conversationID){selected=await request('/desk/action',{method:'POST',body:{conversation_id:conversationID,action:'history'},signal});if(selected?.conversation_id!==conversationID)throw Error('invalid_history');}
+ if(conversationID){selected=await request('/desk/action',{method:'POST',body:{...historyCursor,conversation_id:conversationID,action:'history'},signal});if(selected?.conversation_id!==conversationID)throw Error('invalid_history');}
  if(!Array.isArray(queue.items))throw Error('invalid_queue');
  // Another tab may switch the staff cookie while these reads are in flight.
  const confirmed=await request('/desk/me',{signal});
