@@ -54,6 +54,8 @@ git diff --check
 
 ## 阅读顺序
 
+后续已补[多坐席并发验收](desk-concurrency.md)：包含真实 HTTP 抢接/已读竞争、1/8/16 坐席刷新及连接池等待测量；仍不是生产容量认证。
+
 1. 本文：范围、数据和剩余限制。
 2. internal/conversation/desk_queue.go：可选批量读取契约。
 3. internal/persistence/postgres/desk_queue.go：范围筛选、快照和 SQL 投影。

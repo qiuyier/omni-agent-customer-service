@@ -1,0 +1,32 @@
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.56s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.47s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.46s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.47s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.47s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.48s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.46s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.47s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.45s)
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.49s)
+PASS
+ok  	github.com/qiuyier/omni-agent-customer-service/internal/persistence/postgres	6.500s

@@ -1,0 +1,10 @@
+=== RUN   TestDatabaseDeskHTTPConcurrency
+    desk_concurrency_test.go:236: 8 synchronized claim races: exactly one winner; 8 read/send races: new message unread; agent/source isolation passed; model calls=0
+--- PASS: TestDatabaseDeskHTTPConcurrency (0.75s)
+=== RUN   TestDatabaseDeskConcurrentPolling
+    desk_concurrency_test.go:356: workers=1 requests=50 elapsed_s=9.825 achieved_rps=5.09 errors=0 statuses=map[200:50] p50_ms=21.086 p95_ms=23.337 max_ms=47.522 pool_limit=4 sampled_peak_acquired=1 acquire_count=50 empty_acquire_count=0 total_acquire_ms=0.139 acquired_after=0
+    desk_concurrency_test.go:356: workers=8 requests=400 elapsed_s=9.843 achieved_rps=40.64 errors=0 statuses=map[200:400] p50_ms=25.708 p95_ms=40.218 max_ms=49.791 pool_limit=4 sampled_peak_acquired=4 acquire_count=400 empty_acquire_count=203 total_acquire_ms=3707.148 acquired_after=0
+    desk_concurrency_test.go:356: workers=16 requests=800 elapsed_s=9.854 achieved_rps=81.19 errors=0 statuses=map[200:800] p50_ms=30.105 p95_ms=59.709 max_ms=112.963 pool_limit=4 sampled_peak_acquired=4 acquire_count=800 empty_acquire_count=600 total_acquire_ms=14824.589 acquired_after=0
+--- PASS: TestDatabaseDeskConcurrentPolling (30.31s)
+PASS
+ok  	github.com/qiuyier/omni-agent-customer-service/internal/persistence/postgres	31.791s
