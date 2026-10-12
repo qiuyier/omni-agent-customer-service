@@ -1,0 +1,93 @@
+=== RUN   TestDatabaseDeskQueueBatch
+    desk_queue_test.go:162: agent-a conversations=100 old_statements=601 batch_statements=1
+    desk_queue_test.go:183: batch=false sample=1 ms=237.109 statements=601
+    desk_queue_test.go:183: batch=false sample=2 ms=257.225 statements=601
+    desk_queue_test.go:183: batch=false sample=3 ms=279.976 statements=601
+    desk_queue_test.go:183: batch=false sample=4 ms=250.206 statements=601
+    desk_queue_test.go:183: batch=false sample=5 ms=238.783 statements=601
+    desk_queue_test.go:183: batch=false sample=6 ms=248.309 statements=601
+    desk_queue_test.go:183: batch=false sample=7 ms=248.573 statements=601
+    desk_queue_test.go:183: batch=false sample=8 ms=268.473 statements=601
+    desk_queue_test.go:183: batch=false sample=9 ms=261.517 statements=601
+    desk_queue_test.go:186: batch=false median_ms=250.206 max_ms=279.976
+    desk_queue_test.go:183: batch=true sample=1 ms=6.875 statements=1
+    desk_queue_test.go:183: batch=true sample=2 ms=6.354 statements=1
+    desk_queue_test.go:183: batch=true sample=3 ms=6.506 statements=1
+    desk_queue_test.go:183: batch=true sample=4 ms=6.747 statements=1
+    desk_queue_test.go:183: batch=true sample=5 ms=6.247 statements=1
+    desk_queue_test.go:183: batch=true sample=6 ms=6.287 statements=1
+    desk_queue_test.go:183: batch=true sample=7 ms=5.638 statements=1
+    desk_queue_test.go:183: batch=true sample=8 ms=6.538 statements=1
+    desk_queue_test.go:183: batch=true sample=9 ms=6.452 statements=1
+    desk_queue_test.go:186: batch=true median_ms=6.452 max_ms=6.875
+    desk_queue_test.go:197: Sort  (cost=2582.53..2582.78 rows=100 width=291) (actual time=6.654..6.663 rows=100 loops=1)
+    desk_queue_test.go:197:   Sort Key: q.updated_at, q.id
+    desk_queue_test.go:197:   Sort Method: quicksort  Memory: 86kB
+    desk_queue_test.go:197:   Buffers: shared hit=1838
+    desk_queue_test.go:197:   CTE scoped
+    desk_queue_test.go:197:     ->  Limit  (cost=8.83..9.08 rows=100 width=64) (actual time=0.171..0.183 rows=100 loops=1)
+    desk_queue_test.go:197:           Buffers: shared hit=2
+    desk_queue_test.go:197:           ->  Sort  (cost=8.83..9.14 rows=123 width=64) (actual time=0.170..0.175 rows=100 loops=1)
+    desk_queue_test.go:197:                 Sort Key: conversations.updated_at, conversations.id
+    desk_queue_test.go:197:                 Sort Method: quicksort  Memory: 41kB
+    desk_queue_test.go:197:                 Buffers: shared hit=2
+    desk_queue_test.go:197:                 ->  Seq Scan on conversations  (cost=0.00..4.56 rows=123 width=64) (actual time=0.006..0.020 rows=124 loops=1)
+    desk_queue_test.go:197:                       Filter: ((channel = 'web'::text) AND ((status = 'waiting_human'::text) OR ((status = 'human_active'::text) AND (agent_id = 'agent-a'::text))))
+    desk_queue_test.go:197:                       Rows Removed by Filter: 4
+    desk_queue_test.go:197:                       Buffers: shared hit=2
+    desk_queue_test.go:197:   ->  Nested Loop Left Join  (cost=1805.74..2570.13 rows=100 width=291) (actual time=5.847..6.595 rows=100 loops=1)
+    desk_queue_test.go:197:         Buffers: shared hit=1838
+    desk_queue_test.go:197:         ->  Nested Loop Left Join  (cost=1805.45..2335.33 rows=100 width=202) (actual time=5.831..5.998 rows=100 loops=1)
+    desk_queue_test.go:197:               Buffers: shared hit=1516
+    desk_queue_test.go:197:               ->  Hash Left Join  (cost=1805.17..1807.44 rows=100 width=200) (actual time=5.814..5.846 rows=100 loops=1)
+    desk_queue_test.go:197:                     Hash Cond: (q.id = u.conversation_id)
+    desk_queue_test.go:197:                     Buffers: shared hit=1228
+    desk_queue_test.go:197:                     ->  CTE Scan on scoped q  (cost=0.00..2.00 rows=100 width=184) (actual time=0.175..0.183 rows=100 loops=1)
+    desk_queue_test.go:197:                           Buffers: shared hit=2
+    desk_queue_test.go:197:                     ->  Hash  (cost=1803.58..1803.58 rows=127 width=22) (actual time=5.632..5.635 rows=96 loops=1)
+    desk_queue_test.go:197:                           Buckets: 1024  Batches: 1  Memory Usage: 14kB
+    desk_queue_test.go:197:                           Buffers: shared hit=1226
+    desk_queue_test.go:197:                           ->  Subquery Scan on u  (cost=1801.04..1803.58 rows=127 width=22) (actual time=5.598..5.619 rows=96 loops=1)
+    desk_queue_test.go:197:                                 Buffers: shared hit=1226
+    desk_queue_test.go:197:                                 ->  HashAggregate  (cost=1801.04..1802.31 rows=127 width=22) (actual time=5.597..5.610 rows=96 loops=1)
+    desk_queue_test.go:197:                                       Group Key: m.conversation_id
+    desk_queue_test.go:197:                                       Batches: 1  Memory Usage: 40kB
+    desk_queue_test.go:197:                                       Buffers: shared hit=1226
+    desk_queue_test.go:197:                                       ->  Hash Join  (cost=289.90..1767.61 rows=4457 width=14) (actual time=1.373..5.232 rows=3744 loops=1)
+    desk_queue_test.go:197:                                             Hash Cond: (m.conversation_id = q_1.id)
+    desk_queue_test.go:197:                                             Buffers: shared hit=1226
+    desk_queue_test.go:197:                                             ->  Hash Anti Join  (cost=286.65..1698.57 rows=5661 width=14) (actual time=1.335..4.653 rows=4836 loops=1)
+    desk_queue_test.go:197:                                                   Hash Cond: (m.id = r.message_id)
+    desk_queue_test.go:197:                                                   Buffers: shared hit=1226
+    desk_queue_test.go:197:                                                   ->  Seq Scan on messages m  (cost=0.00..1313.75 rows=11000 width=24) (actual time=0.003..2.106 rows=11000 loops=1)
+    desk_queue_test.go:197:                                                         Filter: (sender = 'customer'::text)
+    desk_queue_test.go:197:                                                         Rows Removed by Filter: 1700
+    desk_queue_test.go:197:                                                         Buffers: shared hit=1155
+    desk_queue_test.go:197:                                                   ->  Hash  (cost=209.60..209.60 rows=6164 width=10) (actual time=1.318..1.318 rows=6164 loops=1)
+    desk_queue_test.go:197:                                                         Buckets: 8192  Batches: 1  Memory Usage: 317kB
+    desk_queue_test.go:197:                                                         Buffers: shared hit=71
+    desk_queue_test.go:197:                                                         ->  Seq Scan on desk_read_receipts r  (cost=0.00..209.60 rows=6164 width=10) (actual time=0.004..0.788 rows=6164 loops=1)
+    desk_queue_test.go:197:                                                               Filter: (agent_id = 'agent-a'::text)
+    desk_queue_test.go:197:                                                               Rows Removed by Filter: 4924
+    desk_queue_test.go:197:                                                               Buffers: shared hit=71
+    desk_queue_test.go:197:                                             ->  Hash  (cost=2.00..2.00 rows=100 width=32) (actual time=0.034..0.034 rows=100 loops=1)
+    desk_queue_test.go:197:                                                   Buckets: 1024  Batches: 1  Memory Usage: 12kB
+    desk_queue_test.go:197:                                                   ->  CTE Scan on scoped q_1  (cost=0.00..2.00 rows=100 width=32) (actual time=0.001..0.024 rows=100 loops=1)
+    desk_queue_test.go:197:               ->  Index Scan using messages_sequence_no_key on messages first  (cost=0.29..5.28 rows=1 width=18) (actual time=0.001..0.001 rows=1 loops=100)
+    desk_queue_test.go:197:                     Index Cond: (sequence_no = u.first_sequence)
+    desk_queue_test.go:197:                     Buffers: shared hit=288
+    desk_queue_test.go:197:         ->  Limit  (cost=0.29..2.33 rows=1 width=75) (actual time=0.006..0.006 rows=1 loops=100)
+    desk_queue_test.go:197:               Buffers: shared hit=322
+    desk_queue_test.go:197:               ->  Index Scan Backward using messages_conversation_sequence_idx on messages  (cost=0.29..182.11 rows=89 width=75) (actual time=0.006..0.006 rows=1 loops=100)
+    desk_queue_test.go:197:                     Index Cond: (conversation_id = q.id)
+    desk_queue_test.go:197:                     Filter: (sender = ANY ('{customer,bot,human_agent}'::text[]))
+    desk_queue_test.go:197:                     Rows Removed by Filter: 2
+    desk_queue_test.go:197:                     Buffers: shared hit=322
+    desk_queue_test.go:197: Planning:
+    desk_queue_test.go:197:   Buffers: shared hit=192
+    desk_queue_test.go:197: Planning Time: 0.530 ms
+    desk_queue_test.go:197: Execution Time: 6.734 ms
+    desk_queue_test.go:162: agent-b conversations=100 old_statements=601 batch_statements=1
+--- PASS: TestDatabaseDeskQueueBatch (3.59s)
+PASS
+ok  	github.com/qiuyier/omni-agent-customer-service/internal/persistence/postgres	4.204s

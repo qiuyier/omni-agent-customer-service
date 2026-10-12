@@ -177,6 +177,22 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 			methodNotAllowed(w, "GET")
 			return
 		}
+		if reader, ok := g.repo.(conversation.DeskQueueReader); ok {
+			items, err := reader.ReadDeskQueue(ctx, a.channel, a.id)
+			if err != nil {
+				applicationError(w, err)
+				return
+			}
+			out := make([]deskState, 0, len(items))
+			for _, item := range items {
+				c := item.Conversation
+				row := deskState{ID: c.ID(), Status: c.Status(), Revision: c.Revision()}
+				applyAttention(&row, item.Attention)
+				out = append(out, row)
+			}
+			writeJSON(w, 200, map[string]any{"items": out, "limit": 100})
+			return
+		}
 		rows, err := g.repo.(conversation.HumanQueue).ListHumanQueue(ctx, a.channel, a.id)
 		if err != nil {
 			applicationError(w, err)
@@ -401,6 +417,11 @@ func (g *Gateway) fillAttention(ctx context.Context, a *trustedAgent, result *de
 	if err != nil {
 		return err
 	}
+	applyAttention(result, info)
+	return nil
+}
+
+func applyAttention(result *deskState, info conversation.Attention) {
 	result.AttentionEnabled = true
 	result.Unread = info.Unread
 	result.FirstUnreadID = info.FirstUnreadID
@@ -418,5 +439,4 @@ func (g *Gateway) fillAttention(ctx context.Context, a *trustedAgent, result *de
 		}
 		result.Latest = &Message{ID: m.ID(), Role: m.Sender(), Content: string(content), CreatedAt: m.CreatedAt(), ContentTruncated: truncated}
 	}
-	return nil
 }
