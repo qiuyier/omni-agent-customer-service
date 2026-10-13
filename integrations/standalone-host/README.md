@@ -1,5 +1,7 @@
 # 独立业务后端接入样例（Node.js）
 
+2026-10-13 新增[两系统相同身份编号的隔离验收](../cross-system/README.md)，复用本宿主而不新增行业分支。统一接入步骤见[系统接入说明](../../docs/system-integration.md)。
+
 可选[人工接管闭环](../../docs/human-handoff.md)已完成本地验收：显式 --allow-human-desk 启动人工队列与工作台，未配置时保持关闭。默认示例仍不提供人工功能。
 
 要接入新的业务系统，请从[配置与启动检查标准清单](../../docs/host-onboarding.md)开始；正式网关支持 -check-config 和 -check-resources，两者均不调用模型或embedding。本目录启动器、模拟登录和故障代理仅用于本地验收。
