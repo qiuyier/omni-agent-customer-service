@@ -1,5 +1,7 @@
 # 独立业务后端接入样例（Node.js）
 
+身份绑定与代理实现已提取到[可复用宿主接入包](../host-kit/README.md)。host.mjs 现在仅包装演示账号；真实业务使用 startAdapter 与身份回调，默认不开放演示登录。
+
 2026-10-13 新增[两系统相同身份编号的隔离验收](../cross-system/README.md)，复用本宿主而不新增行业分支。统一接入步骤见[系统接入说明](../../docs/system-integration.md)。
 
 可选[人工接管闭环](../../docs/human-handoff.md)已完成本地验收：显式 --allow-human-desk 启动人工队列与工作台，未配置时保持关闭。默认示例仍不提供人工功能。

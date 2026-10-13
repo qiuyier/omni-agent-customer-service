@@ -126,4 +126,19 @@ test('two systems: colliding user/staff/event IDs stay isolated through the comp
  await t.test('private gateway does not accept customer or host credentials as staff',async()=>{
   for(const token of [sessions[1].access_token,hostSecrets[1]])assert.equal((await direct('/internal/chat/desk/queue',{token})).status,401);
  });
+ await t.test('reusable acceptance checks the non-commerce sample through configuration only',async()=>{
+  const id=sessions[1].conversation_id;
+  const state=await action(1,{conversation_id:id,action:'history'});
+  assert.equal((await action(1,{conversation_id:id,action:'close',revision:state.data.revision})).status,200);
+  assert.equal((await customer(1,'/chat/v1/consultations',{})).status,200);
+  const probe=spawn(process.execPath,['integrations/host-kit/verify.mjs','--allow-test-writes'],{cwd:root,stdio:['pipe','pipe','pipe'],timeout:20000});
+  let output='';probe.stdout.on('data',chunk=>{output+=chunk;});probe.stderr.resume();
+  const finished=new Promise((resolve,reject)=>{probe.once('error',reject);probe.once('close',resolve);});
+  probe.stdin.end(JSON.stringify({origin:hosts[1].origin,customers:[{account:'lin'},{account:'zhou'}],staff:{account:'staff-1'}}));
+  const exitCode=await finished,report=JSON.parse(output);
+  assert.equal(exitCode,0,JSON.stringify(report));
+  assert.equal(report.passed,true,JSON.stringify(report));
+  assert.ok(report.checks.includes('new_round_empty'));
+  assert.ok(report.checks.includes('staff_logout'));
+ });
 });
