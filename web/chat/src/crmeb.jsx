@@ -8,6 +8,7 @@ function Chat() {
   if (!api.current) api.current = createCRMEBAPI({ getLogin: () => readLogin(localStorage) });
   const lifetime = useRef(null), epoch = useRef(0), busy = useRef(false);
   const [session, setSession] = useState(null), [messages, setMessages] = useState([]);
+  const [status,setStatus]=useState('bot_active');
   const [phase, setPhase] = useState('loading'), [error, setError] = useState('');
   const [draft, setDraft] = useState(''), [pending, setPending] = useState(null), [sending, setSending] = useState(false);
   const [canStore, setCanStore] = useState(false);
@@ -34,7 +35,7 @@ function Chat() {
       const h = await api.current.history(controller.signal);
       if (started !== epoch.current) return;
       if (!Array.isArray(h?.messages)) throw new Error('invalid history');
-      setMessages(h.messages); setPhase('ready');
+      setMessages(h.messages);setStatus(h.status||'bot_active'); setPhase('ready');
     } catch (e) { if (started === epoch.current) { setPhase('error'); failure(e); } }
     finally { if (started === epoch.current) busy.current = false; }
   }
@@ -49,13 +50,24 @@ function Chat() {
   async function refresh() {
     if (busy.current || !session) return;
     busy.current = true; const started = epoch.current; setError('');
-    try { const h = await api.current.history(lifetime.current.signal); if (started === epoch.current) { if (!Array.isArray(h?.messages)) throw new Error('history'); setMessages(h.messages); } }
+    try { const h = await api.current.history(lifetime.current.signal); if (started === epoch.current) { if (!Array.isArray(h?.messages)) throw new Error('history'); setMessages(h.messages);setStatus(h.status||'bot_active'); } }
     catch (e) { if (started === epoch.current) failure(e); }
     finally { if (started === epoch.current) busy.current = false; }
   }
+  const refreshRef=useRef(refresh);refreshRef.current=refresh;
+  useEffect(()=>{if(phase!=='ready'||!['waiting_human','human_active'].includes(status))return;const id=setInterval(()=>{if(document.visibilityState==='visible')refreshRef.current();},5000);return()=>clearInterval(id);},[phase,status]);
+  async function control(kind){
+    if(busy.current||pending||phase!=='ready')return;
+    busy.current=true;setSending(true);setError('');const started=epoch.current;
+    try{
+      if(kind==='handoff'){const result=await api.current.handoff(lifetime.current.signal);if(started===epoch.current)setStatus(result.status);}
+      else {await api.current.nextRound(lifetime.current.signal);if(started===epoch.current)await connect();}
+    }catch(e){if(started===epoch.current)failure(e);}
+    finally{if(started===epoch.current){busy.current=false;setSending(false);}}
+  }
   async function send(e) {
     e?.preventDefault();
-    if (busy.current || !session || !canStore || phase !== 'ready' || (!pending && !validContent(draft))) return;
+    if (busy.current || !session || !canStore || phase !== 'ready' || status === 'closed' || (!pending && !validContent(draft))) return;
     if (api.current.changed()) { resetIdentity(); return; }
     const started = epoch.current; busy.current = true; setSending(true); setError('');
     let p = pending;
@@ -66,7 +78,7 @@ function Chat() {
       if (!result?.message_id) throw new Error('unconfirmed send');
       sessionStorage.removeItem(pendingKey(session.conversation_id)); setPending(null);
       const h = await api.current.history(lifetime.current.signal);
-      if (started === epoch.current) { if (!Array.isArray(h?.messages)) throw new Error('history'); setMessages(h.messages); }
+      if (started === epoch.current) { if (!Array.isArray(h?.messages)) throw new Error('history'); setMessages(h.messages);setStatus(h.status||'bot_active'); }
     } catch (e) { if (started === epoch.current) failure(e); }
     finally { if (started === epoch.current) { busy.current = false; setSending(false); } }
   }
@@ -81,7 +93,8 @@ function Chat() {
         {pending && <div className="ml-auto max-w-[90%] rounded-xl border border-dashed border-stone-300 p-4"><p className="text-xs text-stone-500">{sending ? (session?.reply_mode === 'ai' ? '正在生成回复，请稍候；不要重复发送。' : '等待确认') : '待确认 · 消息可能已保存，重试沿用同一消息标识'}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{pending.content}</p></div>}
       </div>
       <footer className="border-t border-stone-200 p-5">{error && <p role="alert" className="mb-4 text-sm leading-6 text-stone-700">{error}</p>}{phase === 'unauthorized' && <a className="primary-button inline-block" href="/pages/users/login/index">前往商城登录</a>}
-        {phase === 'ready' && (pending ? <button className="primary-button disabled:opacity-40" disabled={sending || !canStore} onClick={send}>{sending ? '正在等待服务确认' : '重试待确认消息'}</button> : <form onSubmit={send}><label className="mb-2 block text-xs font-medium" htmlFor="message">测试消息</label><textarea id="message" rows={3} className="w-full resize-y rounded-xl border border-stone-200 p-3 text-sm leading-6 outline-none focus:border-emerald-800" value={draft} onChange={e => setDraft(e.target.value)} disabled={sending || !canStore} placeholder="写下用于本轮验收的消息"/><div className="mt-3 flex items-center justify-between"><span className="font-mono text-xs text-stone-500">{byteLength(draft)} / 4,000 bytes</span><button type="submit" className="primary-button disabled:opacity-40" disabled={sending || !canStore || !validContent(draft)}>发送</button></div></form>)}
+        {phase==='ready'&&<div className="mb-4 flex flex-wrap items-center gap-3"><p role="status" className="text-sm">{{bot_active:'智能/模拟客服',waiting_human:'等待人工接管',human_active:'人工处理中',closed:'本次咨询已结束'}[status]||'状态待刷新'}</p>{session?.human_enabled&&status==='bot_active'&&<button disabled={sending||!!pending} className="secondary-button" onClick={()=>control('handoff')}>申请人工客服</button>}{session?.new_consultation_enabled&&status==='closed'&&<button disabled={sending||!!pending||!!draft} className="primary-button" onClick={()=>control('next')}>开始新咨询</button>}{status==='closed'&&(!!draft||!!pending)&&<div className="space-y-2"><p className="text-xs">咨询已结束。待确认消息可能已保存，请先刷新记录核对；清理只移除本机草稿和待确认标记，不删除服务器消息。</p><button className="secondary-button" disabled={sending} onClick={()=>{try{sessionStorage.removeItem(pendingKey(session.conversation_id));setPending(null);setDraft('');}catch{setError('无法清理本机会话存储，请检查浏览器设置。');}}}>清理本机草稿与待确认标记</button></div>}</div>}
+        {phase === 'ready' && status!=='closed' && (pending ? <button className="primary-button disabled:opacity-40" disabled={sending || !canStore} onClick={send}>{sending ? '正在等待服务确认' : '重试待确认消息'}</button> : <form onSubmit={send}><label className="mb-2 block text-xs font-medium" htmlFor="message">测试消息</label><textarea id="message" rows={3} className="w-full resize-y rounded-xl border border-stone-200 p-3 text-sm leading-6 outline-none focus:border-emerald-800" value={draft} onChange={e => setDraft(e.target.value)} disabled={sending || !canStore} placeholder="写下用于本轮验收的消息"/><div className="mt-3 flex items-center justify-between"><span className="font-mono text-xs text-stone-500">{byteLength(draft)} / 4,000 bytes</span><button type="submit" className="primary-button disabled:opacity-40" disabled={sending || !canStore || !validContent(draft)}>发送</button></div></form>)}
       </footer>
     </section>
   </main>;

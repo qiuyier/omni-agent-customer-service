@@ -1,0 +1,30 @@
+<?php
+declare(strict_types=1);
+require __DIR__ . '/DeskBridge.php';
+$config=['enabled'=>true,'human_enabled'=>true,'origin'=>'http://demo.crmeb.com','allow_local_http'=>true,'upstream'=>'http://127.0.0.1:8093','secret'=>str_repeat('h',40),'agents'=>['7'=>['id'=>'crmeb-kefu-7','secret'=>str_repeat('s',40)]]];
+$active=true;$uid='7';$calls=[];$hook=null;$passed=0;
+$auth=static function($token)use(&$active,&$uid){return $active&&$token===str_repeat('t',30)?['id'=>$uid,'name'=>'测试客服']:null;};
+$transport=static function($method,$path,$token,$body)use(&$calls,&$hook){$calls[]=[$method,$path,$token,$body];return $hook?$hook():[200,['items'=>[]]];};
+$bridge=new \OmniChat\DeskBridge($config,$auth,$transport);
+$headers=['Host'=>'demo.crmeb.com','Origin'=>'http://demo.crmeb.com','Content-Type'=>'application/json','Authori-zation'=>'Bearer '.str_repeat('t',30)];
+function check($ok,$name){global $passed;if(!$ok)throw new RuntimeException($name);$passed++;}
+check($bridge->handle('GET','me',$headers,'')===[200,['agent'=>['id'=>'crmeb-kefu-7','name'=>'测试客服'],'accounts'=>[]]],'server mapped identity');
+check(count($calls)===0,'me local only');
+check($bridge->handle('GET','queue',$headers,'')[0]===200,'queue');
+check($calls[0][1]==='/internal/chat/desk/queue'&&$calls[0][2]===str_repeat('s',40),'independent upstream credential');
+$body=['action'=>'claim','conversation_id'=>'test','revision'=>1,'expected_agent_id'=>'crmeb-kefu-7'];
+check($bridge->handle('POST','action',$headers,json_encode($body))[0]===200,'claim');
+check(!isset($calls[1][3]['expected_agent_id']),'strip browser actor assertion');
+$body['expected_agent_id']='foreign';check($bridge->handle('POST','action',$headers,json_encode($body))[0]===403,'foreign expected actor');
+unset($body['expected_agent_id']);$body['agent_id']='foreign';check($bridge->handle('POST','action',$headers,json_encode($body))[0]===400,'actor injection');
+foreach(['[]','null','{']as$bad)check($bridge->handle('POST','action',$headers,$bad)[0]===400,'invalid body');
+$h=$headers;$h['Origin']='http://evil.test';check($bridge->handle('GET','queue',$h,'')[0]===403,'foreign origin');
+$h=$headers;$h['Authorization']='Bearer other';check($bridge->handle('GET','queue',$h,'')[0]===401,'ambiguous auth');
+check($bridge->handle('GET','queue',$headers,'','uid=7')[0]===400,'query identity');
+$uid='8';check($bridge->handle('GET','me',$headers,'')[0]===401,'unmapped staff');$uid='7';
+$hook=static function()use(&$active){$active=false;return[200,['private'=>'content']];};
+check($bridge->handle('GET','queue',$headers,'')[0]===401,'revoked in flight');
+$before=count($calls);check($bridge->handle('GET','queue',$headers,'')[0]===401&&count($calls)===$before,'revoked before request');
+$active=true;$hook=static function(){return[500,['private'=>'secret']];};check($bridge->handle('GET','queue',$headers,'')===[502,['error'=>'request_rejected']],'sanitized upstream error');
+$config['human_enabled']=false;check((new \OmniChat\DeskBridge($config,$auth,$transport))->handle('GET','me',$headers,'')[0]===404,'disabled by default');
+echo json_encode(['passed'=>$passed]).PHP_EOL;

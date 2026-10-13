@@ -40,6 +40,7 @@ services:
       WEBCHAT_HOST_SECRET: ${OMNI_HOST_SECRET:?run prepare.mjs first}
       WEBCHAT_ADDRESS: 127.0.0.1:8093
       WEBCHAT_REPLY_MODE: fake
+      WEBCHAT_AGENTS_JSON: ${OMNI_AGENTS_JSON:-}
     depends_on:
       postgres: {condition: service_healthy}
     read_only: true

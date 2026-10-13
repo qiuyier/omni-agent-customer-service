@@ -1,5 +1,8 @@
 # CRMEB 本机持久化测试部署
 
+2026-10-13 已完成 [人工接入验收](../../integrations/crmeb/Human-acceptance.md)，当前实例为 fake 模式，保留原知识与模型配置。
+启用人工需私有 OMNI_AGENTS_JSON 与 CRMEB agents 映射一致；默认空值不会创建坐席。
+
 最新阶段接入[可配置知识库](../../integrations/crmeb/Knowledge-acceptance.md)。
 保留知识模式请使用 `node deploy/crmeb/set-mode.mjs ai-knowledge`；`ai` 明确表示不加载知识。
 

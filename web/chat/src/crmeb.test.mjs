@@ -4,6 +4,13 @@ import { createCRMEBAPI, readLogin, eventID, replyDescription } from './crmeb.mj
 const loginA = 'aaa.bbb.ccc', loginB = 'ddd.eee.fff';
 const s = (id = 'a', token = 'x') => ({access_token:'chat_'+token.repeat(43),conversation_id:'wbc_'+id.repeat(64),expires_at:new Date(Date.now()+300000).toISOString()});
 const reply = (data, status = 200) => new Response(JSON.stringify(data), {status, headers:{'Content-Type':'application/json'}});
+test('human controls use bound capability and empty bodies',async()=>{
+ const calls=[];const api=createCRMEBAPI({getLogin:()=>loginA,fetcher:async(p,o)=>{calls.push([p,o]);return reply(p.endsWith('session')?{...s(),human_enabled:true,new_consultation_enabled:true}:{status:'waiting_human'});}});
+ const opened=await api.open();assert.equal(opened.human_enabled,true);
+ await api.handoff();await api.nextRound();
+ assert.deepEqual(calls.slice(1).map(([p])=>p),['/api/omni-chat/handoff','/api/omni-chat/consultations']);
+ for(const [,o]of calls.slice(1)){assert.equal(o.body,'{}');assert.equal(o.headers['X-Omni-Chat-Token'],s().access_token);}
+});
 test('AI disclosure is explicit, unknown modes never imply AI, old replies not relabeled',()=>{
  assert.match(replyDescription('ai'),/对话内容将用于模型生成/);
  assert.match(replyDescription('ai'),/历史记录可能包含/);

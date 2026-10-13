@@ -30,7 +30,7 @@ export function createCRMEBAPI({ getLogin, fetcher = globalThis.fetch }) {
     const pinned = login;
     const wrapped = async (url, init) => {
       const headers = { ...init.headers, 'Authori-zation': `Bearer ${pinned}` };
-      if (capability && path.endsWith('/messages')) headers['X-Omni-Chat-Token'] = capability;
+      if (capability && !path.endsWith('/session')) headers['X-Omni-Chat-Token'] = capability;
       return fetcher(url, { ...init, headers, redirect: 'error' });
     };
     let result;
@@ -45,22 +45,24 @@ export function createCRMEBAPI({ getLogin, fetcher = globalThis.fetch }) {
     capability = data.access_token;
     current = { conversation_id: data.conversation_id, expires_at: data.expires_at,
       storage: ['postgres', 'memory'].includes(data.storage) ? data.storage : 'unknown',
-      reply_mode: ['fake', 'ai'].includes(data.reply_mode) ? data.reply_mode : 'unknown' };
+      reply_mode: ['fake', 'ai'].includes(data.reply_mode) ? data.reply_mode : 'unknown', human_enabled:data.human_enabled===true, new_consultation_enabled:data.new_consultation_enabled===true };
     return current;
   };
-  const authorized = async (method, body, signal) => {
+  const authorized = async (method, body, signal, path='/api/omni-chat/messages') => {
     if (!current) throw new APIError('unauthorized', 401);
     const expected = current.conversation_id;
     const timeout = () => method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000;
-    try { return await call('/api/omni-chat/messages', { method, body, signal, timeout: timeout() }); }
+    try { return await call(path, { method, body, signal, timeout: timeout() }); }
     catch (error) {
       if (error.status !== 401 || error.code === 'account_changed') throw error;
       await acquire(signal, expected);
-      return call('/api/omni-chat/messages', { method, body, signal, timeout: timeout() });
+      return call(path, { method, body, signal, timeout: timeout() });
     }
   };
   return {
     open: signal => { revision++; login = getLogin(); capability = ''; current = null; if (!login) return Promise.reject(new APIError('unauthorized', 401)); return acquire(signal); },
+    handoff: signal => authorized('POST',{},signal,'/api/omni-chat/handoff'),
+    nextRound: signal => authorized('POST',{},signal,'/api/omni-chat/consultations'),
     history: signal => authorized('GET', undefined, signal),
     send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
     changed: () => !!login && getLogin() !== login,
