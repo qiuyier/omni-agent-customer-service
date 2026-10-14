@@ -10,7 +10,14 @@ import {promisify} from 'node:util';
 import http from 'node:http';
 import {startPortal} from './portal.mjs';
 import {createLegacyDirectory} from './legacy.mjs';
-import {verifyHost} from '../host-kit/verify.mjs';
+import {acceptHost} from '../host-kit/acceptance.mjs';
+async function verifyHost({origin,...lifecycle},options){
+ const report=await acceptHost({preflight:{origin,paths:{customerIdentity:'/support/identity/member',staffIdentity:'/support/identity/operator'}},lifecycle},options);
+ assert.equal(report.status,'needs_verification',JSON.stringify(report));
+ assert.ok(!report.phases.preflight.checks.some(c=>c.status==='fail'),JSON.stringify(report));
+ assert.equal(report.checks.find(c=>c.id==='lifecycle').status,'pass',JSON.stringify(report));
+ return report.phases.lifecycle;
+}
 import {preflightHost} from '../host-kit/preflight.mjs';
 const random=()=>randomBytes(32).toString('base64url');
 test('office native records map through an independent facade',{timeout:180000},async t=>{
@@ -79,11 +86,16 @@ test('office native records map through an independent facade',{timeout:180000},
  await t.test('switch, disable and re-enable revoke old sessions without crossing roles',async()=>{
   const a=await login('member','lin'),cap=await call('/host/chat-session',{cookie:a.cookie,body:{}});const b=await login('member','zhou',a.cookie);
   assert.equal((await call('/chat/v1/messages',{cookie:b.cookie,token:cap.data.access_token})).status,401);
+  for(const cookie of [a.cookie,b.cookie])assert.equal((await call('/chat/v1/messages',{cookie,token:cap.data.access_token,body:{event_id:random(),content:'must reject stale login'}})).status,401);
+  const currentCap=await call('/host/chat-session',{cookie:b.cookie,body:{}});assert.equal(currentCap.status,200);
+  assert.equal((await call('/chat/v1/messages',{cookie:b.cookie,token:currentCap.data.access_token})).status,200);
   const staff=await login('operator','staff');portal.setActive('member','zhou',false);
+  assert.equal((await call('/chat/v1/messages',{cookie:b.cookie,token:currentCap.data.access_token,body:{event_id:random(),content:'must reject disabled login'}})).status,401);
   assert.equal((await call('/host/chat-session',{cookie:b.cookie,body:{}})).status,401);assert.equal((await login('member','zhou')).status,401);
   portal.setActive('member','zhou',true);assert.equal((await call('/host/chat-session',{cookie:b.cookie,body:{}})).status,401);
   assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,200);
   portal.setActive('operator','staff',false);assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,401);portal.setActive('operator','staff',true);assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,401);
+  assert.equal((await call('/desk/action',{cookie:staff.cookie,body:{action:'claim',expected_agent_id:'staff-1',conversation_id:'forged'}})).status,401);
  });
  await t.test('unmapped operator can log in but cannot act as support staff; logout is idempotent',async()=>{
   const a=await login('operator','visitor');assert.equal(a.status,200);assert.equal((await call('/desk/queue',{cookie:a.cookie})).status,401);

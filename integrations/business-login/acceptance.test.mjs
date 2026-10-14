@@ -8,7 +8,14 @@ import {fileURLToPath} from 'node:url';
 import {execFile,spawn} from 'node:child_process';
 import {promisify} from 'node:util';
 import {startBusiness} from './business.mjs';
-import {verifyHost} from '../host-kit/verify.mjs';
+import {acceptHost} from '../host-kit/acceptance.mjs';
+async function verifyHost({origin,...lifecycle},options){
+ const report=await acceptHost({preflight:{origin,paths:{customerIdentity:'/auth/customer/me',staffIdentity:'/auth/staff/me'}},lifecycle},options);
+ assert.equal(report.status,'needs_verification',JSON.stringify(report));
+ assert.ok(!report.phases.preflight.checks.some(c=>c.status==='fail'),JSON.stringify(report));
+ assert.equal(report.checks.find(c=>c.id==='lifecycle').status,'pass',JSON.stringify(report));
+ return report.phases.lifecycle;
+}
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const random=()=>randomBytes(32).toString('base64url');
 test('password-backed business sessions integrate without demoAccounts or adapter/core changes',{timeout:180000},async t=>{
@@ -57,12 +64,14 @@ test('password-backed business sessions integrate without demoAccounts or adapte
   const b=await login('customer','zhou',a.cookie);assert.equal(b.status,200);
   assert.equal((await call('/chat/v1/messages',{cookie:a.cookie,token:cap.data.access_token})).status,401);
   assert.equal((await call('/chat/v1/messages',{cookie:b.cookie,token:cap.data.access_token})).status,401);
+  for(const cookie of [a.cookie,b.cookie])assert.equal((await call('/chat/v1/messages',{cookie,token:cap.data.access_token,body:{event_id:random(),content:'must reject stale login'}})).status,401);
   const own=await session(b.cookie);assert.equal(own.status,200);assert.notEqual(own.data.conversation_id,cap.data.conversation_id);
   assert.equal((await call('/desk/queue',{cookie:b.cookie})).status,401);
  });
  await t.test('customer disable revokes old sessions permanently, re-enable needs a new login',async()=>{
   const a=await login('customer','lin');const cap=await session(a.cookie);
   business.setEnabled('customer','lin',false);
+  assert.equal((await call('/chat/v1/messages',{cookie:a.cookie,token:cap.data.access_token,body:{event_id:random(),content:'must reject disabled login'}})).status,401);
   assert.equal((await call('/chat/v1/messages',{cookie:a.cookie,token:cap.data.access_token})).status,401);
   assert.equal((await login('customer','lin')).status,401);
   business.setEnabled('customer','lin',true);
@@ -74,6 +83,7 @@ test('password-backed business sessions integrate without demoAccounts or adapte
   const staff=await login('staff','staff');assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,200);
   assert.equal((await session(staff.cookie)).status,401);
   business.setEnabled('staff','staff',false);
+  assert.equal((await call('/desk/action',{cookie:staff.cookie,body:{action:'claim',expected_agent_id:'staff-1',conversation_id:'forged'}})).status,401);
   assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,401);
   assert.equal((await login('staff','staff')).status,401);
   business.setEnabled('staff','staff',true);
