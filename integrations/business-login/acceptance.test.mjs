@@ -29,8 +29,8 @@ test('password-backed business sessions integrate without demoAccounts or adapte
  const accounts=[{role:'customer',account:'lin',id:'repair-member-1',password:passwords.lin},{role:'customer',account:'zhou',id:'repair-member-2',password:passwords.zhou},{role:'staff',account:'staff',id:'staff-1',password:passwords.staff},{role:'staff',account:'outsider',id:'unmapped-employee',password:passwords.outsider}];
  let now=Date.now();
  business=await startBusiness({gatewayOrigin,hostSecret,agents:[{id:'staff-1',name:'维修服务员工',secret:agentSecret}],accounts,now:()=>now});
- async function call(path,{body,cookie,token,origin=business.origin}={}){
-  const r=await fetch(business.origin+path,{method:body===undefined?'GET':'POST',headers:{Origin:origin,...(body===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(10000)});
+ async function call(path,{body,cookie,token,version,origin=business.origin}={}){
+  const r=await fetch(business.origin+path,{method:body===undefined?'GET':'POST',headers:{Origin:origin,...(version?{"X-Business-Session":version}:{}),...(body===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(10000)});
   const raw=await r.text();return {status:r.status,data:raw?JSON.parse(raw):null,cookie:r.headers.get('set-cookie')?.split(';')[0],cookieHeader:r.headers.get('set-cookie')};
  }
  const login=(role,account,cookie)=>call('/auth/'+role+'/login',{body:{account,password:passwords[account]},cookie});
@@ -89,6 +89,35 @@ test('password-backed business sessions integrate without demoAccounts or adapte
   assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,200);
   assert.equal((await call('/desk/queue',{cookie:customer.cookie.replace('repair_customer=','repair_staff=')})).status,401);
   assert.equal((await session(customer.cookie)).status,200);
+ });
+ await t.test('browser version is non-credential, rotates on same-account login and rejects stale staff/customer requests',async()=>{
+  assert.equal((await call('/auth/customer/me')).data.identity,null);
+  assert.equal((await call('/')).status,404);
+  for(const role of ['customer','staff']){
+   const account=role==='customer'?'lin':'staff',path=role==='customer'?'/host/me':'/desk/queue';
+   const first=await login(role,account),me=await call('/auth/'+role+'/me',{cookie:first.cookie});
+   const version=me.data.identity.version;assert.match(version,/^[a-f0-9]{32}$/);
+   assert.equal((await call(path,{cookie:first.cookie,version})).status,200);
+   assert.equal((await call(path,{version})).status,401);
+   const next=await login(role,account,first.cookie),fresh=await call('/auth/'+role+'/me',{cookie:next.cookie});
+   assert.notEqual(fresh.data.identity.version,version);
+   assert.equal((await call(path,{cookie:next.cookie,version})).status,401);
+   assert.equal((await call(path,{cookie:next.cookie,version:fresh.data.identity.version})).status,200);
+   assert.equal((await call('/auth/'+role+'/me',{cookie:first.cookie})).data.identity,null);
+  }
+ });
+ await t.test('opt-in UI serves only local assets with CSP and no injected credentials',async()=>{
+  const ui=await startBusiness({gatewayOrigin,hostSecret,agents:[{id:'staff-1',name:'维修服务员工',secret:agentSecret}],accounts,serveUI:true});
+  try{
+   for(const path of ['/','/staff-login','/chat/','/desk/','/business.js','/business.css']){
+    const response=await fetch(ui.origin+path);assert.equal(response.status,200);
+    assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+    const body=await response.text();for(const secret of [...Object.values(passwords),hostSecret,agentSecret])assert.ok(!body.includes(secret));
+   }
+   assert.equal((await fetch(ui.origin+'/public/index.html')).status,404);
+   assert.equal((await fetch(ui.origin+'/business.js',{headers:{Origin:'http://foreign.invalid'}})).status,403);
+  }finally{await ui.close();}
  });
  // Advance the injected clock only after checks that exchange real gateway TTLs.
  await t.test('expired business login cannot renew chat or access staff queue',async()=>{

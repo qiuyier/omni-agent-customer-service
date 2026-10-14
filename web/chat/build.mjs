@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('.', import.meta.url));
 const output = fileURLToPath(new URL('../../internal/webchat/ui/assets/', import.meta.url));
 await build({
-  entryPoints: [new URL('src/app.jsx', import.meta.url).pathname],
+  entryPoints: [new URL('src/demo-entry.jsx', import.meta.url).pathname],
   outfile: `${output}app.js`,
   bundle: true,
   minify: true,

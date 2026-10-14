@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
 import { MAX_BYTES, byteLength, validContent, pendingKey, readPending, savePending, probeStorage, createChatAPI, requestJSON, errorMessage, normalizeStorage, normalizeReplyMode } from './protocol.mjs';
+import {requestJSON as baseRequest} from './protocol.mjs';
 import { demoPresentation } from './demo.mjs';
-import { Desk } from './desk.jsx';
 import {usePolling,pollingLabel} from './use-polling.jsx';
 
 function Icon({ name, className = 'size-5', ...props }) {
@@ -42,7 +41,7 @@ function InlineError({ children }) {
   return <div role="alert" className="flex gap-2.5 rounded-xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm leading-relaxed text-stone-700"><Icon name="alert" className="mt-0.5 size-4 shrink-0" /><span>{children}</span></div>;
 }
 
-function Home() {
+export function Home() {
   const [user, setUser] = useState(null);
   const [storage, setStorage] = useState(null);
   const [replyMode, setReplyMode] = useState(null);
@@ -112,14 +111,16 @@ function Home() {
   </div>;
 }
 
-function useChat() {
+function useChat(fetcher,storageScope) {
+  const chatStorage=()=>{const storage=window.sessionStorage;return storageScope?{getItem:key=>storage.getItem(storageScope+key),setItem:(key,value)=>storage.setItem(storageScope+key,value),removeItem:key=>storage.removeItem(storageScope+key)}:storage;};
+  const requestJSON=(path,options)=>baseRequest(path,{...options,fetcher});
   const [startingRound,setStartingRound]=useState(false);
   const [previous,setPrevious]=useState(null);
   const [previousLoaded,setPreviousLoaded]=useState(false);
   const round = useRef(null);
   const [requestingHuman,setRequestingHuman]=useState(false);
   const api = useRef(null);
-  if (!api.current) api.current = createChatAPI();
+  if (!api.current) api.current = createChatAPI(fetcher);
   const operation = useRef({ id: 0, controller: null });
   const busyRef = useRef(false);
   const identity = useRef(null);
@@ -165,7 +166,7 @@ function useChat() {
       round.current=opened.conversation_id;
       identity.current = opened.user.id;
       try {
-        const storage = window.sessionStorage;
+        const storage = chatStorage();
         probeStorage(storage, opened.conversation_id);
         const recovered = readPending(storage, opened.conversation_id);
         setPending(recovered); setStorageAvailable(true);
@@ -264,7 +265,7 @@ function useChat() {
       if (typeof crypto.randomUUID !== 'function') { setError('当前浏览器无法生成安全消息标识，请使用 localhost 或 HTTPS 访问。'); return; }
       outgoing = { event_id: crypto.randomUUID(), content: value };
       if (storageAvailable) {
-        try { savePending(window.sessionStorage, session.conversation_id, outgoing); }
+        try { savePending(chatStorage(), session.conversation_id, outgoing); }
         catch { setStorageAvailable(false); setError('消息尚未发送：浏览器无法保存待确认记录，请允许会话存储后重新载入。'); return; }
       }
       setPending(outgoing); setDraft('');
@@ -278,7 +279,7 @@ function useChat() {
       // Clear uncertainty before the independent history fetch. A history failure must not replay a confirmed message.
       setPending(null);
       let storageWarning = '';
-      try { window.sessionStorage.removeItem(pendingKey(session.conversation_id)); }
+      try { chatStorage().removeItem(pendingKey(session.conversation_id)); }
       catch { storageWarning = '浏览器未能清理待确认缓存，请勿在其他页面重复提交这条消息。'; setStorageAvailable(false); }
       setMessages((items) => items.some((item) => item.id === result.message_id) ? items : [...items, { id: result.message_id, role: 'customer', content: outgoing.content, created_at: new Date().toISOString() }]);
       const confirmed = result.outcome === 'waiting_human' ? (session.human_enabled?'消息已接受，交由人工处理。回复会自动更新，也可手动刷新。':'消息已接受并标记为待人工处理；此入口不提供人工转接或坐席服务。') : result.outcome === 'superseded' ? '消息已接受；回复状态已发生变化，请查看最新记录。' : '消息已发送。';
@@ -322,7 +323,7 @@ function useChat() {
       if(!task.active())return;
       if(data?.history!==null&&(!data?.history?.conversation_id||!Array.isArray(data.history.messages)))throw new Error('invalid_history');
       let oldPending=null;
-      if(data.history){try{oldPending=readPending(window.sessionStorage,data.history.conversation_id);}catch{/* History remains readable if local storage is unavailable. */}}
+      if(data.history){try{oldPending=readPending(chatStorage(),data.history.conversation_id);}catch{/* History remains readable if local storage is unavailable. */}}
       setPrevious(data.history?{...data.history,pending:oldPending}:null);setPreviousLoaded(true);
     }catch(e){if(task.active()&&e.name!=='AbortError')report(e);}
     finally{if(task.active()){busyRef.current=false;setRefreshing(false);}}
@@ -347,9 +348,10 @@ function Message({ message }) {
   </article>;
 }
 
-function Chat() {
-  const chat = useChat();
+export function Chat({fetcher=globalThis.fetch,storageScope="",businessAuthenticated=false}={}) {
+  const chat = useChat(fetcher,storageScope);
   const demo = demoPresentation(chat.session?.storage, chat.session?.reply_mode,chat.session?.human_enabled);
+  if(businessAuthenticated)demo.description=demo.description.replace("模拟登录不是真实认证。","身份已由业务系统密码登录验证；本页仅供本机验收。");
   const end = useRef(null);
   const composer = useRef(null);
   const [nearBottom, setNearBottom] = useState(true);
@@ -372,8 +374,8 @@ function Chat() {
           {chat.mustReload&&<button type="button" className="secondary-button" onClick={chat.initialize}>重新载入当前咨询</button>}
         </div>}
         {chat.session?.human_enabled&&<div className="mt-5"><button className="secondary-button" onClick={chat.handoff} disabled={chat.requestingHuman||chat.status!=='bot_active'||chat.mustReload}>{chat.requestingHuman?'正在申请…':chat.status==='waiting_human'?'等待人工接管':chat.status==='human_active'?'人工正在处理':closed?'会话已结束':'申请人工处理'}</button><p className="mt-2 text-xs leading-6 text-stone-500">接管后由坐席回复。页面可见时自动更新，也可手动刷新。</p></div>}
-        <p className="mt-3 hidden text-sm leading-7 text-stone-500 md:block">一个独立的聊天入口，沿用你在示例站点选择的身份。</p>
-        <div className="mt-8 hidden border-t border-stone-300/70 pt-6 md:block"><p className="mb-3 text-[11px] text-stone-400">当前演示身份</p>{chat.session ? <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-[#e9e9df] text-sm text-stone-600">{chat.session.user.display_name.slice(0, 1)}</span><div><p className="text-sm font-medium text-stone-800">{chat.session.user.display_name}</p><a href="/" className="mt-1 inline-block text-xs text-stone-400 underline-offset-4 hover:underline">返回站点切换账号</a></div></div> : <p className="text-sm text-stone-500">{chat.phase === 'loading' ? '正在读取…' : '尚未连接'}</p>}</div>
+        <p className="mt-3 hidden text-sm leading-7 text-stone-500 md:block">{businessAuthenticated?'一个独立的聊天入口，沿用业务系统已验证的登录身份。':'一个独立的聊天入口，沿用你在示例站点选择的身份。'}</p>
+        <div className="mt-8 hidden border-t border-stone-300/70 pt-6 md:block"><p className="mb-3 text-[11px] text-stone-400">{businessAuthenticated?'当前业务身份':'当前演示身份'}</p>{chat.session ? <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-[#e9e9df] text-sm text-stone-600">{chat.session.user.display_name.slice(0, 1)}</span><div><p className="text-sm font-medium text-stone-800">{chat.session.user.display_name}</p><a href="/" className="mt-1 inline-block text-xs text-stone-400 underline-offset-4 hover:underline">返回站点切换账号</a></div></div> : <p className="text-sm text-stone-500">{chat.phase === 'loading' ? '正在读取…' : '尚未连接'}</p>}</div>
         <div className="mt-10 hidden space-y-5 text-xs leading-6 text-stone-500 md:block"><div className="flex gap-2.5"><Icon name="note" className="mt-0.5 size-4 shrink-0" /><p>{demo.description}</p></div><div className="flex gap-2.5"><Icon name="shield" className="mt-0.5 size-4 shrink-0" /><p>{demo.capabilities}</p></div></div>
       </aside>
       <section aria-label="聊天窗口" className="flex min-h-[650px] min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white shadow-[0_12px_48px_-30px_rgba(60,54,44,0.18)] md:col-start-2 md:h-[calc(100dvh-120px)] md:min-h-[660px]">
@@ -406,5 +408,3 @@ function Chat() {
     </main>
   </div>;
 }
-
-createRoot(document.getElementById('root')).render(location.pathname === '/desk/' ? <Desk /> : location.pathname === '/chat/' || location.pathname === '/chat' ? <Chat /> : <Home />);
