@@ -11,6 +11,7 @@ import http from 'node:http';
 import {startPortal} from './portal.mjs';
 import {createLegacyDirectory} from './legacy.mjs';
 import {verifyHost} from '../host-kit/verify.mjs';
+import {preflightHost} from '../host-kit/preflight.mjs';
 const random=()=>randomBytes(32).toString('base64url');
 test('office native records map through an independent facade',{timeout:180000},async t=>{
  const dir=await mkdtemp(join(tmpdir(),'omni-office-test-'));let gateway,portal,closed;
@@ -28,6 +29,20 @@ test('office native records map through an independent facade',{timeout:180000},
   const raw=await response.text();return {status:response.status,data:raw?JSON.parse(raw):null,cookie:response.headers.get('set-cookie')?.split(';')[0]};
  };
  const login=(realm,handle,cookie)=>call(`/access/${realm}/open`,{body:{handle,passphrase:passwords[handle]},cookie});
+ await t.test('read-only preflight checks live business identities without login, logout or conversation writes',async()=>{
+  // Test harness prepares sessions; preflight itself is never given passwords.
+  const oldCustomer=await login('member','lin'),customer=await login('member','lin',oldCustomer.cookie);
+  const oldStaff=await login('operator','staff'),staff=await login('operator','staff',oldStaff.cookie),visitor=await login('operator','visitor');
+  const memberID=(await call('/support/identity/member',{cookie:customer.cookie})).data.identity.id;
+  const visitorID=(await call('/support/identity/operator',{cookie:visitor.cookie})).data.identity.id;
+  const before=await call('/desk/queue',{cookie:staff.cookie}),requests=[];
+  const report=await preflightHost({origin:portal.origin,paths:{customerIdentity:'/support/identity/member',staffIdentity:'/support/identity/operator'},sessions:{customer:{cookie:customer.cookie,expectedID:memberID},staff:{cookie:staff.cookie,expectedID:'staff-1'},revokedCustomer:{cookie:oldCustomer.cookie,expectedID:memberID},revokedStaff:{cookie:oldStaff.cookie,expectedID:'staff-1'},unassignedStaff:{cookie:visitor.cookie,expectedID:visitorID}}},{fetcher:(url,options)=>{requests.push({path:new URL(url).pathname,method:options.method,body:options.body});return fetch(url,options);}});
+  assert.equal(report.status,'needs_verification',JSON.stringify(report));assert.ok(!report.checks.some(c=>c.status==='fail'),JSON.stringify(report));
+  assert.ok(requests.every(r=>r.method==='GET'&&r.body===undefined&&['/support/identity/member','/support/identity/operator','/host/me','/desk/me','/desk/queue'].includes(r.path)));
+  assert.deepEqual((await call('/desk/queue',{cookie:staff.cookie})).data,before.data);
+  assert.equal((await call('/support/identity/member',{cookie:customer.cookie})).data.identity.id,memberID);
+  for(const value of [...Object.values(passwords),hostSecret,agentSecret,customer.cookie.split('=')[1],staff.cookie.split('=')[1]])assert.ok(!JSON.stringify(report).includes(value));
+ });
  await t.test('native IAM uses nested records; mapping does not trust browser claims',async()=>{
   const directory=await createLegacyDirectory({accounts});try{const cookie=(await directory.open({headers:{}},'member','lin',passwords.lin)).split(';')[0];const record=directory.authenticate({headers:{cookie}},'member');assert.equal(record.principal.number,'MEM:731');assert.equal(record.lifecycle.active,true);assert.ok(record.ticket.deadline>Date.now());assert.notEqual(record.ticket.key,record.ticket.publicRevision);}finally{directory.dispose();}
   assert.equal((await call('/access/member/open',{body:{account:'lin',password:passwords.lin}})).status,400);
