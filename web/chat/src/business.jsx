@@ -1,19 +1,19 @@
-import React,{useEffect,useMemo,useRef,useState} from 'react';
+import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {flushSync} from 'react-dom';
 import {Chat} from './app.jsx';
 import {Desk} from './desk.jsx';
 import {requestJSON} from './protocol.mjs';
-import {createPinnedFetch} from './business-session.mjs';
+import {HostSessionBoundary} from './host-session.jsx';
+import {createHostSessionConfig,announceHostIdentityChange} from './host-session.mjs';
 const role=location.pathname.startsWith('/desk')||location.pathname==='/staff-login'?'staff':'customer';
 const loginURL=role==='staff'?'/staff-login':'/';
 const destination=role==='staff'?'/desk/':'/chat/';
-function announce(){try{const c=new BroadcastChannel('business-auth');c.postMessage({role});c.close();}catch{/* Focus and polling are fallback checks. */}}
+const sessionConfig=createHostSessionConfig({role,identityURL:`/auth/${role}/me`,logoutURL:`/auth/${role}/logout`,loginURL,channelName:'business-auth',label:'本地维修服务',notice:'模拟回复'});
 function Login(){
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   async function submit(e){e.preventDefault();if(busy)return;setBusy(true);setError('');
     const form=new FormData(e.currentTarget);
-    try{await requestJSON(`/auth/${role}/login`,{method:'POST',body:{account:form.get('account'),password:form.get('password')}});announce();location.assign(destination);}
+    try{await requestJSON(`/auth/${role}/login`,{method:'POST',body:{account:form.get('account'),password:form.get('password')}});announceHostIdentityChange(sessionConfig);location.assign(destination);}
     catch{setError('登录失败：请检查测试账号、密码及账号是否启用。');setBusy(false);}
   }
   return <main className="mx-auto grid min-h-[100dvh] max-w-6xl items-center gap-12 px-6 py-12 md:grid-cols-[1.2fr_1fr] md:gap-24">
@@ -27,39 +27,10 @@ function Login(){
     </form>
   </main>;
 }
-function SessionContent({identity,current,invalidate}){
-  const alive=useRef(true);useEffect(()=>()=>{alive.current=false;},[]);
-  const fetcher=useMemo(()=>createPinnedFetch({version:identity.version,isCurrent:()=>alive.current&&current.current===identity.version,onUnauthorized:invalidate}),[identity.version]);
-  const request=useMemo(()=>(path,options)=>requestJSON(path,{...options,fetcher}),[fetcher]);
-  return role==='staff'?<Desk request={request} externalLoginURL="/staff-login" hostLabel="业务系统"/>:<Chat businessAuthenticated fetcher={fetcher} storageScope={`business:${identity.version}:`}/>;
+function Service(){
+  return <HostSessionBoundary config={sessionConfig}>{({fetcher,request,storageScope})=>role==='staff'
+    ?<Desk request={request} externalLoginURL={loginURL} customerURL="/" hostLabel="业务系统"/>
+    :<Chat businessAuthenticated fetcher={fetcher} storageScope={storageScope}/>
+  }</HostSessionBoundary>;
 }
-function Boundary(){
-  const [identity,setIdentity]=useState(null),[status,setStatus]=useState('正在核对业务登录身份…');
-  const current=useRef(null),generation=useRef(0),pending=useRef(null);
-  const invalidate=()=>{current.current=null;++generation.current;pending.current?.abort();setIdentity(null);setStatus('登录已失效或身份发生变化，请重新进入。');};
-  useEffect(()=>{
-    let alive=true;
-    function clear(){flushSync(()=>invalidate());}
-    async function check(){
-      if(document.visibilityState==='hidden'||pending.current)return;
-      const epoch=generation.current,controller=new AbortController();pending.current=controller;
-      try{const data=await requestJSON(`/auth/${role}/me`,{signal:controller.signal});
-        if(!alive||epoch!==generation.current)return;
-        if(!data.identity){invalidate();return;}
-        current.current=data.identity.version;
-        setIdentity(old=>old?.version===data.identity.version?old:data.identity);setStatus('');
-      }catch(e){if(alive&&epoch===generation.current&&e.name!=='AbortError')invalidate();}
-      finally{if(pending.current===controller)pending.current=null;}
-    }
-    function reset(){clear();pending.current=null;void check();}
-    function visibility(){if(document.visibilityState==='hidden')clear();else reset();}
-    const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('business-auth'):null;
-    if(channel)channel.onmessage=e=>{if(e.data?.role===role)reset();};
-    window.addEventListener('focus',reset);window.addEventListener('blur',clear);window.addEventListener('pageshow',reset);window.addEventListener('pagehide',clear);document.addEventListener('visibilitychange',visibility);
-    const timer=setInterval(check,3000);void check();
-    return()=>{alive=false;++generation.current;current.current=null;pending.current?.abort();channel?.close();clearInterval(timer);window.removeEventListener('focus',reset);window.removeEventListener('blur',clear);window.removeEventListener('pageshow',reset);window.removeEventListener('pagehide',clear);document.removeEventListener('visibilitychange',visibility);};
-  },[]);
-  async function logout(){invalidate();try{await requestJSON(`/auth/${role}/logout`,{method:'POST',body:{}});announce();location.assign(loginURL);}catch{setStatus('退出失败，身份内容已隐藏。请重试退出或重新登录。');}}
-  return <><nav aria-label="业务身份" className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 px-6 py-3 text-xs text-stone-600"><span>本地维修服务 · {identity?identity.id:'未显示身份'} · 模拟回复</span><div className="flex gap-5"><a href={loginURL} className="underline">切换账号</a><button onClick={logout} className="underline">退出业务登录</button></div></nav>{identity?<SessionContent key={identity.version} identity={identity} current={current} invalidate={invalidate}/>:<main className="mx-auto max-w-3xl px-6 py-16"><p role="status" className="mb-6 text-sm">{status}</p><a className="primary-button" href={loginURL}>前往业务登录</a></main>}</>;
-}
-createRoot(document.getElementById('root')).render(location.pathname===destination?<Boundary/>:<Login/>);
+createRoot(document.getElementById('root')).render(location.pathname===destination?<Service/>:<Login/>);
