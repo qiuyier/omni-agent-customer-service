@@ -52,6 +52,10 @@ const adapter = await startAdapter({
 
 ## 配置化验收
 
+代理装配顺序：先验证外部业务请求的Host/Origin，再向adapter.origin转发并设置内部Origin为adapter.origin（目标URL决定内部Host）；仅保留所需业务Cookie、聊天Authorization和受限请求体。不可把外部Origin原样送给私有适配器，也不可未经检查便重写成可信Origin。
+
+验收器登录成功必须HTTP200；退出必须幂等返回200/204，因为finally会重复清理。其Cookie管理不是完整浏览器Cookie jar，也不会发送X-Business-Session，故不能替代Cookie Path/SameSite和浏览器版本隔离验收。额外验证员工能登录但未获agents授权时的拒绝行为。
+
 验收器会发送测试消息、转人工、关闭咨询、创建新咨询并注销测试登录。**只用于授权的、可丢弃账号与 fresh bot_active 空会话**，不自动清库，不自动关闭已有业务咨询。
 当前仅接受 http://127.0.0.1:端口，且要求服务端元数据 fake + human_enabled=true；这些是误操作保护，不是抵御恶意目标伪报模式的安全保证。
 
