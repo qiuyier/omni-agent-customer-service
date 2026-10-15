@@ -59,6 +59,8 @@ node integrations/host-kit/acceptance.mjs --allow-test-writes < /private/path/ac
 
 专项记录至少保留：目标版本/环境、测试时间、场景、预期、实际结果、脱敏证据位置及未验证原因。不要保存密码、Cookie、聊天令牌或客户正文。样例中的通过只证明样例，不自动转移到新系统。
 
+办公门户已补充[2026-10-15 真实浏览器专项证据](../office-portal/browser-acceptance.md)，包含多标签退出/切号、禁用坐席与延迟历史请求取消。其他目标仍必须独立验证，统一工具不会据此把 browser 项自动改为 pass。
+
 ## 结果与回归
 
 统一 JSON 含 checks 与 phases。fail / 退出码 1 表示失败；needs_verification / 退出码 2 表示尚有证据缺口；pass / 0 保留给全部完成。当前入口始终保留专项未验证项，所以自动闭环全通过仍返回 2，这是正常行为。必须检查 phases.lifecycle 判断闭环是否通过，不能把整体 2 当作闭环失败或全通过。此报告不是生产上线批准。

@@ -95,7 +95,15 @@ test('office native records map through an independent facade',{timeout:180000},
   portal.setActive('member','zhou',true);assert.equal((await call('/host/chat-session',{cookie:b.cookie,body:{}})).status,401);
   assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,200);
   portal.setActive('operator','staff',false);assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,401);portal.setActive('operator','staff',true);assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,401);
-  assert.equal((await call('/desk/action',{cookie:staff.cookie,body:{action:'claim',expected_agent_id:'staff-1',conversation_id:'forged'}})).status,401);
+  for(const action of ['claim','reply','close'])assert.equal((await call('/desk/action',{cookie:staff.cookie,body:{action,expected_agent_id:'staff-1',conversation_id:'forged',content:'must reject revoked staff'}})).status,401);
+ });
+ await t.test('staff logout denies every write action with the old cookie without revoking the member',async()=>{
+  const member=await login('member','lin'),staff=await login('operator','staff');
+  assert.equal((await call('/desk/queue',{cookie:staff.cookie})).status,200);
+  assert.equal((await call('/access/operator/close',{cookie:staff.cookie,body:{}})).status,204);
+  for(const action of ['claim','reply','close'])assert.equal((await call('/desk/action',{cookie:staff.cookie,body:{action,expected_agent_id:'staff-1',conversation_id:'forged',content:'must reject logged out staff'}})).status,401);
+  assert.equal((await call('/host/me',{cookie:member.cookie})).status,200);
+  assert.ok((await call('/support/identity/member',{cookie:member.cookie})).data.identity);
  });
  await t.test('unmapped operator can log in but cannot act as support staff; logout is idempotent',async()=>{
   const a=await login('operator','visitor');assert.equal(a.status,200);assert.equal((await call('/desk/queue',{cookie:a.cookie})).status,401);

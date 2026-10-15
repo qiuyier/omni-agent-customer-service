@@ -28,3 +28,10 @@ test('host request wrapper refuses external destinations and redirects',async()=
   for(const path of ['https://elsewhere.invalid','//elsewhere.invalid','/\\elsewhere.invalid','/\t/elsewhere.invalid'])await assert.rejects(fetcher(path));assert.equal(calls,0);
   await fetcher('/desk/queue',{redirect:'follow',credentials:'include'});assert.equal(seen.redirect,'error');assert.equal(seen.credentials,'same-origin');
 });
+test('late successful history response cannot enter a replacement identity',async()=>{
+ let current=true,finish,unauthorized=0;
+ const fetcher=createPinnedFetch({version:'old-version',isCurrent:()=>current,onUnauthorized:()=>unauthorized++,fetcher:()=>new Promise(resolve=>finish=resolve)});
+ const pending=fetcher('/chat/v1/messages');current=false;
+ finish(new Response(JSON.stringify({messages:[{content:'old-account-only'}]})));
+ await assert.rejects(pending,{name:'AbortError'});assert.equal(unauthorized,0);
+});

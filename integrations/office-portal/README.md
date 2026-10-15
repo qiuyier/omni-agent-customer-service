@@ -19,6 +19,8 @@
 
 ## 运行与清理
 
+新增[多标签页、撤销与延迟响应浏览器验收](browser-acceptance.md)。启动器支持 hold / release / status，只暂扣一条消息历史读取，控制不暴露为 HTTP 接口。
+
 ```sh
 node web/chat/build-office.mjs
 node --test integrations/office-portal/acceptance.test.mjs
