@@ -61,6 +61,8 @@ node integrations/host-kit/acceptance.mjs --allow-test-writes < /private/path/ac
 
 办公门户已补充[2026-10-15 真实浏览器专项证据](../office-portal/browser-acceptance.md)，包含多标签退出/切号、禁用坐席与延迟历史请求取消。其他目标仍必须独立验证，统一工具不会据此把 browser 项自动改为 pass。
 
+独立宿主已补充[2026-10-15 PostgreSQL 重启专项证据](../standalone-host/persistence-acceptance.md)，涵盖人工状态、归属、已读/未读、事件重试及关闭禁发。它使用模拟登录和 API 客户端，不代替目标业务认证、真实浏览器恢复或数据库备份恢复；deployment 项仍需目标独立验收。
+
 ## 结果与回归
 
 统一 JSON 含 checks 与 phases。fail / 退出码 1 表示失败；needs_verification / 退出码 2 表示尚有证据缺口；pass / 0 保留给全部完成。当前入口始终保留专项未验证项，所以自动闭环全通过仍返回 2，这是正常行为。必须检查 phases.lifecycle 判断闭环是否通过，不能把整体 2 当作闭环失败或全通过。此报告不是生产上线批准。
