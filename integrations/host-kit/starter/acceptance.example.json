@@ -1,0 +1,22 @@
+{
+  "preflight": {
+    "origin": "http://127.0.0.1:12345",
+    "paths": {
+      "customerIdentity": "/auth/customer/me",
+      "staffIdentity": "/auth/staff/me"
+    }
+  },
+  "lifecycle": {
+    "customers": [
+      {"account": "REPLACE_TEST_CUSTOMER_A", "password": "REPLACE_PRIVATE_PASSWORD"},
+      {"account": "REPLACE_TEST_CUSTOMER_B", "password": "REPLACE_PRIVATE_PASSWORD"}
+    ],
+    "staff": {"account": "REPLACE_TEST_STAFF", "password": "REPLACE_PRIVATE_PASSWORD"},
+    "paths": {
+      "customerLogin": "/auth/customer/login",
+      "customerLogout": "/auth/customer/logout",
+      "staffLogin": "/auth/staff/login",
+      "staffLogout": "/auth/staff/logout"
+    }
+  }
+}

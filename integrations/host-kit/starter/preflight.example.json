@@ -1,0 +1,9 @@
+{
+  "preflight": {
+    "origin": "http://127.0.0.1:12345",
+    "paths": {
+      "customerIdentity": "/auth/customer/me",
+      "staffIdentity": "/auth/staff/me"
+    }
+  }
+}
