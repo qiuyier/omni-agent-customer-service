@@ -35,3 +35,17 @@ test('closing gate destroys a held request and clears its payload',async t=>{
  const pending=fetch(gate.origin+'/chat/v1/messages').catch(()=>null);
  await capture;await gate.close();assert.equal(await pending,null);assert.deepEqual(gate.status(),{armed:false,held:false});
 });
+test('send loss truncates a successful body; identical retries keep auditable payload hashes and receipt IDs',async t=>{
+ let calls=0;const receipts=[];
+ const server=http.createServer((req,res)=>{req.resume();req.on('end',()=>{calls++;res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({message_id:'message-1',reply_message_id:'reply-1',content:'must-not-log'}));});});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const gate=await startResponseGate('http://127.0.0.1:'+server.address().port,{observeReceipt:r=>receipts.push(r)});
+ t.after(async()=>{await gate.close();server.closeAllConnections();await new Promise(r=>server.close(r));});
+ gate.loseNextSend();assert.throws(()=>gate.loseNextSend());
+ const send=()=>fetch(gate.origin+'/chat/v1/messages',{method:'POST',headers:{Origin:gate.origin,'Content-Type':'application/json'},body:JSON.stringify({event_id:'same-event',content:'test-only'})});
+ await assert.rejects(async()=>{const response=await send();await response.json();});
+ assert.equal(calls,1);assert.equal((await (await send()).json()).message_id,'message-1');assert.equal(calls,2);
+ assert.equal(receipts.length,2);assert.equal(receipts[0].dropped,true);assert.equal(receipts[1].dropped,false);
+ assert.equal(receipts[0].request_sha256,receipts[1].request_sha256);assert.equal(receipts[0].message_id,receipts[1].message_id);
+ assert.ok(!JSON.stringify(receipts).includes('must-not-log'));assert.ok(!JSON.stringify(receipts).includes('test-only'));
+});

@@ -1,0 +1,44 @@
+# PostgreSQL 与业务登录浏览器恢复验收
+
+验收日期：2026-10-15。本地办公门户使用独立认证替身的真实口令表单登录（非生产 SSO），客服网关连接专用 PostgreSQL，回复为 fake。没有读取 .env、访问 CRMEB 或调用付费模型。
+
+## 实测结果
+
+| 场景 | 实际结果 |
+| --- | --- |
+| 网关 SIGKILL 后原端口重启 | 原客户页面无需重新登录，恢复已保存消息 |
+| 业务后端 SIGKILL 后重启 | 客户和坐席页面隐藏旧身份与记录并提示重新登录；表单重登后历史、同一会话及坐席“由你处理”归属恢复 |
+| 已保存消息的成功响应正文被截断 | 页面显示等待确认及手动重试按钮；网关重启后原待确认内容保留；点击重试后待确认状态消失，仅保留一条已保存客户消息与回复 |
+| 原事件重试证据 | 两次请求 SHA-256 相同，客户消息 ID、回复 ID 均相同；首次 dropped=true，重试 false |
+| 客户 A 切到 B | B 显示独立身份、空历史和空输入框，不显示 A 的消息或待确认内容 |
+
+恢复历史后、确认前可能同时显示已保存记录和待确认气泡；这是客户端尚未确认的状态，不是两条数据库记录。手动重试确认后气泡消失。
+
+## 证据
+
+- [网关与业务后端恢复报告](../../examples/archive/integration/office-portal/2026-10-15T08-23-46-810Z-485f8f55/report.json)：包括历史与坐席归属恢复。其首次响应丢失发生在响应头之前，浏览器自动重试，不能作为手动待确认重试的证据。
+- [最终待确认重试报告](../../examples/archive/integration/office-portal/2026-10-15T15-01-29-586Z-59a45752/report.json)：改为成功响应正文截断后，浏览器明确进入等待确认，手动重试两次回执一致。
+- [中断运行记录](../../examples/archive/integration/office-portal/2026-10-15T08-30-12-747Z-72920d87/report.json)：未完成浏览器场景，不计通过。恢复工作时确认原进程不存在，并停止遗留专用数据库；不回填报告伪装完成。
+
+报告仅保存进程、事件、请求摘要及回执 ID，不含口令、Cookie、聊天凭据或正文。run_completed 表示启动器正常走完，不是浏览器自动认证；浏览器结果由本记录单独说明。
+
+本轮 Node 回归 123 项通过，涵盖 web/chat、host-kit、office-portal、business-login、standalone-host 和 cross-system；响应门控测试 5 项通过，前端构建与 git diff --check 通过。未修改 Go 核心或共享聊天 UI。
+
+## 复现
+
+```sh
+node web/chat/build-office.mjs
+node integrations/office-portal/persistence-browser-lab.mjs --allow-local-postgres
+```
+
+需本地 Docker desktop-linux 上下文、Go、Node 和既有前端依赖。使用 deploy/standalone-host/compose.yaml 中专用数据库（15434），如数据库已在运行则拒绝启动，避免接管其他测试。不会读业务数据库配置。
+
+启动器打印临时回环 URL、随机测试口令和报告路径。用 lin 登录发送消息；终端 restart-gateway 强制重启网关。转人工并用 staff 登录接管后，restart-backend 重启业务后端，分别重新登录检查历史与归属。另用 lose-send 截断下一次成功发送响应，观察等待确认，restart-gateway 后点击页面“重试待确认消息”；最后切换 zhou 检查隔离。status 查看事件数量，stop 结束。
+
+控制仅在终端，不提供 HTTP 管理端点。正常结束停止本次子进程与专用数据库，删除本次临时构建目录，保留数据库卷及报告；因此不是“恢复测试前数据”。强行终止启动器可能留下数据库，需先核对其归属再停止，不能盲目清库。
+
+## 边界
+
+待确认恢复验证的是业务登录仍有效时的网关重启，不承诺跨业务后端重启、注销或重新登录迁移待确认内容；登录版本隔离仍然生效。未验证关闭浏览器导致 sessionStorage 丢失、数据库崩溃/备份恢复、生产 SSO、HTTPS、真实模型或多浏览器。此结果不是任意系统自动兼容或生产上线批准。
+
+阅读顺序：本记录 → persistence-browser-lab.mjs（隔离部署与重启）→ persistence-worker.mjs / portal.mjs（装配）→ response-gate.mjs / response-gate.test.mjs（故障注入与回执证据）。

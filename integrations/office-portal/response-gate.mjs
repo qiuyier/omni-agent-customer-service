@@ -1,9 +1,11 @@
-// Test-only loopback transport. No control endpoint, credentials or response logging.
+// Test-only loopback transport. No control endpoint or credential/body logging.
 import http from 'node:http';
-export async function startResponseGate(target,{notify=()=>{},holdMs=120000}={}){
+import {createHash} from 'node:crypto';
+export async function startResponseGate(target,{notify=()=>{},holdMs=120000,observeReceipt=()=>{}}={}){
  const url=new URL(target);
  if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||!url.port||url.pathname!=='/'||url.search||url.hash||url.username||url.password)throw Error('loopback_required');
  let origin,armed=false,held=null,closed=false,active=0;
+ let dropSend=false;
  const requests=new Set();
  const log=event=>{try{notify(event);}catch{}};
  const release=()=>{
@@ -23,14 +25,36 @@ export async function startResponseGate(target,{notify=()=>{},holdMs=120000}={})
   response.once('close',()=>{if(!finished){finished=true;active--;}});
   const delay=armed&&request.method==='GET'&&request.url==='/chat/v1/messages';
   if(delay)armed=false;
+  const send=request.method==='POST'&&request.url==='/chat/v1/messages';
+  const drop=send&&dropSend;if(drop)dropSend=false;
+  const hash=send?createHash('sha256'):null;
+  if(hash)request.on('data',chunk=>hash.update(chunk));
   const headers={...request.headers,host:url.host};
   if(headers.origin)headers.origin=target;
   const upstream=http.request(target+request.url,{method:request.method,headers},incoming=>{
-   if(!delay){response.writeHead(incoming.statusCode,incoming.headers);incoming.pipe(response);return;}
+   if(!delay&&!send){response.writeHead(incoming.statusCode,incoming.headers);incoming.pipe(response);return;}
    const chunks=[];let size=0;
    incoming.on('data',chunk=>{size+=chunk.length;if(size>1048576){incoming.destroy();response.destroy();return;}chunks.push(chunk);});
    incoming.on('end',()=>{
     if(closed)return;
+    if(send){
+     if(incoming.statusCode===200){
+      try{const receipt=JSON.parse(Buffer.concat(chunks).toString());
+       if(typeof receipt.message_id==='string'&&typeof receipt.reply_message_id==='string')observeReceipt({request_sha256:hash.digest('hex'),message_id:receipt.message_id,reply_message_id:receipt.reply_message_id,dropped:drop});
+      }catch{/* Never log payload or parser errors. */}
+      if(drop){
+       // Start a response before breaking it: a pre-header disconnect can be
+       // transparently retried by a browser and never expose uncertainty.
+       const body=Buffer.concat(chunks);
+       const partialHeaders={...incoming.headers,'content-length':String(body.length)};
+       delete partialHeaders['transfer-encoding'];
+       response.writeHead(incoming.statusCode,partialHeaders);response.flushHeaders();
+       response.write(body.subarray(0,1),()=>response.destroy());
+       log('send_response_dropped');return;
+      }
+     }
+     response.writeHead(incoming.statusCode,incoming.headers);response.end(Buffer.concat(chunks));return;
+    }
     if(held){response.destroy();return;}
     held={response,status:incoming.statusCode,headers:incoming.headers,body:Buffer.concat(chunks)};
     held.timer=setTimeout(release,holdMs);held.timer.unref();
@@ -45,5 +69,5 @@ export async function startResponseGate(target,{notify=()=>{},holdMs=120000}={})
  });
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
  origin='http://127.0.0.1:'+server.address().port;
- return {origin,arm(){if(armed||held)throw Error('already_pending');armed=true;log('armed');},release,status:()=>({armed,held:!!held}),async close(){if(closed)return;closed=true;armed=false;if(held){clearTimeout(held.timer);held.response.destroy();held=null;}for(const request of requests)request.destroy();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
+ return {origin,loseNextSend(){if(dropSend)throw Error('already_pending');dropSend=true;log('send_loss_armed');},arm(){if(armed||held)throw Error('already_pending');armed=true;log('armed');},release,status:()=>({armed,held:!!held}),async close(){if(closed)return;closed=true;armed=false;dropSend=false;if(held){clearTimeout(held.timer);held.response.destroy();held=null;}for(const request of requests)request.destroy();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
 }

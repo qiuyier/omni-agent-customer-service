@@ -20,7 +20,7 @@ const pages=new Set(['/access/member','/access/operator','/support/chat','/suppo
 const assets=new Map([['/portal.js','app.js'],['/portal.css','app.css']]);
 async function bounded(stream,limit){let size=0;const parts=[];if(stream)for await(const part of stream){size+=part.length;if(size>limit)throw fail(413,'payload_limit');parts.push(Buffer.from(part));}return Buffer.concat(parts);}
 function object(body,keys){if(!body||Array.isArray(body)||typeof body!=='object'||Object.keys(body).some(key=>!keys.includes(key)))throw fail(400,'invalid_request');return body;}
-export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,serveUI=false,now=Date.now}){
+export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,serveUI=false,now=Date.now,storage='memory',port=0}){
  const directory=await createLegacyDirectory({accounts,now});
  const sessions={authenticate(request,role){
   const realm=roleToRealm[role];if(!realm)return null;
@@ -29,7 +29,7 @@ export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,s
   return {role,enabled:true,subjectID:subject(record),displayName:record.principal.number,sessionID:record.ticket.key,expiresAt:record.ticket.deadline};
  }};
  let adapter;
- try{adapter=await startAdapter({gatewayOrigin,hostSecret,agents,now,identity:businessIdentity({sessions})});}catch(error){directory.dispose();throw error;}
+ try{adapter=await startAdapter({gatewayOrigin,hostSecret,agents,now,storage,identity:businessIdentity({sessions})});}catch(error){directory.dispose();throw error;}
  let origin,active=0,closed=false;
  const respond=(response,status,data)=>{response.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});response.end(data===undefined?'':JSON.stringify(data));};
  const server=http.createServer(async(request,response)=>{
@@ -93,7 +93,7 @@ export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,s
   finally{active--;}
  });
  server.requestTimeout=25000;server.headersTimeout=5000;server.keepAliveTimeout=5000;server.maxHeadersCount=64;
- try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});}catch(error){directory.dispose();await adapter.close();throw error;}
+ try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});}catch(error){directory.dispose();await adapter.close();throw error;}
  origin=`http://127.0.0.1:${server.address().port}`;
  return {origin,setActive:(realm,handle,value)=>directory.setActive(realm,handle,value),close:async()=>{if(closed)return;closed=true;directory.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await adapter.close();}};
 }

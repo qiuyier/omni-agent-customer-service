@@ -65,6 +65,8 @@ node integrations/host-kit/acceptance.mjs --allow-test-writes < /private/path/ac
 
 ## 结果与回归
 
+办公门户另有[PostgreSQL + 真实口令登录浏览器恢复记录](../office-portal/persistence-acceptance.md)，覆盖网关重启、业务后端重启后的重新登录、待确认消息手动重试和切号隔离。仅为本地样例专项证据，不自动改变统一验收结果。
+
 统一 JSON 含 checks 与 phases。fail / 退出码 1 表示失败；needs_verification / 退出码 2 表示尚有证据缺口；pass / 0 保留给全部完成。当前入口始终保留专项未验证项，所以自动闭环全通过仍返回 2，这是正常行为。必须检查 phases.lifecycle 判断闭环是否通过，不能把整体 2 当作闭环失败或全通过。此报告不是生产上线批准。
 
 维修业务与办公门户使用不同登录字段和身份源，复用相同入口；已有专项测试继续执行：
