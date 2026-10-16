@@ -34,7 +34,7 @@ func TestConfigDefaultsArePostgresAndFakeOnly(t *testing.T) {
 	allowed := map[string]bool{"WEBCHAT_ADDRESS": true, "WEBCHAT_HOST_ID": true, "WEBCHAT_HOST_SECRET": true, "DATABASE_URL": true, "WEBCHAT_REPLY_MODE": true, "STORAGE_DRIVER": true}
 	values := validEnvironment()
 	config, err := resolveConfig(func(key string) (string, bool) {
-		if !allowed[key] && key != "WEBCHAT_AGENTS_JSON" {
+		if !allowed[key] && key != "WEBCHAT_AGENTS_JSON" && key != "WEBCHAT_HOSTS_JSON" {
 			t.Fatalf("unexpected environment lookup %s", key)
 		}
 		return mapLookup(values)(key)

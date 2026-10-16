@@ -43,7 +43,7 @@ func runCommand(ctx context.Context, args []string, lookup func(string) (string,
 	resources := flags.Bool("check-resources", false, "validate settings, local FAQ and PostgreSQL; never call models or listen")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			_, err = fmt.Fprintln(output, "Usage: webchat-server [-address IP:PORT] [-check-config | -check-resources]\nRequires WEBCHAT_HOST_ID, WEBCHAT_HOST_SECRET and DATABASE_URL. PostgreSQL required; replies default to fake. WEBCHAT_REPLY_MODE=ai explicitly enables configured AI and optional knowledge.\n-check-config is offline format validation. -check-resources also reads the configured FAQ and checks PostgreSQL connectivity/schema; neither calls models or embeddings, migrates the database or starts a listener.")
+			_, err = fmt.Fprintln(output, "Usage: webchat-server [-address IP:PORT] [-check-config | -check-resources]\nRequires DATABASE_URL and either WEBCHAT_HOST_ID/WEBCHAT_HOST_SECRET or WEBCHAT_HOSTS_JSON. PostgreSQL required; replies default to fake. Multiple hosts require fake mode; single-host WEBCHAT_REPLY_MODE=ai enables configured AI and optional knowledge.\n-check-config is offline format validation. -check-resources also reads the configured FAQ and checks PostgreSQL connectivity/schema; neither calls models or embeddings, migrates the database or starts a listener.")
 			if err == nil {
 				return nil
 			}
@@ -125,7 +125,7 @@ func newGatewayContext(ctx context.Context, repository conversation.Repository, 
 	}
 	gateway, err := webchat.New(repository, service, webchat.Config{
 		Agents:         config.Agents,
-		Hosts:          []webchat.Host{{SourceID: config.HostID, Secret: config.HostSecret}},
+		Hosts:          config.trustedHosts(),
 		RequestTimeout: config.Reply.RequestTimeout(),
 	})
 	if err != nil {

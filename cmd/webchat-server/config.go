@@ -18,6 +18,7 @@ import (
 const defaultServerAddress = "127.0.0.1:8093"
 
 type serverConfig struct {
+	Hosts       []webchat.Host
 	Agents      []webchat.Agent
 	Address     string
 	HostID      string
@@ -52,6 +53,26 @@ func resolveConfig(lookup func(string) (string, bool), addressOverride string) (
 		return serverConfig{}, errors.New("STORAGE_DRIVER must be postgres or postgresql; memory storage is not supported")
 	}
 	var err error
+	if raw, supplied := lookup("WEBCHAT_HOSTS_JSON"); supplied && raw != "" {
+		if config.HostID != "" || config.HostSecret != "" {
+			return serverConfig{}, errors.New("WEBCHAT_HOSTS_JSON cannot be combined with legacy host configuration")
+		}
+		var entries []struct {
+			SourceID string `json:"source_id"`
+			Secret   string `json:"secret"`
+		}
+		decoder := json.NewDecoder(strings.NewReader(raw))
+		decoder.DisallowUnknownFields()
+		if len(raw) > 16384 || !utf8.ValidString(raw) || decoder.Decode(&entries) != nil || decoder.Decode(new(any)) != io.EOF || len(entries) < 1 || len(entries) > 32 {
+			return serverConfig{}, errors.New("WEBCHAT_HOSTS_JSON must contain 1..32 valid host entries")
+		}
+		for _, entry := range entries {
+			config.Hosts = append(config.Hosts, webchat.Host{SourceID: entry.SourceID, Secret: entry.Secret})
+		}
+	}
+	if len(config.Hosts) > 1 && config.ReplyMode != "fake" {
+		return serverConfig{}, errors.New("multiple hosts currently require fake reply mode; AI and knowledge are not source-isolated")
+	}
 	if raw := value("WEBCHAT_AGENTS_JSON"); raw != "" {
 		decoder := json.NewDecoder(strings.NewReader(raw))
 		decoder.DisallowUnknownFields()
@@ -69,7 +90,7 @@ func resolveConfig(lookup func(string) (string, bool), addressOverride string) (
 	return config, nil
 }
 
-func (c serverConfig) validate() error {
+func (c serverConfig) validateSingleHost() error {
 	if c.HostID == "" || len(c.HostID) > 128 || !utf8.ValidString(c.HostID) ||
 		strings.ContainsFunc(c.HostID, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
 		return errors.New("WEBCHAT_HOST_ID must be a stable non-whitespace identifier of 1..128 bytes")
@@ -81,6 +102,30 @@ func (c serverConfig) validate() error {
 		strings.ContainsFunc(c.HostSecret, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) ||
 		strings.HasPrefix(c.HostSecret, "chat_") {
 		return errors.New("WEBCHAT_HOST_SECRET must be an independent random 32..128 byte credential without whitespace or the chat_ prefix")
+	}
+	return nil
+}
+
+func (c serverConfig) trustedHosts() []webchat.Host {
+	if len(c.Hosts) > 0 {
+		return c.Hosts
+	}
+	return []webchat.Host{{SourceID: c.HostID, Secret: c.HostSecret}}
+}
+
+func (c serverConfig) validate() error {
+	if len(c.Hosts) > 0 && (c.HostID != "" || c.HostSecret != "") {
+		return errors.New("host configuration modes are mutually exclusive")
+	}
+	hosts := c.trustedHosts()
+	for _, host := range hosts {
+		single := serverConfig{HostID: host.SourceID, HostSecret: host.Secret}
+		if err := single.validateSingleHost(); err != nil {
+			return err
+		}
+	}
+	if len(hosts) > 1 && c.ReplyMode != "fake" {
+		return errors.New("multiple hosts currently require fake reply mode")
 	}
 	if strings.TrimSpace(c.DatabaseURL) == "" {
 		return errors.New("DATABASE_URL is required; PostgreSQL storage has no memory fallback")
@@ -94,9 +139,9 @@ func (c serverConfig) validate() error {
 	if err := c.Reply.Validate(); err != nil {
 		return err
 	}
-	if len(c.Agents) > 0 {
-		if err := webchat.ValidateAgentConfiguration(c.Agents, []webchat.Host{{SourceID: c.HostID, Secret: c.HostSecret}}); err != nil {
-			return errors.New("WEBCHAT_AGENTS_JSON is invalid; use distinct agent IDs and independent credentials for this host")
+	{
+		if err := webchat.ValidateAgentConfiguration(c.Agents, hosts); err != nil {
+			return errors.New("host or agent configuration is invalid; use unique sources and independent credentials with source-scoped agent IDs")
 		}
 	}
 	host, port, err := net.SplitHostPort(c.Address)

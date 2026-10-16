@@ -1,5 +1,7 @@
 # 通用业务系统接入：配置与启动检查
 
+2026-10-16：正式入口现支持 `WEBCHAT_HOSTS_JSON` 多来源配置，范围仅 fake 回复与人工服务，详见[多宿主启动配置](webchat-multi-host.md)。不支持多宿主共享 AI/知识模式。
+
 首次接入先读[系统接入路径与接口清单](system-integration.md)。2026-10-13 补充了[跨系统协议隔离验收](../integrations/cross-system/README.md)，不代表正式入口已支持多宿主共享知识。
 
 可选[人工接管模块](human-handoff.md)现已提供本地最小闭环；真实员工认证、通知及新咨询轮次不包含在内。未显式配置时保持原无人工接口模式。
