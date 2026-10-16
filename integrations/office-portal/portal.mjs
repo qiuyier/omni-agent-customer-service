@@ -16,8 +16,8 @@ const pages=new Set(['/access/member','/access/operator','/support/chat','/suppo
 const assets=new Map([['/portal.js','app.js'],['/portal.css','app.css']]);
 async function bounded(stream,limit){let size=0;const parts=[];if(stream)for await(const part of stream){size+=part.length;if(size>limit)throw fail(413,'payload_limit');parts.push(Buffer.from(part));}return Buffer.concat(parts);}
 function object(body,keys){if(!body||Array.isArray(body)||typeof body!=='object'||Object.keys(body).some(key=>!keys.includes(key)))throw fail(400,'invalid_request');return body;}
-export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,serveUI=false,now=Date.now,storage='memory',port=0}){
- const directory=await createLegacyDirectory({accounts,now});
+export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,serveUI=false,now=Date.now,storage='memory',port=0,cookieNamespace='office'}){
+ const directory=await createLegacyDirectory({accounts,now,cookieNamespace});
  const sessions={authenticate(request,role){
   const realm=roleToRealm[role];if(!realm)return null;
   const record=directory.authenticate(request,realm);

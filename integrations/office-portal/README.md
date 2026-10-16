@@ -1,5 +1,7 @@
 # 办公门户：按文档独立装配验收
 
+业务登录支持 `startPortal({..., cookieNamespace: 'office_team_a'})`，默认 `office`。多实例部署与并行验收见 [Cookie 配置说明](../host-kit/cookie-isolation.md)。
+
 2026-10-16 后续：客服 HTTP 代理已复用 [host-kit/proxy.mjs](../host-kit/proxy.md)。member/operator 字段转换、登录和页面仍留在本业务；会话映射增加公开 version，供共享代理核对浏览器登录版本。下方早期“不修改 host-kit”的描述是当时验收范围，不表示本次未新增共享代理。
 
 此例模拟另一套已有业务系统，不是维修样例改名。原认证服务使用 member/operator、handle/passphrase、MEM:/OPS: 编号及嵌套 ticket 状态；客服只看到适配后的标准身份。不会访问真实办公系统、CRMEB、业务数据库或模型。

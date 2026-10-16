@@ -7,7 +7,8 @@ const derive=promisify(scrypt);
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const realms=new Set(['member','operator']);
 const lifetime=30*60*1000;
-export async function createLegacyDirectory({accounts,now=Date.now}){
+export async function createLegacyDirectory({accounts,now=Date.now,cookieNamespace='office'}){
+ if(typeof cookieNamespace!=='string'||!/^[a-z][a-z0-9_]{0,47}$/.test(cookieNamespace))throw Error('invalid cookie namespace');
  if(!Array.isArray(accounts)||accounts.length<1||accounts.length>32)throw Error('invalid office directory configuration');
  const directory=new Map(),numbers=new Set(),tickets=new Map();
  for(const entry of accounts){
@@ -21,7 +22,7 @@ export async function createLegacyDirectory({accounts,now=Date.now}){
  // Perform the same password derivation for unknown handles as known ones.
  const dummySalt=randomBytes(16),dummyProof=await derive(randomBytes(32).toString('hex'),dummySalt,32);
  let attempts=0,windowStart=now();
- const cookieName=realm=>'office_'+realm;
+ const cookieName=realm=>cookieNamespace+'_'+realm;
  function presented(request,realm){
   if(!realms.has(realm))return null;
   const entries=String(request.headers.cookie||'').split(';').map(value=>value.trim()).filter(value=>value.startsWith(cookieName(realm)+'='));

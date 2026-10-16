@@ -6,8 +6,8 @@ import {createLegacyDirectory} from '../office-portal/legacy.mjs';
 const realm=role=>role==='staff'?'operator':'member';
 export const fail=(status,code)=>Object.assign(Error(code),{status,code});
 export async function bounded(stream,limit){let size=0;const parts=[];for await(const part of stream){size+=part.length;if(size>limit)throw fail(413,'payload_limit');parts.push(Buffer.from(part));}return Buffer.concat(parts);}
-export async function startBusiness({accounts,port=0,serveUI=false}){
- const directory=await createLegacyDirectory({accounts});let extension=null,origin,active=0;
+export async function startBusiness({accounts,port=0,serveUI=false,cookieNamespace='fresh'}){
+ const directory=await createLegacyDirectory({accounts,cookieNamespace});let extension=null,origin,active=0;
  const identity=(request,role)=>{
   const record=directory.authenticate(request,realm(role));if(!record)return null;
   return {subjectID:record.principal.realm==='operator'&&record.principal.number==='OPS:42'?'staff-1':'person_'+createHash('sha256').update(record.principal.number).digest('hex'),displayName:record.principal.number,role,enabled:record.lifecycle.active,sessionID:record.ticket.key,expiresAt:record.ticket.deadline,version:record.ticket.publicRevision};

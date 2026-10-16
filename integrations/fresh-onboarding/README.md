@@ -1,5 +1,7 @@
 # 从无客服基线开始的装配验收
 
+业务登录支持 `startBusiness({..., cookieNamespace: 'fresh_team_b'})`，默认改为 `fresh`，旧版登录需要重新验证。多实例部署与并行验收见 [Cookie 配置说明](../host-kit/cookie-isolation.md)。
+
 2026-10-16 完成。目的不是再增加一个行业样例，而是检查[最小接入包](../host-kit/starter/README.md)在没有客服路由的业务基线上能否装配成功。
 
 ## 结论
