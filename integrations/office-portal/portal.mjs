@@ -5,17 +5,13 @@ import {readFile} from 'node:fs/promises';
 import {createLegacyDirectory} from './legacy.mjs';
 import {startAdapter} from '../host-kit/adapter.mjs';
 import {businessIdentity} from '../host-kit/identity.example.mjs';
+import {createSupportProxy} from '../host-kit/proxy.mjs';
 
 const fail=(status,code)=>Object.assign(Error(code),{status,code});
 const roleToRealm={customer:'member',staff:'operator'};
 const realmToRole={member:'customer',operator:'staff'};
 // Native numbers contain ':' and cannot be passed straight to the common identity API.
 const subject=record=>record.principal.realm==='operator'&&record.principal.number==='OPS:42'?'staff-1':(record.principal.realm==='member'?'member_':'operator_')+createHash('sha256').update(record.principal.number).digest('hex');
-const allowed=new Map([
- ['/host/me',['GET']],['/host/chat-session',['POST']],['/chat/v1/messages',['GET','POST']],
- ['/chat/v1/handoff',['POST']],['/chat/v1/consultations',['POST']],['/chat/v1/previous-consultation',['GET']],
- ['/desk/me',['GET']],['/desk/queue',['GET']],['/desk/action',['POST']],
-]);
 const pages=new Set(['/access/member','/access/operator','/support/chat','/support/desk']);
 const assets=new Map([['/portal.js','app.js'],['/portal.css','app.css']]);
 async function bounded(stream,limit){let size=0;const parts=[];if(stream)for await(const part of stream){size+=part.length;if(size>limit)throw fail(413,'payload_limit');parts.push(Buffer.from(part));}return Buffer.concat(parts);}
@@ -26,11 +22,12 @@ export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,s
   const realm=roleToRealm[role];if(!realm)return null;
   const record=directory.authenticate(request,realm);
   if(!record||record.principal.realm!==realm||record.lifecycle.active!==true||!Number.isFinite(record.ticket.deadline)||record.ticket.deadline<=now())return null;
-  return {role,enabled:true,subjectID:subject(record),displayName:record.principal.number,sessionID:record.ticket.key,expiresAt:record.ticket.deadline};
+  return {role,enabled:true,subjectID:subject(record),displayName:record.principal.number,sessionID:record.ticket.key,expiresAt:record.ticket.deadline,version:record.ticket.publicRevision};
  }};
  let adapter;
  try{adapter=await startAdapter({gatewayOrigin,hostSecret,agents,now,storage,identity:businessIdentity({sessions})});}catch(error){directory.dispose();throw error;}
  let origin,active=0,closed=false;
+ const proxy=createSupportProxy({adapterOrigin:adapter.origin,publicOrigin:()=>origin,sessions,now});
  const respond=(response,status,data)=>{response.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});response.end(data===undefined?'':JSON.stringify(data));};
  const server=http.createServer(async(request,response)=>{
   response.setHeader('Cache-Control','no-store');response.setHeader('X-Content-Type-Options','nosniff');response.setHeader('Referrer-Policy','no-referrer');
@@ -67,28 +64,7 @@ export async function startPortal({gatewayOrigin,hostSecret,agents=[],accounts,s
     if(!cookie)throw fail(401,'login_required');
     response.setHeader('Set-Cookie',cookie);respond(response,200,{opened:true});return;
    }
-   if(!allowed.has(path))throw fail(404,'not_found');
-   if(!allowed.get(path).includes(request.method))throw fail(405,'method_not_allowed');
-   const realm=path.startsWith('/desk/')?'operator':'member';
-   const before=directory.authenticate(request,realm);
-   // This public, non-credential nonce pins a browser render to its current login.
-   // It never replaces the authenticated cookie checked by the adapter on both sides.
-   if(count('x-business-session')&&(count('x-business-session')!==1||!before||request.headers['x-business-session']!==before.ticket.publicRevision))throw fail(401,'session_changed');
-   if(count('authorization')>1)throw fail(400,'invalid_request');
-   const body=request.method==='POST'?await bounded(request,32768):undefined;
-   const headers={Origin:adapter.origin,...(body===undefined?{}:{'Content-Type':'application/json'})};
-   if(request.headers.cookie)headers.Cookie=request.headers.cookie;
-   if(request.headers.authorization)headers.Authorization=request.headers.authorization;
-   let upstream,data;
-   try{
-    upstream=await fetch(adapter.origin+path,{method:request.method,headers,body,redirect:'error',signal:AbortSignal.timeout(20000)});
-    if(!upstream.headers.get('content-type')?.startsWith('application/json'))throw Error('upstream type');
-    data=JSON.parse((await bounded(upstream.body,1<<20)).toString());
-   }catch{throw fail(502,'support_unavailable');}
-   const after=directory.authenticate(request,realm);
-   if(before?.ticket.key!==after?.ticket.key||before?.principal.number!==after?.principal.number)throw fail(401,'session_changed');
-   if(![200,201,204,400,401,403,404,405,409,412,413,415,429,500,502,503,504].includes(upstream.status))throw fail(502,'support_unavailable');
-   respond(response,upstream.status,data);
+   if(!await proxy(request,response))throw fail(404,'not_found');
   }catch(error){if(!response.headersSent)respond(response,error.status||500,{code:error.code||'internal_error'});else response.end();}
   finally{active--;}
  });

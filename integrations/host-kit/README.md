@@ -1,5 +1,7 @@
 # 可复用宿主接入包（仓库内参考实现）
 
+同源业务服务器可复用[共享安全代理](proxy.md)，办公门户和空白业务已采用。登录/身份映射仍由业务方负责，不需要重复实现客服路由代理。
+
 首次接入从[最小接入包](starter/README.md)开始：集中装配顺序、可复制验收 JSON、故障处理与目标交接表；复用本包，不新增认证系统。
 
 新系统优先按[统一接入验收流程](acceptance.md)运行：默认只读，显式授权后复用业务闭环，单列切号/禁用、浏览器和部署证据缺口。
@@ -48,6 +50,7 @@ const adapter = await startAdapter({
 - sessionID：16–512 字符的不透明登录会话标识，不能只用用户 ID；退出、切号、重新登录必须撤销/更换，避免旧登录复活。
 - expiresAt：Unix 毫秒到期时间；不是秒。认证服务需设置自身超时，并及时反映禁用和退出。
 - displayName：可选显示名，不是鉴权依据。
+- version：使用共享 proxy 时额外提供，与浏览器公开身份接口一致的随机登录版本（16–128 位字母/数字/下划线/连字符）；不是私有 sessionID。直接使用 adapter 的身份模板不消费该字段。
 
 直接调用 startAdapter 时 identity.customer / identity.staff 返回 `{id, name, sessionID, expiresAt}`。适配器在转发前和返回前调用验证，不凭前端提交的 customer_id、agent_id 授权。相同 sessionID 对应的用户发生变化会拒绝；不同登录的聊天凭据不能混用。
 认证异常仅返回固定 authentication_unavailable，不把原异常或密钥发给客户端。
