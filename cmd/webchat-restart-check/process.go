@@ -32,7 +32,10 @@ func childEnvironment(opts options, source, secret string, demo bool) []string {
 		"STORAGE_DRIVER=postgres", "WEBCHAT_REPLY_MODE=fake")
 }
 
-func (h *harness) start(role, source, secret string, demo bool) (*childProcess, error) {
+func (h *harness) start(role, source, secret string, demo bool, multi ...string) (*childProcess, error) {
+	if len(multi) != 0 && (len(multi) != 2 || demo) {
+		return nil, errors.New("invalid multi-host child configuration")
+	}
 	binary, prefix := h.options.serverBinary, "Web chat server: "
 	var args []string
 	if demo {
@@ -42,6 +45,9 @@ func (h *harness) start(role, source, secret string, demo bool) (*childProcess, 
 	command := exec.Command(binary, args...)
 	command.Dir = h.options.outputDir
 	command.Env = childEnvironment(h.options, source, secret, demo)
+	if len(multi) == 2 {
+		command.Env = multiChildEnvironment(h.options, multi[0], multi[1])
+	}
 	command.Stderr = io.Discard // Never print or persist child diagnostics.
 	command.WaitDelay = time.Second
 	stdout, err := command.StdoutPipe()

@@ -432,6 +432,9 @@ func (h *harness) accept() error {
 	}); err != nil {
 		return err
 	}
+	if err := h.acceptMultiHost(); err != nil {
+		return err
+	}
 	if h.options.demoBinary != "" {
 		return h.acceptDemo(runID)
 	}

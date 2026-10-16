@@ -19,6 +19,6 @@ node --test integrations/cross-system/isolation.test.mjs
 
 `multihost_test.go` 通过真实 runCommand → 配置解析 → 启动监听 → 网关链路，在相同客户/坐席/事件 ID 下检查会话与历史分离、来源队列、跨来源五种人工操作拒绝、本来源接管回复，以及关闭 A 不影响 B。测试仅替换 PostgreSQL 依赖为内存仓库；不是实际数据库持久化、真实浏览器或负载验收。原有跨系统 HTTP 测试继续覆盖业务密码登录和切号/退出。
 
-本轮没有修改客服核心或 CRMEB，没有连接数据库或调用真实模型。生产存储的多来源回归仍需在独立测试 PostgreSQL 上另行验收。
+配置实现当轮没有修改客服核心或 CRMEB，没有连接数据库或调用真实模型。后续已完成[独立测试 PostgreSQL 的多来源重启验收](webchat-multi-host-postgres.md)，其中明确区分真实持久化与浏览器证据范围。
 
 2026-10-16：正式入口、webchat 和 UI 的 race 回归通过；跨系统 demo/password HTTP 专项 21 项通过。语法与配置拒绝场景包含原有单宿主 AI 测试；未把注入内存仓库的命令测试记作 PostgreSQL 现场验收。
