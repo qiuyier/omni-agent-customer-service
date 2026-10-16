@@ -10,6 +10,9 @@ import {randomBytes} from 'node:crypto';
 import {execFile,spawn} from 'node:child_process';
 import {promisify} from 'node:util';
 import {startHost} from '../standalone-host/host.mjs';
+import {startPortal} from '../office-portal/portal.mjs';
+import {startBusiness} from '../fresh-onboarding/business.mjs';
+import {attachSupport} from '../fresh-onboarding/support.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const secret=()=>randomBytes(32).toString('base64url');
 function client(origin){
@@ -18,7 +21,7 @@ function client(origin){
   const text=await r.text();return {status:r.status,data:text?JSON.parse(text):null,cookie:r.headers.get('set-cookie')?.split(';')[0]};
  };
 }
-test('two systems: colliding user/staff/event IDs stay isolated through the complete human lifecycle',{timeout:180000},async t=>{
+for(const mode of ['demo','password'])test(`${mode}: two systems sharing one gateway stay isolated through the complete human lifecycle`,{timeout:180000},async t=>{
  const dir=await mkdtemp(join(tmpdir(),'omni-cross-system-'));
  let child,closed;const hosts=[];
  t.after(async()=>{
@@ -37,8 +40,21 @@ test('two systems: colliding user/staff/event IDs stay isolated through the comp
   child.once('exit',()=>{clearTimeout(timer);reject(Error('fixture exited'));});
   child.stdout.on('data',chunk=>{output+=chunk;const m=output.match(/^(http:\/\/127\.0\.0\.1:\d+)\n/);if(m){clearTimeout(timer);resolve(m[1]);}});
  });
- for(let i=0;i<2;i++)hosts.push(await startHost({gatewayOrigin:gateway,hostSecret:hostSecrets[i],agents:[{id:'staff-1',name:'测试客服',secret:agentSecrets[i]}]}));
- const call=hosts.map(h=>client(h.origin)),direct=client(gateway),logins=[],staff=[],sessions=[];
+ const passwords=[{lin:secret(),zhou:secret(),staff:secret()},{lin:secret(),zhou:secret(),staff:secret()}];
+ for(let i=0;i<2;i++){
+  const config={gatewayOrigin:gateway,hostSecret:hostSecrets[i],agents:[{id:'staff-1',name:'测试客服',secret:agentSecrets[i]}]};
+  const accounts=[{realm:'member',handle:'lin',number:'MEM:731',passphrase:passwords[i].lin},{realm:'member',handle:'zhou',number:'MEM:864',passphrase:passwords[i].zhou},{realm:'operator',handle:'staff',number:'OPS:42',passphrase:passwords[i].staff}];
+  if(mode==='demo')hosts.push(await startHost(config));
+  else if(i===0)hosts.push(await startPortal({...config,accounts}));
+  else{const business=await startBusiness({accounts});let support;hosts.push({origin:business.origin,async close(){await business.close();await support?.close();}});support=await attachSupport(business,config);}
+ }
+ // Only adapt native login routes/bodies; all support requests and responses stay real.
+ const call=hosts.map((h,i)=>{const request=client(h.origin);return (path,options={})=>{
+  if(mode==='demo')return request(path,options);
+  const routes=i===0?{'/demo/login':'/access/member/open','/demo/logout':'/access/member/close','/desk/login':'/access/operator/open','/desk/logout':'/access/operator/close'}:{'/demo/login':'/auth/customer/login','/demo/logout':'/auth/customer/logout','/desk/login':'/auth/staff/login','/desk/logout':'/auth/staff/logout'};
+  if(path==='/demo/login'||path==='/desk/login'){const account=path==='/desk/login'?'staff':options.body.account;options={...options,body:i===0?{handle:account,passphrase:passwords[i][account]}:{account,password:passwords[i][account]}};}
+  return request(routes[path]||path,options);
+ }}),direct=client(gateway),logins=[],staff=[],sessions=[];
  const open=i=>call[i]('/host/chat-session',{method:'POST',body:{},cookie:logins[i].cookie});
  const customer=(i,path,body)=>call[i](path,{method:body===undefined?'GET':'POST',body,cookie:logins[i].cookie,token:sessions[i].access_token});
  const action=(i,body)=>call[i]('/desk/action',{method:'POST',cookie:staff[i].cookie,body:{expected_agent_id:'staff-1',...body}});
@@ -47,12 +63,19 @@ test('two systems: colliding user/staff/event IDs stay isolated through the comp
   staff.push(await call[i]('/desk/login',{method:'POST',body:{account:'staff-1'}}));assert.equal(staff[i].status,200);
   const opened=await open(i);assert.equal(opened.status,200);sessions.push(opened.data);
  }
- await t.test('same raw identities map to different conversations; secrets stay server side',()=>{
-  assert.equal(logins[0].data.user.id,logins[1].data.user.id);
-  assert.equal(staff[0].data.agent.id,staff[1].data.agent.id);
+ await t.test('same raw identities map to different conversations; secrets stay server side',async()=>{
+  if(mode==='demo'){assert.equal(logins[0].data.user.id,logins[1].data.user.id);assert.equal(staff[0].data.agent.id,staff[1].data.agent.id);}
+  else{
+   const members=await Promise.all(call.map((request,i)=>request('/host/me',{cookie:logins[i].cookie})));
+   const agents=await Promise.all(call.map((request,i)=>request('/desk/me',{cookie:staff[i].cookie})));
+   for(const m of members)assert.equal(m.status,200);
+   // Raw MEM:731 is identical; the two existing business mappings deliberately use different prefixes.
+   assert.equal(members[0].data.user.id.replace(/^member_/,''),members[1].data.user.id.replace(/^person_/,''));
+   for(const a of agents){assert.equal(a.status,200);assert.equal(a.data.agent.id,'staff-1');}
+  }
   assert.notEqual(sessions[0].conversation_id,sessions[1].conversation_id);
   const browserData=JSON.stringify([logins,staff,sessions]);
-  for(const value of [...hostSecrets,...agentSecrets])assert.ok(!browserData.includes(value));
+  for(const value of [...hostSecrets,...agentSecrets,...passwords.flatMap(Object.values)])assert.ok(!browserData.includes(value));
  });
  await t.test('foreign cookies, mixed capabilities and forged source fields are rejected',async()=>{
   assert.equal((await call[1]('/chat/v1/messages',{cookie:logins[0].cookie,token:sessions[0].access_token})).status,401);
@@ -115,6 +138,16 @@ test('two systems: colliding user/staff/event IDs stay isolated through the comp
   const other=await customer(1,'/chat/v1/messages');assert.equal(other.data.status,'human_active');
   assert.equal((await open(1)).data.conversation_id,sessions[1].conversation_id);
  });
+ await t.test('switching A revokes its old login without changing B history or ownership',async()=>{
+  const before=await action(1,{conversation_id:sessions[1].conversation_id,action:'history'});assert.equal(before.status,200);
+  const old=logins[0];logins[0]=await call[0]('/demo/login',{method:'POST',body:{account:'zhou'},cookie:old.cookie});assert.equal(logins[0].status,200);
+  assert.equal((await call[0]('/chat/v1/messages',{cookie:old.cookie,token:sessions[0].access_token})).status,401);
+  assert.equal((await customer(0,'/chat/v1/messages')).status,401);
+  const next=await open(0);assert.equal(next.status,200);assert.notEqual(next.data.conversation_id,sessions[0].conversation_id);sessions[0]=next.data;
+  assert.deepEqual((await customer(0,'/chat/v1/messages')).data.messages,[]);
+  const after=await action(1,{conversation_id:sessions[1].conversation_id,action:'history'});assert.equal(after.status,200);assert.deepEqual(after.data,before.data);
+  assert.equal((await customer(1,'/chat/v1/messages')).data.status,'human_active');
+ });
  await t.test('customer/staff logout in A neither authenticates nor logs out B',async()=>{
   assert.equal((await call[0]('/demo/logout',{method:'POST',body:{},cookie:logins[0].cookie})).status,204);
   assert.equal((await call[0]('/desk/logout',{method:'POST',body:{},cookie:staff[0].cookie})).status,204);
@@ -126,7 +159,7 @@ test('two systems: colliding user/staff/event IDs stay isolated through the comp
  await t.test('private gateway does not accept customer or host credentials as staff',async()=>{
   for(const token of [sessions[1].access_token,hostSecrets[1]])assert.equal((await direct('/internal/chat/desk/queue',{token})).status,401);
  });
- await t.test('reusable acceptance checks the non-commerce sample through configuration only',async()=>{
+ if(mode==='demo')await t.test('reusable acceptance checks the non-commerce sample through configuration only',async()=>{
   const id=sessions[1].conversation_id;
   const state=await action(1,{conversation_id:id,action:'history'});
   assert.equal((await action(1,{conversation_id:id,action:'close',revision:state.data.revision})).status,200);
