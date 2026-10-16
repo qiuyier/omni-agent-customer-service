@@ -42,6 +42,8 @@ timeoutMs 默认 20000，仅沿用 fake 样例预算，可显式配置 1–12000
 
 ## 2026-10-16 提取验收
 
+后续新增的真实浏览器验证见 [浏览器回归记录](proxy-browser-acceptance.md)，包括两个样例的人工闭环、切号/退出、业务服务重建及同主机 Cookie 限制。以下保留提取当轮的测试范围。
+
 新增代理专项 6 项全部通过；联合 web/chat、host-kit、office-portal、fresh-onboarding、business-login、standalone-host、cross-system 共 139 项通过，git diff --check 通过。两个样例通过真实 HTTP 和临时 Go 网关完成原人工闭环；办公门户覆盖登录版本、禁用与退出，空白业务覆盖适配器重建后恢复历史。
 
 本轮没有改 Go 核心、原 adapter、共享页面、认证目录或 CRMEB，没有访问数据库或模型。没有新增真实浏览器或 PostgreSQL 重启验收；浏览器身份状态逻辑运行了自动回归，不把历史截图当作本轮手工验收。临时服务由测试 teardown 关闭。
