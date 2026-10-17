@@ -26,7 +26,7 @@
 | KNOWLEDGE_RETRIEVER | 默认keyword，无embedding调用；semantic需显式配置并可能在正式启动时产生embedding费用 |
 | 业务后端的模式元数据 | /host/me和/host/chat-session返回可信storage=postgres、reply_mode，与网关配置保持一致；不是模型可用性探针 |
 
-当前网关是一实例一套宿主配置、模型和知识。双账号会话隔离不等于共享实例的多租户知识隔离。不同系统如需配置/知识隔离，先按独立实例规划；不能自行认为当前已支持任意多租户共用。
+当前正式入口允许多宿主 fake/人工，但不允许多宿主 AI。双账号会话隔离不等于共享实例的知识隔离。不同系统如需 AI/知识隔离，按独立实例规划；完整执行顺序见[交付指南](integration-delivery.md)。
 
 ## 2. 分层检查，再启动
 
