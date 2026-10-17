@@ -1,5 +1,7 @@
 # 可复用宿主接入包（仓库内参考实现）
 
+现有办公门户与空白业务已完成[同一正式网关 + PostgreSQL 的浏览器验收](../../docs/webchat-multi-host-browser.md)，包含人工闭环、网关重启恢复及单边关闭/切号/退出。
+
 多业务并行接入须核对[业务 Cookie 命名与隔离边界](cookie-isolation.md)：两个样例现已使用不同默认命名空间；这不替代生产安全域隔离。
 
 办公门户与空白业务的密码登录、共享代理已通过[同一临时网关的跨来源 HTTP 验收](../cross-system/README.md)。正式入口后续已提供[多宿主配置](../../docs/webchat-multi-host.md)，限 fake/人工模式；不表示多租户 AI/知识或生产部署已验收。

@@ -1,5 +1,7 @@
 # 多业务 PostgreSQL 与正式网关重启验收
 
+后续已补齐[双业务真实浏览器端到端验收](webchat-multi-host-browser.md)，将现有页面接到同一正式网关与 PostgreSQL。下文保持本轮服务端进程测试的独立证据范围。
+
 本轮通过 `bash scripts/webchat_restart_check.sh` 复用既有验收器。正式 `cmd/webchat-server` 二进制使用 WEBCHAT_HOSTS_JSON，同时配置两个随机业务来源，连接同一个真实 PostgreSQL，不替换 repository，不使用内存回退。
 
 ## 结果
