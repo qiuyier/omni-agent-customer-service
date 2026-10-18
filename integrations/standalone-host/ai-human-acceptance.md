@@ -1,0 +1,33 @@
+# 单业务真实 AI 与人工联合验收
+
+2026-10-18（北京时间），人工浏览器审阅通过本页列出的有限样本。沿用 glm-5.3-flash；授权上限10次，实际3次外部调用，均HTTP 200（约8.48、7.45、5.19秒）。仅使用虚构FAQ和演示账号，不涉及CRMEB或真实业务数据。
+
+## 结果
+
+- 服务时间：正确回答工作日09:00—17:30（北京时间）、周末关闭，未编造节假日安排。
+- 未知规则：积分有效期、短信提醒均明确无法确认。
+- 故障恢复：本机注入503，无外部调用；页面保留待确认消息并显示可重试，不泄漏供应商错误。解除人为故障后显式点击重试，沿用事件 `5d9e9d79-bb73-41c4-97cc-3d6506197943`，历史仅一条客户消息和一条回复。恢复答案正确说明邮箱验证找回密码，不索取密码或验证码。
+- 人工闭环：点击申请人工后状态为waiting_human；等待期间发送消息的outcome为waiting_human。乔杉接管后再次发送消息交由人工；此阶段没有新增模型请求。坐席回复在客户页显示“人工坐席”。结束后双方显示已结束，客户输入框禁用。
+- 中途演示登录过期，重新选择同账号后历史恢复；没有因此追加模型调用。
+
+## 复现与阅读顺序
+
+先读本页，再读 lab-options.mjs / lab-options.test.mjs、ai-human-faq.json、browser-lab.mjs。
+
+```sh
+node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --allow-real-ai --allow-human-desk
+```
+
+AI与人工开关现在可以显式组合；默认仍不调用模型、不启用人工。硬上限改为10次。真实上游非成功响应或网络失败后代理停止外发，避免SDK重试追加请求；不要在真实失败后未经确认执行model-up。本轮model-up仅用于解除主动注入的本地故障。
+
+自动回归：standalone-host的host.test.mjs与lab-options.test.mjs共8/8通过；go test ./cmd/webchat-server ./internal/webchat/... ./internal/customerservice通过。首次Node测试受沙箱禁止监听端口影响，授权后重跑通过。
+
+## 证据与边界
+
+原始报告：[report.json](../../examples/archive/integration/standalone-host/2026-10-17T16-26-53-802Z-62ba37dc/report.json)。报告保留自动生成的pending_manual_browser_review，本页记录人工审阅结论，不把启动成功误当验收通过。
+
+![人工回复后关闭](../../examples/archive/integration/standalone-host/2026-10-17T16-26-53-802Z-62ba37dc/ai-human-closed.png)
+
+这是单业务、模拟账号、PostgreSQL下的有限验收，不是生产认证、多租户AI隔离或全面模型质量认证。故障为本地503，不是供应商真实故障或超时测试；未覆盖AI生成过程中同时接管的竞态。本次未验证模型口头转人工建议，实际转接由页面按钮触发。通用核心未新增电商逻辑、业务查询或执行能力。
+
+网关、业务后端、测试标签页及专用数据库容器已停止；测试数据卷与证据保留。

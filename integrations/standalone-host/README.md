@@ -66,7 +66,9 @@ startHost 接受后端可信 gatewayOrigin、hostSecret，以及 storage（memor
 node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --allow-real-ai
 ```
 
-本轮使用 Node.js 26.7.0；AI 验收工具需要支持 node:util 的 parseEnv。仅支持显式 HTTPS Chat Completions 端点与通用 AI_API_KEY，真实请求最多12次。使用本目录 ai-faq.json 虚构资料、keyword 检索及核心默认提示；不向 embedding 发送数据。终端 model-down/model-up 控制本机故障注入，drop-next 丢弃下一次成功回复的响应，stop 关闭本轮服务及专用测试数据库并保留数据卷。故障代理仅供回环测试，不可生产部署；报告不自动宣称浏览器验收通过。
+本轮使用 Node.js 26.7.0；AI 验收工具需要支持 node:util 的 parseEnv。仅支持显式 HTTPS Chat Completions 端点与通用 AI_API_KEY，真实请求最多10次。使用本目录 ai-faq.json 虚构资料、keyword 检索及核心默认提示；不向 embedding 发送数据。终端 model-down/model-up 控制本机故障注入，drop-next 丢弃下一次成功回复的响应，stop 关闭本轮服务及专用测试数据库并保留数据卷。故障代理仅供回环测试，不可生产部署；报告不自动宣称浏览器验收通过。
+
+2026-10-18新增[单业务AI与人工联合验收](ai-human-acceptance.md)：显式同时传入 --allow-real-ai 与 --allow-human-desk，使用 ai-human-faq.json，实际3次模型调用完成回答、故障恢复和人工闭环。真实上游失败后停止外发，不自动追加请求；model-up只应解除主动注入的故障，真实失败后须重新确认才可恢复。
 
 进一步已完成[真实浏览器中断恢复验收](browser-acceptance.md)：实际页面上的凭证续期、重新登录、待确认重试和跨标签页账号隔离通过，附截图与网络证据。
 
