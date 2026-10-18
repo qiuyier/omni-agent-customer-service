@@ -11,17 +11,18 @@ import http from 'node:http';
 import readline from 'node:readline';
 import {labOptions} from './lab-options.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const {ai,human,maxExternalCalls}=labOptions(process.argv.slice(2));
+const {ai,human,maxExternalCalls,mockSlow=false}=labOptions(process.argv.slice(2));
 // Parse data, never source shell code. Only explicitly selected model settings
 // enter the gateway. Database/host/knowledge settings cannot come from .env.
 const aiEnv={};
-if(ai){
+if(ai&&!mockSlow){
   const parsed=parseEnv(fs.readFileSync(root+'.env','utf8'));
   for(const key of ['AI_PROVIDER','AI_PROTOCOL','AI_MODEL','AI_BASE_URL','AI_API_KEY'])if(parsed[key])aiEnv[key]=parsed[key];
   if(!aiEnv.AI_API_KEY||!aiEnv.AI_MODEL||aiEnv.AI_PROTOCOL!=='chat_completions')throw Error('AI lab requires explicit model, generic key and chat_completions in .env');
   const endpoint=new URL(aiEnv.AI_BASE_URL);
   if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||endpoint.search||endpoint.hash)throw Error('AI lab requires clean HTTPS endpoint');
 }
+if(mockSlow)Object.assign(aiEnv,{AI_PROVIDER:'custom',AI_PROTOCOL:'chat_completions',AI_MODEL:'local-slow-mock',AI_API_KEY:randomBytes(32).toString('hex'),AI_BASE_URL:'http://127.0.0.1'});
 const compose='deploy/standalone-host/compose.yaml';
 const dsn='postgres://standalone_demo:standalone_local_test@127.0.0.1:15434/standalone_chat_acceptance?sslmode=disable';
 const runID=new Date().toISOString().replace(/[:.]/g,'-')+'-'+randomBytes(4).toString('hex');
@@ -37,6 +38,9 @@ const docker=(...args)=>run('docker',['--context','desktop-linux','compose','--e
 const secret=randomBytes(32).toString('base64url');
 const agents=human?[{id:'qiao',name:'乔杉',secret:randomBytes(32).toString('base64url')},{id:'wen',name:'温宁',secret:randomBytes(32).toString('base64url')}]:[];
 report.human_enabled=human;
+report.mock_slow_ai=mockSlow;
+report.mock_requests=0;
+const pendingMock=new Set();
 report.max_external_model_calls=maxExternalCalls;
 const faqFile=human?'ai-human-faq.json':'ai-faq.json';
 const agentEnv={WEBCHAT_AGENTS_JSON:JSON.stringify(agents.map(a=>({id:a.id,source_id:report.source_id,secret:a.secret}))),STANDALONE_AGENTS_JSON:JSON.stringify(agents)};
@@ -76,6 +80,18 @@ try {
         if(req.method!=='POST'||req.url!=='/chat/completions'||req.headers.authorization!=='Bearer '+aiEnv.AI_API_KEY){res.writeHead(403).end();return;}
         let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>1048576)throw Error('request too large');chunks.push(chunk);}
         if(modelDown){record.status=503;res.writeHead(503,{'Content-Type':'application/json'}).end(JSON.stringify({error:{message:'local injected failure',type:'unavailable'}}));return;}
+        if(mockSlow){
+          record.mock=true;report.mock_requests++;save();console.log('mock-model: waiting for release-model');
+          await new Promise(resolve=>{
+            const finish=()=>{clearTimeout(timer);pendingMock.delete(finish);res.off('close',finish);resolve();};
+            const timer=setTimeout(finish,90000);
+            pendingMock.add(finish);res.once('close',finish);
+          });
+          if(res.destroyed){record.status=499;return;}
+          record.status=200;
+          res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({id:'mock-delayed',object:'chat.completion',created:Math.floor(Date.now()/1000),model:'local-slow-mock',choices:[{index:0,message:{role:'assistant',content:'迟到的模拟 AI 回复，不应在人工接管后显示。'},finish_reason:'stop'}],usage:{prompt_tokens:1,completion_tokens:1,total_tokens:2}}));
+          return;
+        }
         if(report.external_model_calls>=maxExternalCalls){record.status=429;res.writeHead(429).end();return;}
         report.external_model_calls++;record.forwarded=true;save();
         const upstream=await fetch(endpoint+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+aiEnv.AI_API_KEY,'Content-Type':'application/json'},body:Buffer.concat(chunks),redirect:'error',signal:AbortSignal.timeout(80000)});
@@ -121,7 +137,7 @@ try {
   });
   await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));publicOrigin='http://127.0.0.1:'+proxy.address().port;
   report.browser_origin=publicOrigin;save();
-  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,commands:['restart-gateway','restart-backend','drop-next','drop-next-consultation',...(ai?['model-down','model-up']:[]),'stop']}));
+  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model']:[]),'stop']}));
   const lines=readline.createInterface({input:process.stdin});
   for await(const line of lines){
     const command=line.trim();
@@ -130,6 +146,7 @@ try {
     else if(command==='restart-backend'){await stop(host,'SIGKILL');host=await startBackend(hostPort);}
     else if(command==='drop-next')dropNext=true;
     else if(command==='drop-next-consultation')dropNextConsultation=true;
+    else if(mockSlow&&command==='release-model'){for(const finish of [...pendingMock])finish();}
     else if(ai&&command==='model-down')modelDown=true;
     else if(ai&&command==='model-up')modelDown=false;
     else {console.log('unknown command');continue;}
@@ -138,6 +155,7 @@ try {
   lines.close();report.finished_at=new Date().toISOString();
 }catch{report.passed=false;report.failure_step='browser_lab';process.exitCode=1;}
 finally{
+  for(const finish of [...pendingMock])finish();
   if(proxy){proxy.closeAllConnections();await new Promise(resolve=>proxy.close(resolve));}
   for(const entry of children.slice().reverse())await stop(entry);
   if(modelProxy){modelProxy.closeAllConnections();await new Promise(resolve=>modelProxy.close(resolve));}
