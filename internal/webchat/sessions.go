@@ -184,7 +184,9 @@ func (g *Gateway) acquire(r *http.Request) (identity, func(), string) {
 		g.mu.Unlock()
 		return identity{}, nil, "unauthorized"
 	}
-	exclusive := r.URL.Path != "/chat/v1/handoff"
+	// Read-only current history may run alongside generation. Authentication,
+	// ownership, rate limits and the global concurrency cap still apply.
+	exclusive := r.URL.Path != "/chat/v1/handoff" && !(r.URL.Path == MessagesPath && r.Method == http.MethodGet)
 	if (exclusive && p.busy) || g.active >= g.config.MaxConcurrent {
 		g.mu.Unlock()
 		return identity{}, nil, "busy"

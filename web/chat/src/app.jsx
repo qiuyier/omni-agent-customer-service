@@ -3,6 +3,7 @@ import { MAX_BYTES, byteLength, validContent, pendingKey, readPending, savePendi
 import {requestJSON as baseRequest} from './protocol.mjs';
 import { demoPresentation } from './demo.mjs';
 import {usePolling,pollingLabel} from './use-polling.jsx';
+import {canReadDuringSend} from './handoff-read.mjs';
 
 function Icon({ name, className = 'size-5', ...props }) {
   const paths = {
@@ -231,8 +232,9 @@ function useChat(fetcher,storageScope) {
     };
   }, []);
 
+  const handoffRead=canReadDuringSend(sending,status);
   const autoUpdate=usePolling(async task=>{
-    if(busyRef.current||!session)return;
+    if((busyRef.current&&!handoffRead)||!session)return;
     const version=operation.current.id,owner=session.conversation_id;
     const active=()=>task.active()&&version===operation.current.id&&round.current===owner;
     try{
@@ -242,7 +244,7 @@ function useChat(fetcher,storageScope) {
       const data=await api.current.history(task.signal);
       if(active())applyHistory(data,owner);
     }catch(e){if(active()&&(e.code==='account_changed'||e.code==='unauthorized'))report(e);throw e;}
-  },phase==='ready'&&!!session&&!mustReload&&!identityChecking&&!sending&&!refreshing&&!startingRound&&!requestingHuman,session?.conversation_id);
+  },phase==='ready'&&!!session&&!mustReload&&!identityChecking&&(!sending||handoffRead)&&!refreshing&&!startingRound&&!requestingHuman,session?.conversation_id);
 
   async function refresh() {
     if (busyRef.current || !session) return;
@@ -275,6 +277,8 @@ function useChat(fetcher,storageScope) {
     try {
       const result = await api.current.send(outgoing, task.signal);
       if (!task.active()) return;
+      // A poll started before this receipt must not replace the final history.
+      autoUpdate.invalidate();
       if (result?.conversation_id !== session.conversation_id || !result.message_id || !['replied', 'waiting_human', 'superseded'].includes(result.outcome)) throw new Error('invalid_receipt');
       // Clear uncertainty before the independent history fetch. A history failure must not replay a confirmed message.
       setPending(null);
@@ -388,8 +392,8 @@ export function Chat({fetcher=globalThis.fetch,storageScope="",businessAuthentic
             {chat.truncated && <p className="text-center text-[11px] leading-6 text-stone-400">仅显示最近的消息，较早记录未在此页展示。</p>}
             {chat.messages.length === 0 && !chat.pending && <div className="pb-8 pt-6 md:pt-10"><span className="mb-6 grid size-12 place-items-center rounded-2xl border border-stone-200 text-emerald-900"><Icon name="chat" className="size-6" /></span><h3 className="text-xl font-medium tracking-tight text-stone-800">你好，{chat.session.user.display_name}。</h3><p className="mt-3 max-w-md text-sm leading-7 text-stone-500">{demo.emptyDescription}</p><div className="mt-6 flex flex-wrap gap-2">{['你好，我想了解这个演示', '这个聊天页是如何工作的？'].map((value) => <button type="button" key={value} onClick={() => prompt(value)} disabled={blocked} className="rounded-full border border-stone-200 px-3.5 py-2.5 text-xs text-stone-500 transition-colors hover:border-emerald-800/30 hover:text-emerald-900 active:scale-[0.98] disabled:opacity-50">{value}</button>)}</div></div>}
             {chat.messages.map((message) => <Message key={message.id} message={message} />)}
-            {chat.pending && <article className="flex justify-end"><div className="max-w-[90%] sm:max-w-[82%]"><p className="mb-2 text-right text-[11px] text-stone-400">你 · {chat.sending ? '发送中' : '等待确认'}</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-tr-md border border-dashed border-emerald-800/30 bg-emerald-50/50 px-4 py-3.5 text-sm leading-7 text-stone-600 [overflow-wrap:anywhere]">{chat.pending.content}</p></div></article>}
-            {chat.sending && <div role="status" className="flex items-center gap-2 text-xs text-stone-400"><span className="sending-dot size-1.5 rounded-full bg-emerald-700" />正在发送并等待服务确认…</div>}
+            {chat.pending && !canReadDuringSend(chat.sending,chat.status) && <article className="flex justify-end"><div className="max-w-[90%] sm:max-w-[82%]"><p className="mb-2 text-right text-[11px] text-stone-400">你 · {chat.sending ? '发送中' : '等待确认'}</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-tr-md border border-dashed border-emerald-800/30 bg-emerald-50/50 px-4 py-3.5 text-sm leading-7 text-stone-600 [overflow-wrap:anywhere]">{chat.pending.content}</p></div></article>}
+            {chat.sending && <div role="status" className="flex items-center gap-2 text-xs text-stone-400"><span className="sending-dot size-1.5 rounded-full bg-emerald-700" />{canReadDuringSend(chat.sending,chat.status)?'已转入人工流程，消息记录持续更新；原发送请求收尾中，暂不能再次发送。':'正在发送并等待服务确认…'}</div>}
             <div ref={end} />
           </div>}
         </div>

@@ -3,6 +3,7 @@ package webchat
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"reflect"
 	"sync"
@@ -61,12 +62,10 @@ func TestDelayedBotAcrossHumanLifecycle(t *testing.T) {
 				deskAction(t, f, 0, map[string]any{"conversation_id": s.ConversationID, "action": "close", "revision": row.Revision}, 200)
 				wantStatus = conversation.StatusClosed
 			}
-			// Customer history is busy until send completes (the UI disables
-			// refresh). Read the repository-backed snapshot for the baseline.
-			before, err := f.g.readHistory(context.Background(), identify("host-a", "overlap-customer"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			// Reading history during generation must neither block nor release
+			// the write exclusion held by the original send.
+			before := history(t, f, s)
+			expect(t, call(f.g, "POST", MessagesPath, s.AccessToken, map[string]string{"event_id": "still-busy", "content": "blocked"}), 429)
 			if before.Status != wantStatus || len(before.Messages) != wantMessages {
 				t.Fatalf("unexpected state before model completes: %+v", before)
 			}
@@ -123,6 +122,61 @@ func TestDelayedBotAcrossHumanLifecycle(t *testing.T) {
 				if len(final.Messages) != wantMessages+1 || final.Messages[len(final.Messages)-1].Role != conversation.SenderHumanAgent {
 					t.Fatalf("human continuation failed: %+v", final)
 				}
+			}
+		})
+	}
+}
+
+func TestFailedGenerationAfterHandoffAcknowledgesAcceptedMessage(t *testing.T) {
+	for _, closed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "human", true: "closed"}[closed], func(t *testing.T) {
+			entered, release := make(chan struct{}), make(chan struct{})
+			var once sync.Once
+			unblock := func() { once.Do(func() { close(release) }) }
+			defer unblock()
+			f := newFixture(t, Config{Agents: testAgents}, func(ctx context.Context, _ customerservice.ReplyRequest) (customerservice.Reply, error) {
+				close(entered)
+				select {
+				case <-release:
+					return customerservice.Reply{}, errors.New("simulated timeout")
+				case <-ctx.Done():
+					return customerservice.Reply{}, ctx.Err()
+				}
+			})
+			s := mint(t, f, 0, "late-failure")
+			done := make(chan *httptest.ResponseRecorder, 1)
+			go func() {
+				done <- call(f.g, "POST", MessagesPath, s.AccessToken, map[string]string{"event_id": "slow", "content": "accepted question"})
+			}()
+			select {
+			case <-entered:
+			case <-time.After(time.Second):
+				t.Fatal("not started")
+			}
+			expect(t, call(f.g, "POST", "/chat/v1/handoff", s.AccessToken, map[string]any{}), 200)
+			row := deskAction(t, f, 0, map[string]any{"conversation_id": s.ConversationID, "action": "history"}, 200)
+			row = deskAction(t, f, 0, map[string]any{"conversation_id": s.ConversationID, "action": "claim", "revision": row.Revision}, 200)
+			deskAction(t, f, 0, map[string]any{"conversation_id": s.ConversationID, "action": "reply", "event_id": "human", "content": "human reply"}, 200)
+			if closed {
+				deskAction(t, f, 0, map[string]any{"conversation_id": s.ConversationID, "action": "close", "revision": row.Revision}, 200)
+			}
+			before := history(t, f, s)
+			unblock()
+			select {
+			case w := <-done:
+				expect(t, w, 200)
+				var result SendResult
+				if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+					t.Fatal(err)
+				}
+				if result.Outcome != "superseded" || result.MessageID != before.Messages[0].ID || result.ReplyMessageID != "" {
+					t.Fatal(result)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("not finished")
+			}
+			if !reflect.DeepEqual(before, history(t, f, s)) || f.models.Load() != 1 {
+				t.Fatal("history or attempts changed")
 			}
 		})
 	}

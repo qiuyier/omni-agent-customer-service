@@ -153,6 +153,14 @@ func (g *Gateway) send(w http.ResponseWriter, r *http.Request, claims identity) 
 		return
 	}
 	if err != nil {
+		// Generation failure after handoff does not undo the accepted customer
+		// message. Acknowledge the handoff, but never hide an unreadable state.
+		current, readErr := g.repo.FindConversation(r.Context(), claims.conversation)
+		if readErr == nil && (current.Status() == conversation.StatusWaitingHuman || current.Status() == conversation.StatusHumanActive || current.Status() == conversation.StatusClosed) {
+			result.Outcome = "superseded"
+			writeJSON(w, 200, result)
+			return
+		}
 		applicationError(w, err)
 		return
 	}

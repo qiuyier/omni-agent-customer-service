@@ -110,6 +110,12 @@ func TestDatabaseDelayedBotAcrossHumanLifecycle(t *testing.T) {
 			if before[0].Content() != "original question" {
 				t.Fatal("customer message lost")
 			}
+			var pendingHistory webchat.History
+			quick(func() deskHTTPResult { return l.request("GET", webchat.MessagesPath, s.AccessToken, nil) }, &pendingHistory)
+			if pendingHistory.Status != wantStatus || len(pendingHistory.Messages) != wantCount {
+				t.Fatal("concurrent history mismatch")
+			}
+			requireDeskHTTP(t, l.request("POST", webchat.MessagesPath, s.AccessToken, map[string]string{"event_id": "still-busy", "content": "blocked"}), 429, nil)
 			unblock()
 			var result webchat.SendResult
 			select {

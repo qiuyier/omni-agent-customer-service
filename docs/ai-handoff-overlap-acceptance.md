@@ -59,6 +59,8 @@ go test ./internal/webchat/... ./internal/customerservice ./cmd/webchat-server
 
 ## 浏览器补充验收（2026-10-18）：安全闭环通过，及时显示有待改进
 
+本节记录修复前的发现；后续修复与复验见文末，不能将旧限制视为当前状态。
+
 启动方式：
 
 ```sh
@@ -76,3 +78,24 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 证据：[report.json](../examples/archive/integration/standalone-host/2026-10-18T05-42-05-595Z-c1d7a2a7/report.json)。测试网关、后端、标签页和专用数据库容器已停止，保留数据卷与证据。
 
 ![释放迟到模型并关闭后的客户页](../examples/archive/integration/standalone-host/2026-10-18T05-42-05-595Z-c1d7a2a7/browser-overlap-closed.png)
+
+## 及时显示修复与复验（2026-10-18）
+
+已修复人工回复必须等原AI请求结束才可见的问题：
+
+- sessions.go只将当前历史GET设为非独占读取，仍执行鉴权、会话归属、限流及全局并发上限；发送与新咨询仍互斥。回归明确断言历史读取后第二次发送仍429。
+- app.jsx在发送中且已确认waiting_human/human_active/closed时恢复只读轮询（可见页约5秒），保留身份、会话及操作版本校验；原发送回执到达时使旧轮询失效。
+- 页面说明人工流程已启动、原请求正在收尾，暂不允许再次发送。不以消息文本相同推断已确认；待确认缓存只有正式回执才清除。轮询期间隐藏重复的临时发送气泡，不删除缓存。
+- 首轮浏览器复验遇到75秒模型超时，发现已接管情况下仍返回503、残留待确认提示。messages.go现会在生成失败后重新确认会话状态：已进入人工或已关闭，返回原客户message_id及superseded；状态读取失败或仍为bot_active时不吞掉原错误。新增人工处理中/已关闭的迟到失败回归。
+
+最终浏览器复验使用本地慢模型：在模型未完成、原发送无回执时，客户页已显示人工回复；约55.6秒后手动release-model，原请求HTTP200/superseded、没有bot消息或待确认残留；关闭后刷新状态和两条历史消息一致。
+
+证据：[最终报告](../examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/report.json)，[发现超时边界的首轮报告](../examples/archive/integration/standalone-host/2026-10-18T05-50-15-006Z-27b21b70/report.json)。两轮共2次本地模拟调用，真实外部调用0次。最终成功迟到回执做了浏览器验证；迟到失败修复用确定性自动测试覆盖，未再次在浏览器等待75秒超时。
+
+验证：前端61项通过；完整webchat竞态检测通过；3个成功迟到场景及2个失败迟到场景各20轮通过；相关Go回归通过；独立PostgreSQL完整仓储竞态套件通过（新增生成中HTTP历史读取及二次发送拒绝断言）。浏览器资源已重新构建。所有本轮服务、标签页与测试数据库容器已停止，证据与测试卷保留。
+
+边界：此修复是“读不必等待写完成”，不是取消上游生成，也没有放开同会话并发发送。人工消息约按5秒轮询可见，不是实时推送；隐藏页面暂停更新。未修改CRMEB或引入电商规则。
+
+阅读顺序：web/chat/src/handoff-read.mjs → web/chat/src/app.jsx → internal/webchat/sessions.go → internal/webchat/messages.go → internal/webchat/human_overlap_test.go → internal/persistence/postgres/human_overlap_test.go。
+
+![AI仍在等待时客户已看到人工回复](../examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/live-human-reply.png)
