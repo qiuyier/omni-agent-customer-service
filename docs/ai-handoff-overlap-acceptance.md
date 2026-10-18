@@ -99,3 +99,23 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 阅读顺序：web/chat/src/handoff-read.mjs → web/chat/src/app.jsx → internal/webchat/sessions.go → internal/webchat/messages.go → internal/webchat/human_overlap_test.go → internal/persistence/postgres/human_overlap_test.go。
 
 ![AI仍在等待时客户已看到人工回复](../examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/live-human-reply.png)
+
+## 账号切换、刷新和关闭边界验收（2026-10-18）
+
+新增 web/chat/src/handoff-identity.test.mjs 共7项：发送及历史同时悬挂，在clear并重新打开B后，旧200/401/503分别按发送先返回、历史先返回两种顺序完成；全部拒绝为AbortError，不恢复A凭证、不因旧401续期、不重发。另验证刷新只获取会话及历史，恢复closed状态，A的待确认缓存不进入B且不自动发送。前端完整测试68/68通过。本轮未修改生产代码。
+
+浏览器使用两个模拟客户、一个坐席及本地慢模型：
+
+1. A发送唯一标记问题，生成中申请人工，坐席读取并接管。
+2. 另一首页标签切换到B，原客户页自动变成B的空会话；坐席随后回复并关闭A。
+3. 本次模型先达到75秒超时（mock记录499），release-model指令到达时请求已结束；业务后端因登录已改变，旧消息请求返回401。没有将其解释为正常模型成功回执；旧成功/失败返回的完整组合由上述确定性测试覆盖。
+4. B刷新仍为空，不含A问题、人工回复或待确认消息；切回A后两条持久化消息、closed状态和原待确认缓存恢复，刷新不重复发送，旧响应不重新开启会话。
+5. A显式发起新咨询得到新的空会话，不继承人工状态、历史或旧待确认内容；没有触发模型或重发原消息。
+
+报告只有1条客户消息POST、1次本地模型请求、0次外部调用。关闭会话里额外虚线“等待确认”是客户端原事件缓存，不是第二条数据库消息；切号已丢弃旧回执，不能以相同文本猜测确认成功。关闭状态下重试按钮禁用，原缓存保留在旧轮次；本轮未实现事件级只读回执查询或自动清理该缓存。
+
+证据：[报告](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/report.json)。真实密码登录、企业IAM、多浏览器进程以及刷新瞬间所有网络时序不在此轮浏览器覆盖范围。自动报告仍保留pending_manual_browser_review，本节为人工审阅记录。所有本轮进程、标签页及测试数据库容器已停止，测试卷保留。
+
+![B刷新后没有A的数据](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-b-empty.png)
+
+![A刷新后仍关闭，原待确认缓存保留](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-a-closed.png)
