@@ -125,6 +125,11 @@ test('independent Node login backend and actual Go gateway', {timeout:180000}, a
   const event={event_id:'same-event',content:'独立业务甲的私有测试内容'};
   const first=await call('/chat/v1/messages',{method:'POST',body:event,cookie:a.cookie,token:sa.access_token});
   assert.equal(first.status,200);assert.equal(first.data.outcome,'replied');
+  const receipt=await call('/chat/v1/message-receipt',{method:'POST',body:event,cookie:a.cookie,token:sa.access_token});
+  assert.equal(receipt.status,200);assert.equal(receipt.data.accepted,true);assert.equal(receipt.data.message_id,first.data.message_id);
+  assert.equal((await call('/chat/v1/message-receipt',{method:'POST',body:event,cookie:b.cookie,token:sb.access_token})).data.accepted,false);
+  assert.equal((await call('/chat/v1/message-receipt',{method:'POST',body:event,cookie:b.cookie,token:sa.access_token})).status,401);
+  assert.equal((await call('/chat/v1/message-receipt',{method:'POST',body:{...event,content:'different'},cookie:a.cookie,token:sa.access_token})).status,409);
   const replay=await call('/chat/v1/messages',{method:'POST',body:event,cookie:a.cookie,token:sa.access_token});assert.deepEqual(replay.data,first.data);
   assert.equal((await session(a.cookie)).access_token,sa.access_token);
   const history=await call('/chat/v1/messages',{cookie:a.cookie,token:sa.access_token});assert.equal(history.data.messages.length,2);

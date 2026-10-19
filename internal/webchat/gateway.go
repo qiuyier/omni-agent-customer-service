@@ -158,8 +158,12 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		g.exchange(w, r)
-	case NextRoundPath, PreviousRoundPath, MessagesPath:
-		if r.URL.Path != MessagesPath {
+	case NextRoundPath, PreviousRoundPath, MessagesPath, MessageReceiptPath:
+		if r.URL.Path == MessageReceiptPath && r.Method != http.MethodPost {
+			methodNotAllowed(w, "POST")
+			return
+		}
+		if r.URL.Path != MessagesPath && r.URL.Path != MessageReceiptPath {
 			if _, ok := g.repo.(conversation.Rounds); !ok {
 				problem(w, 404, "not_found")
 				return
@@ -191,6 +195,10 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer release()
 		ctx, cancel := context.WithTimeout(r.Context(), g.config.RequestTimeout)
 		defer cancel()
+		if r.URL.Path == MessageReceiptPath {
+			g.receipt(w, r.WithContext(ctx), claims)
+			return
+		}
 		if r.URL.Path == NextRoundPath {
 			g.nextRound(w, r.WithContext(ctx), claims)
 			return

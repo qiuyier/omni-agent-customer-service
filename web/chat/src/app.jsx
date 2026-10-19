@@ -4,6 +4,7 @@ import {requestJSON as baseRequest} from './protocol.mjs';
 import { demoPresentation } from './demo.mjs';
 import {usePolling,pollingLabel} from './use-polling.jsx';
 import {canReadDuringSend} from './handoff-read.mjs';
+import {reconcilePending} from './pending-receipt.mjs';
 
 function Icon({ name, className = 'size-5', ...props }) {
   const paths = {
@@ -154,6 +155,19 @@ function useChat(fetcher,storageScope) {
   };
   const report = (e) => { setError(errorMessage(e)); if (e.code === 'account_changed' || e.code === 'unauthorized') setMustReload(true); };
 
+  async function confirmPending(task,owner,recovered){
+    if(!recovered||!task.active())return;
+    try{
+      const confirmed=await reconcilePending({api:api.current,storage:chatStorage(),conversationID:owner,pending:recovered,signal:task.signal,active:()=>task.active()&&round.current===owner});
+      if(confirmed&&task.active()){setPending(null);setNotice('已确认原消息送达，已清除待确认提示；这不代表已获得回复。');}
+    }catch(e){
+      if(task.active()&&e.name!=='AbortError'){
+        setNotice('暂未能核实原消息的接收结果，待确认内容已保留，不会自动重发。');
+        if(e.code==='account_changed'||e.code==='unauthorized')report(e);
+      }
+    }
+  }
+
   async function initialize() {
     const task = start(); busyRef.current = true;
     setPrevious(null);setPreviousLoaded(false);setStartingRound(false);round.current=null;
@@ -166,10 +180,11 @@ function useChat(fetcher,storageScope) {
       setSession(opened);
       round.current=opened.conversation_id;
       identity.current = opened.user.id;
+      let recovered=null;
       try {
         const storage = chatStorage();
         probeStorage(storage, opened.conversation_id);
-        const recovered = readPending(storage, opened.conversation_id);
+        recovered = readPending(storage, opened.conversation_id);
         setPending(recovered); setStorageAvailable(true);
         if (recovered) setNotice('发现一条待确认消息。已保留原内容；请查看记录后手动重试，页面不会自动发送。');
       } catch {
@@ -181,6 +196,7 @@ function useChat(fetcher,storageScope) {
       } catch (e) {
         if (task.active() && e.name !== 'AbortError') report(e);
       }
+      await confirmPending(task,opened.conversation_id,recovered);
       if (task.active()) setPhase('ready');
     } catch (e) {
       if (task.active() && e.name !== 'AbortError') { report(e); setPhase(e.code === 'unauthorized' ? 'unauthorized' : 'error'); }
@@ -253,6 +269,7 @@ function useChat(fetcher,storageScope) {
     try {
       const data = await api.current.history(task.signal);
       if (task.active()) { applyHistory(data, session.conversation_id); setNotice('消息记录已更新。'); }
+      await confirmPending(task,session.conversation_id,pending);
     } catch (e) { if (task.active() && e.name !== 'AbortError') report(e); }
     finally { if (task.active()) { busyRef.current = false; setRefreshing(false); } }
   }

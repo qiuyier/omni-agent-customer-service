@@ -111,7 +111,7 @@ try {
   await run(join(directory,'migrate'),[],{cwd:root,env:{...env,DATABASE_URL:dsn},timeout:30000});
   gateway=await startGateway();host=await startBackend();
   const gatewayPort=Number(new URL(gateway.origin).port),hostPort=Number(new URL(host.origin).port);
-  let publicOrigin,dropNext=false,dropNextConsultation=false;
+  let publicOrigin,dropNext=false,dropNextConsultation=false,failNextReceipt=false;
   report.browser_network=[];
   proxy=http.createServer(async(req,res)=>{
     try {
@@ -130,6 +130,10 @@ try {
       if(req.url==='/host/chat-session'&&upstream.status===200){const result=JSON.parse(data);entry.user=result.user?.id;entry.conversation=result.conversation_id;}
       if(req.url==='/chat/v1/messages'&&req.method==='POST'&&dropNext&&upstream.status===200){dropNext=false;entry.response_dropped=true;report.browser_network.push(entry);save();res.destroy();return;}
       if(req.url==='/chat/v1/consultations'&&req.method==='POST'&&dropNextConsultation&&upstream.status===200){dropNextConsultation=false;entry.response_dropped=true;report.browser_network.push(entry);save();res.destroy();return;}
+      if(req.url==='/chat/v1/messages'&&req.method==='POST'&&failNextReceipt&&upstream.status===200){
+        failNextReceipt=false;entry.receipt_failure_injected=true;report.browser_network.push(entry);save();
+        res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'}).end(JSON.stringify({error:'unavailable'}));return;
+      }
       report.browser_network.push(entry);save();
       for(const name of ['content-type','cache-control','content-security-policy','x-content-type-options','referrer-policy','set-cookie']){const value=upstream.headers.get(name);if(value)res.setHeader(name,value);}
       res.writeHead(upstream.status);res.end(data);
@@ -137,7 +141,7 @@ try {
   });
   await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));publicOrigin='http://127.0.0.1:'+proxy.address().port;
   report.browser_origin=publicOrigin;save();
-  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model']:[]),'stop']}));
+  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','fail-next-receipt','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model']:[]),'stop']}));
   const lines=readline.createInterface({input:process.stdin});
   for await(const line of lines){
     const command=line.trim();
@@ -145,6 +149,7 @@ try {
     if(command==='restart-gateway'){await stop(gateway,'SIGKILL');gateway=await startGateway(gatewayPort);}
     else if(command==='restart-backend'){await stop(host,'SIGKILL');host=await startBackend(hostPort);}
     else if(command==='drop-next')dropNext=true;
+    else if(command==='fail-next-receipt')failNextReceipt=true;
     else if(command==='drop-next-consultation')dropNextConsultation=true;
     else if(mockSlow&&command==='release-model'){for(const finish of [...pendingMock])finish();}
     else if(ai&&command==='model-down')modelDown=true;

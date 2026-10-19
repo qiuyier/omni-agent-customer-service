@@ -1,5 +1,6 @@
 // Same-origin HTTP boundary for the private adapter. Not an arbitrary URL proxy.
 const routes=new Map([
+ ['/chat/v1/message-receipt',['POST']],
  ['/host/me',['GET']],['/host/chat-session',['POST']],['/chat/v1/messages',['GET','POST']],
  ['/chat/v1/handoff',['POST']],['/chat/v1/consultations',['POST']],['/chat/v1/previous-consultation',['GET']],
  ['/desk/me',['GET']],['/desk/queue',['GET']],['/desk/action',['POST']],

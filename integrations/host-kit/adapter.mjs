@@ -101,6 +101,7 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
         res.writeHead(200,{'Content-Type':url.endsWith('.js')?'text/javascript':url.endsWith('.css')?'text/css':'text/html; charset=utf-8'});res.end(data);return;
       }
       const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST'],'/chat/v1/consultations':['POST'],'/chat/v1/previous-consultation':['GET'],...(agents.length?{'/chat/v1/handoff':['POST'],'/desk/me':['GET'],'/desk/login':['POST'],'/desk/logout':['POST'],'/desk/queue':['GET'],'/desk/action':['POST']}:{})};
+      allowed['/chat/v1/message-receipt']=['POST'];
       if(!demo)for(const route of ['/demo/login','/demo/logout','/desk/login','/desk/logout'])delete allowed[route];
       if(!Object.hasOwn(allowed,url))throw failure(404,'not_found');
       if(!allowed[url].includes(req.method))throw failure(405,'method_not_allowed');
@@ -183,7 +184,7 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
         if(typeof body.event_id!=='string'||typeof body.content!=='string'||!body.content.trim()||Buffer.byteLength(body.content)>4000)throw failure(400,'invalid_request');
       }
       let data;
-      try {data=await remote('/chat/v1/messages',req.method,cap.access_token,body);}
+      try {data=await remote(url,req.method,cap.access_token,body);}
       catch(e){if(e.status===401&&s.cap===cap)s.cap=null;throw e;}
       // Logout cannot undo an admitted send, but must suppress its late response.
       if(!await current(login)||s.cap!==cap||Date.parse(cap.expires_at)<=now())throw failure(401,'chat_session_required');

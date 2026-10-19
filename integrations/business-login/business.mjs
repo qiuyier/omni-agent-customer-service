@@ -30,6 +30,7 @@ export async function startBusiness({gatewayOrigin,hostSecret,agents,accounts,no
  }};
  const adapter=await startAdapter({gatewayOrigin,hostSecret,agents,identity:businessIdentity({sessions:identityService}),now});
  const allowed=new Map([['/host/me','GET'],['/host/chat-session','POST'],['/chat/v1/messages','GET,POST'],['/chat/v1/handoff','POST'],['/chat/v1/consultations','POST'],['/chat/v1/previous-consultation','GET'],['/desk/me','GET'],['/desk/queue','GET'],['/desk/action','POST']]);
+ allowed.set('/chat/v1/message-receipt','POST');
  let origin,attempts=0;
  const respond=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(data===undefined?'':JSON.stringify(data));};
  const server=http.createServer(async(req,res)=>{

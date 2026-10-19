@@ -111,6 +111,11 @@ func TestDatabaseDelayedBotAcrossHumanLifecycle(t *testing.T) {
 				t.Fatal("customer message lost")
 			}
 			var pendingHistory webchat.History
+			var receipt map[string]any
+			quick(func() deskHTTPResult { return l.request("POST", webchat.MessageReceiptPath, s.AccessToken, body) }, &receipt)
+			if receipt["accepted"] != true || receipt["message_id"] != before[0].ID() {
+				t.Fatal("in-flight receipt not confirmed")
+			}
 			quick(func() deskHTTPResult { return l.request("GET", webchat.MessagesPath, s.AccessToken, nil) }, &pendingHistory)
 			if pendingHistory.Status != wantStatus || len(pendingHistory.Messages) != wantCount {
 				t.Fatal("concurrent history mismatch")
@@ -147,6 +152,10 @@ func TestDatabaseDelayedBotAcrossHumanLifecycle(t *testing.T) {
 			renewed := fresh.session(t, 0, "customer")
 			if renewed.ConversationID != s.ConversationID {
 				t.Fatal("reconnect changed conversation")
+			}
+			requireDeskHTTP(t, fresh.request("POST", webchat.MessageReceiptPath, renewed.AccessToken, body), 200, &receipt)
+			if receipt["accepted"] != true || receipt["message_id"] != result.MessageID {
+				t.Fatal("receipt not durable")
 			}
 			var loaded webchat.History
 			requireDeskHTTP(t, fresh.request("GET", webchat.MessagesPath, renewed.AccessToken, nil), 200, &loaded)

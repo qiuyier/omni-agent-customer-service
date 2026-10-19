@@ -114,6 +114,8 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 
 报告只有1条客户消息POST、1次本地模型请求、0次外部调用。关闭会话里额外虚线“等待确认”是客户端原事件缓存，不是第二条数据库消息；切号已丢弃旧回执，不能以相同文本猜测确认成功。关闭状态下重试按钮禁用，原缓存保留在旧轮次；本轮未实现事件级只读回执查询或自动清理该缓存。
 
+2026-10-19 后续已为支持新路由的通用接入链路实现事件级只读回执，见[回执恢复验收](message-receipt-acceptance.md)。上面的记录保留为当时结果，不代表当前限制。
+
 证据：[报告](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/report.json)。真实密码登录、企业IAM、多浏览器进程以及刷新瞬间所有网络时序不在此轮浏览器覆盖范围。自动报告仍保留pending_manual_browser_review，本节为人工审阅记录。所有本轮进程、标签页及测试数据库容器已停止，测试卷保留。
 
 ![B刷新后没有A的数据](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-b-empty.png)

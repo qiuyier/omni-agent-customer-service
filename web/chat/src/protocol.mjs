@@ -118,6 +118,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
     nextRound: (signal) => authorized('POST',{},signal,'/chat/v1/consultations'),
     previousRound: (signal) => authorized('GET',undefined,signal,'/chat/v1/previous-consultation'),
     history: (signal) => authorized('GET', undefined, signal),
+    receipt: (pending,signal) => authorized('POST',{event_id:pending.event_id,content:pending.content},signal,'/chat/v1/message-receipt'),
     send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
     clear: () => { revision++; token = ''; current = null; },
   };
