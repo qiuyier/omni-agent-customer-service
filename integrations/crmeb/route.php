@@ -4,6 +4,7 @@ use think\facade\Route;
 Route::post('omni-chat/session', 'OmniChat/session');
 Route::get('omni-chat/messages', 'OmniChat/messages');
 Route::post('omni-chat/messages', 'OmniChat/messages');
+Route::post('omni-chat/message-receipt', 'OmniChat/receipt');
 Route::post('omni-chat/handoff', 'OmniChat/handoff');
 Route::post('omni-chat/consultations', 'OmniChat/consultations');
 Route::get('omni-chat/desk/me', 'OmniChat/deskMe');

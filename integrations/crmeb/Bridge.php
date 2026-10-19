@@ -41,17 +41,17 @@ final class Bridge
             if (($h['host'] ?? '') !== $host || ($h['sec-fetch-site'] ?? '') === 'cross-site' ||
                 (isset($h['origin']) && $h['origin'] !== $origin) ||
                 ($method === 'POST' && ($h['origin'] ?? '') !== $origin)) return $this->error(403);
-            if ($query !== '' || !in_array($action, ['session', 'messages', 'handoff', 'consultations'], true)) return $this->error(400);
+            if ($query !== '' || !in_array($action, ['session', 'messages', 'message-receipt', 'handoff', 'consultations'], true)) return $this->error(400);
             if (($action !== 'messages' && $method !== 'POST') || !in_array($method, ['GET', 'POST'], true)) return $this->error(405);
             if (strlen($body) > 32768) return $this->error(413);
             if ($method === 'POST' && strtolower(trim(explode(';', $h['content-type'] ?? '')[0])) !== 'application/json') return $this->error(415);
             $input = $method === 'POST' ? json_decode($body, false, 16, JSON_THROW_ON_ERROR) : new \stdClass();
             if (!$input instanceof \stdClass || ($method === 'GET' && $body !== '')) return $this->error(400);
             $input = (array)$input;
-            $allowed = $action === 'messages' ? ['event_id', 'content'] : [];
+            $allowed = in_array($action, ['messages', 'message-receipt'], true) ? ['event_id', 'content'] : [];
             if (in_array($action, ['handoff', 'consultations'], true) && ($this->config['human_enabled'] ?? false) !== true) return $this->error(404);
             if (array_diff(array_keys($input), $allowed)) return $this->error(400);
-            if ($action === 'messages' && $method === 'POST' &&
+            if (in_array($action, ['messages', 'message-receipt'], true) && $method === 'POST' &&
                 (count($input) !== 2 || !is_string($input['event_id'] ?? null) || !is_string($input['content'] ?? null) ||
                  !preg_match('/\A[A-Za-z0-9_-]{1,128}\z/D', $input['event_id']) || trim($input['content']) === '' || strlen($input['content']) > 4000)) return $this->error(400);
             // CRMEB's actual H5 header, kept separate from the chat capability.

@@ -1,0 +1,106 @@
+{
+  "passed": true,
+  "checks": [
+    "customer_login_0",
+    "customer_login_1",
+    "staff_login",
+    "staff_bound",
+    "fake_mode_required",
+    "fresh_bot_round_required",
+    "original_message_accepted_before_fault",
+    "frontend_sees_lost_success",
+    "pending_retained_after_fault",
+    "mixed_login_capability_rejected",
+    "different_customer_round",
+    "other_customer_cannot_find_event",
+    "switch_preserves_original_cache",
+    "return_restores_same_round",
+    "refresh_confirms_exact_event",
+    "confirmed_cache_removed",
+    "unknown_not_confirmed",
+    "unknown_cache_retained",
+    "content_conflict",
+    "staff_claim",
+    "staff_close",
+    "reload_keeps_closed",
+    "closed_reload_confirms",
+    "single_message_still_closed",
+    "no_automatic_resend",
+    "logout_revokes_receipt"
+  ],
+  "network": [
+    {
+      "path": "/api/omni-chat/session",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/messages",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/messages",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/session",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/message-receipt",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/session",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/message-receipt",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/message-receipt",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/message-receipt",
+      "method": "POST",
+      "status": 409
+    },
+    {
+      "path": "/api/omni-chat/handoff",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/session",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/messages",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/message-receipt",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/omni-chat/messages",
+      "method": "GET",
+      "status": 200
+    }
+  ],
+  "conversation_id": "wbc_24318944d0497970e3e01a150db45d037b2f6f94451e5aa15521c8196e6f29ab",
+  "external_model_calls": 0,
+  "fault_layer": "client transport replaces successful real HTTP send with 503; shared production recovery helper, not browser UI"
+}

@@ -1,5 +1,7 @@
 # CRMEB 客户身份桥接（PHP 7.4+）
 
+2026-10-19 已完成[只读回执接入与真实登录验收](Receipt-acceptance.md)：新增受认证的 `POST /api/omni-chat/message-receipt`，支持页面恢复和手动刷新清理已确认的原事件缓存，不自动重发。
+
 最新人工接入与安装补充见 [2026-10-13 人工验收](Human-acceptance.md)。下文“未接人工”是早期阶段边界。
 
 后续已完成[独立 H5 测试入口及真实 HTTP/浏览器验收](H5-acceptance.md)。

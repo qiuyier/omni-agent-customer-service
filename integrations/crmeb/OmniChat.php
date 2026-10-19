@@ -11,6 +11,7 @@ final class OmniChat
 {
     public function session(Request $request) { return $this->dispatch($request, 'session'); }
     public function messages(Request $request) { return $this->dispatch($request, 'messages'); }
+    public function receipt(Request $request) { return $this->dispatch($request, 'message-receipt'); }
     public function handoff(Request $request) { return $this->dispatch($request, 'handoff'); }
     public function consultations(Request $request) { return $this->dispatch($request, 'consultations'); }
     public function deskMe(Request $request) { return $this->desk($request, 'me'); }

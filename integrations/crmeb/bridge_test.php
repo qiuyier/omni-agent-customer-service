@@ -33,6 +33,24 @@ try {
     check($bridge->handle('GET', 'messages', $headers($sameUser, $s1['access_token']), '')[0] === 401, 'same uid different login');
     check($bridge->handle('GET', 'messages', $headers($a, $s1['access_token']), '')[0] === 200, 'owner access');
     $key = 'omni-chat:v1:' . hash_hmac('sha256', $a, $config['secret']);
+    $receiptBody = '{"event_id":"receipt-1","content":"test"}';
+    $hook = static function ($method, $path, $token, $body) {
+        check($method === 'POST' && $path === '/chat/v1/message-receipt' && $body === ['event_id'=>'receipt-1','content'=>'test'], 'receipt exact upstream');
+        return [200, ['accepted'=>true,'message_id'=>'m1']];
+    };
+    check($bridge->handle('POST', 'message-receipt', $headers($a, $s1['access_token']), $receiptBody)[1]['accepted'] === true, 'receipt accepted');
+    $before = $calls;
+    check($bridge->handle('POST', 'message-receipt', $headers($b, $s1['access_token']), $receiptBody)[0] === 401, 'receipt foreign login');
+    check($bridge->handle('POST', 'message-receipt', $headers($sameUser, $s1['access_token']), $receiptBody)[0] === 401, 'receipt different login same uid');
+    check($bridge->handle('GET', 'message-receipt', $headers($a, $s1['access_token']), '')[0] === 405, 'receipt post only');
+    check($bridge->handle('POST', 'message-receipt', $headers($a, $s1['access_token']), '{"event_id":"x","content":"test","conversation_id":"other"}')[0] === 400, 'receipt forged conversation');
+    check($bridge->handle('POST', 'message-receipt', $headers($a, $s1['access_token']), '{}')[0] === 400, 'receipt required fields');
+    check($calls === $before, 'receipt invalid requests never reach upstream');
+    $hook = static function () { return [409, ['error'=>'conflict']]; };
+    check($bridge->handle('POST', 'message-receipt', $headers($a, $s1['access_token']), $receiptBody)[0] === 409, 'receipt conflict');
+    $hook = static function () use (&$revoked, $a) { $revoked[$a] = true; return [200, ['accepted'=>true,'message_id'=>'private']]; };
+    check($bridge->handle('POST', 'message-receipt', $headers($a, $s1['access_token']), $receiptBody)[0] === 401, 'receipt logout while querying');
+    unset($revoked[$a]); $hook = null;
     $saved = $cache[$key]; $cache[$key]['expiry'] = time() - 1;
     check($bridge->handle('GET', 'messages', $headers($a, $s1['access_token']), '')[0] === 401, 'expired binding');
     $cache[$key] = $saved;

@@ -64,6 +64,7 @@ export function createCRMEBAPI({ getLogin, fetcher = globalThis.fetch }) {
     handoff: signal => authorized('POST',{},signal,'/api/omni-chat/handoff'),
     nextRound: signal => authorized('POST',{},signal,'/api/omni-chat/consultations'),
     history: signal => authorized('GET', undefined, signal),
+    receipt: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal, '/api/omni-chat/message-receipt'),
     send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
     changed: () => !!login && getLogin() !== login,
     clear: () => { revision++; login = ''; capability = ''; current = null; },

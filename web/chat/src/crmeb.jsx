@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { reconcilePending } from './pending-receipt.mjs';
 import { createCRMEBAPI, readLogin, eventID, replyDescription } from './crmeb.mjs';
 import { byteLength, validContent, probeStorage, readPending, savePending, pendingKey } from './protocol.mjs';
 
@@ -22,6 +23,16 @@ function Chat() {
     if (e.status === 401 || e.code === 'account_changed') { resetIdentity(); return; }
     setError((e.status === 404 ? '测试服务尚未启用，请联系维护者。' : e.status === 429 ? '请求较多，请稍后重试。' : '暂时无法确认服务响应。请检查连接后重试，不要重复创建消息。') + `（状态：${e.status || 0}）`);
   }
+  async function confirmPending(started, s, recovered) {
+    try {
+      const cleared = await reconcilePending({api:api.current,storage:sessionStorage,conversationID:s.conversation_id,pending:recovered,signal:lifetime.current.signal,active:()=>started===epoch.current&&!api.current.changed()});
+      if (cleared) { setPending(null); setError('已确认原消息送达，已清除待确认提示；这不代表已获得回复。'); }
+    } catch (e) {
+      if (started !== epoch.current || e.name === 'AbortError') return;
+      if (e.status === 401 || e.code === 'account_changed') { failure(e); return; }
+      setError('暂未能核实原消息的接收结果，待确认内容已保留，不会自动重发。');
+    }
+  }
   async function connect() {
     lifetime.current?.abort(); const controller = new AbortController(); lifetime.current = controller;
     const started = ++epoch.current; busy.current = true;
@@ -30,12 +41,15 @@ function Chat() {
       const s = await api.current.open(controller.signal);
       if (started !== epoch.current) return;
       setSession(s);
-      try { probeStorage(sessionStorage, s.conversation_id); setPending(readPending(sessionStorage, s.conversation_id)); setCanStore(true); }
+      let recovered = null;
+      try { probeStorage(sessionStorage, s.conversation_id); recovered = readPending(sessionStorage, s.conversation_id); setPending(recovered); setCanStore(true); }
       catch { setError('浏览器会话存储不可用或待确认记录损坏，已暂停发送。'); }
       const h = await api.current.history(controller.signal);
       if (started !== epoch.current) return;
       if (!Array.isArray(h?.messages)) throw new Error('invalid history');
-      setMessages(h.messages);setStatus(h.status||'bot_active'); setPhase('ready');
+      setMessages(h.messages);setStatus(h.status||'bot_active');
+      await confirmPending(started, s, recovered);
+      if (started === epoch.current) setPhase('ready');
     } catch (e) { if (started === epoch.current) { setPhase('error'); failure(e); } }
     finally { if (started === epoch.current) busy.current = false; }
   }
@@ -47,15 +61,15 @@ function Chat() {
     document.addEventListener('visibilitychange', visible);
     return () => { epoch.current++; lifetime.current?.abort(); api.current.clear(); window.removeEventListener('storage', check); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', visible); };
   }, []);
-  async function refresh() {
+  async function refresh(checkReceipt = true) {
     if (busy.current || !session) return;
     busy.current = true; const started = epoch.current; setError('');
-    try { const h = await api.current.history(lifetime.current.signal); if (started === epoch.current) { if (!Array.isArray(h?.messages)) throw new Error('history'); setMessages(h.messages);setStatus(h.status||'bot_active'); } }
+    try { const h = await api.current.history(lifetime.current.signal); if (started === epoch.current) { if (!Array.isArray(h?.messages)) throw new Error('history'); setMessages(h.messages);setStatus(h.status||'bot_active'); if (checkReceipt) await confirmPending(started, session, pending); } }
     catch (e) { if (started === epoch.current) failure(e); }
     finally { if (started === epoch.current) busy.current = false; }
   }
   const refreshRef=useRef(refresh);refreshRef.current=refresh;
-  useEffect(()=>{if(phase!=='ready'||!['waiting_human','human_active'].includes(status))return;const id=setInterval(()=>{if(document.visibilityState==='visible')refreshRef.current();},5000);return()=>clearInterval(id);},[phase,status]);
+  useEffect(()=>{if(phase!=='ready'||!['waiting_human','human_active'].includes(status))return;const id=setInterval(()=>{if(document.visibilityState==='visible')refreshRef.current(false);},5000);return()=>clearInterval(id);},[phase,status]);
   async function control(kind){
     if(busy.current||pending||phase!=='ready')return;
     busy.current=true;setSending(true);setError('');const started=epoch.current;
