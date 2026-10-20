@@ -21,6 +21,7 @@ final class OmniChat
     private function desk(Request $request, string $action)
     {
         require_once root_path() . 'extend/omni_chat/DeskBridge.php';
+        require_once root_path() . 'extend/omni_chat/IdentityRevision.php';
         $config = Config::get('omni_chat', []);
         $bridge = new \OmniChat\DeskBridge($config, static function (string $token): array {
             // Reject a different login realm before CRMEB's parser can delete
@@ -29,6 +30,7 @@ final class OmniChat
             if (!is_array($cached) || ($cached['type'] ?? '') !== 'kefu') throw new \RuntimeException('identity');
             $staff = app()->make(\app\services\kefu\LoginServices::class)->parseToken($token);
             if (($staff['type'] ?? '') !== 'kefu') throw new \RuntimeException('identity');
+            \OmniChat\IdentityRevision::assertVerifiedToken($token, 'kefu', (int)$staff['id']);
             // Original parseToken does not recheck the current enabled flag.
             $current = \app\model\service\StoreService::where('id', (int)$staff['id'])->find();
             if (!$current || !(int)$current['status']) throw new \RuntimeException('disabled');
@@ -43,6 +45,7 @@ final class OmniChat
     private function dispatch(Request $request, string $action)
     {
         require_once root_path() . 'extend/omni_chat/Bridge.php';
+        require_once root_path() . 'extend/omni_chat/IdentityRevision.php';
         $config = Config::get('omni_chat', []);
         $config['lock_dir'] = runtime_path() . 'omni-chat-locks';
         $bridge = new \OmniChat\Bridge($config, static function (string $token): string {
@@ -51,6 +54,7 @@ final class OmniChat
             $auth = app()->make(UserAuthServices::class)->parseToken($token);
             // Customer tokens only: never turn an admin/kefu/application token into a customer.
             if (($auth['tokenData']['type'] ?? '') !== 'api') throw new \RuntimeException('identity');
+            \OmniChat\IdentityRevision::assertVerifiedToken($token, 'api', (int)$auth['user']->uid);
             return (string)$auth['user']->uid;
         }, static function (string $key) { return CacheService::get($key, null); },
         static function (string $key, array $value, int $ttl): bool { return (bool)CacheService::set($key, $value, $ttl); });
