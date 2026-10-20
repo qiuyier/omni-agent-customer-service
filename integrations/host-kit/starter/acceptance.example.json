@@ -14,6 +14,7 @@
     "staff": {"account": "REPLACE_TEST_STAFF", "password": "REPLACE_PRIVATE_PASSWORD"},
     "paths": {
       "customerLogin": "/auth/customer/login",
+      "receipt": "/chat/v1/message-receipt",
       "customerLogout": "/auth/customer/logout",
       "staffLogin": "/auth/staff/login",
       "staffLogout": "/auth/staff/logout"

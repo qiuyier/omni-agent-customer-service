@@ -1,5 +1,7 @@
 # 可复用宿主接入包（仓库内参考实现）
 
+当前自动闭环基线为 `webchat-receipt-v1`，包含只读消息回执。见[基线与回归记录](../../docs/integration-baseline-acceptance.md)。旧接入未开放回执时必须补齐重验，不能直接沿用旧版通过结论。
+
 现有办公门户与空白业务已完成[同一正式网关 + PostgreSQL 的浏览器验收](../../docs/webchat-multi-host-browser.md)，包含人工闭环、网关重启恢复及单边关闭/切号/退出。
 
 多业务并行接入须核对[业务 Cookie 命名与隔离边界](cookie-isolation.md)：两个样例现已使用不同默认命名空间；这不替代生产安全域隔离。

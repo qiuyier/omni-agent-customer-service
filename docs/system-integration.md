@@ -36,6 +36,7 @@
 | GET /host/me | 当前已认证客户与可信 storage/reply_mode/human_enabled 元数据 |
 | POST /host/chat-session，{} | 后端从登录取 ID，用宿主凭据调用 POST /internal/chat/sessions；绑定短期聊天凭证到该登录 |
 | GET/POST /chat/v1/messages | 双重验证业务登录及聊天凭证；发送只接收 event_id/content |
+| POST /chat/v1/message-receipt | 同样双重鉴权；只读核对原 event_id/content，返回 conversation_id/event_id/accepted，确认时附原 message_id；未知为 false，内容冲突 409 |
 | POST /chat/v1/handoff，{} | 只作用于当前客户当前会话，不允许指定别人的 conversation_id |
 | POST /chat/v1/consultations，{} | 仅关闭后创建新轮次；确认成功后失效旧绑定，再明确换取新会话 |
 | GET /desk/me | 服务端已验证的坐席身份；不返回坐席密钥 |
@@ -44,7 +45,9 @@
 | 原业务登录/退出 | 保留业务原入口；适配器不能以调用错误角色鉴权为由误清另一角色登录 |
 
 宿主凭据、坐席凭据、客户短期凭据是三种权限，不能混用。Cookie 本身不按端口隔离；部署时安排域名、Cookie 名/路径、HTTPS/Secure/HttpOnly/SameSite、CSRF 和服务端会话策略。
-退出后要拦截迟到响应，但已经提交的消息不一定能撤回。发送结果不明时复用原 event_id，不能自动生成新事件重试。
+退出后要拦截迟到响应，但已经提交的消息不一定能撤回。发送结果不明时先查询原消息回执；未知或查询失败保留待确认，不自动重发。明确手动重试时沿用原 event_id/content，不能生成新事件。accepted 只证明收件，不证明已回复；未知不证明在途发送永远不会落库。关闭后可查询，但换轮次后旧凭据失效。
+
+当前自动闭环基线为 `webchat-receipt-v1`，包括回执鉴权、隔离、冲突及只读验证。旧版通过报告不代表符合该基线；未开放回执的目标需补齐后重验，不跳过后标记通过。详见[统一验收](../integrations/host-kit/acceptance.md)。
 
 ## 接入顺序与完成标准
 

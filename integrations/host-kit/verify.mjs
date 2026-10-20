@@ -2,13 +2,14 @@
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-export async function verifyHost(config,{allowTestWrites=false}={}){
+export const baseline='webchat-receipt-v1';
+export async function verifyHost(config,{allowTestWrites=false,fetcher=fetch}={}){
  const checks=[],clients=[];let paths,origin,report;
  const ensure=(ok,label)=>{if(!ok)throw Object.assign(Error('check_failed'),{check:label});checks.push(label);};
  const post=(body)=>({method:'POST',body});
  function makeClient(){
   let cookie='';const call=async(path,{method='GET',body,token}={})=>{
-   const r=await fetch(origin+path,{method,headers:{Origin:origin,...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(15000)});
+   const r=await fetcher(origin+path,{method,headers:{Origin:origin,...(cookie?{Cookie:cookie}:{}),...(token?{Authorization:'Bearer '+token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(15000)});
    const set=r.headers.getSetCookie();if(set.length)cookie=set.map(x=>x.split(';')[0]).join('; ');
    const chunks=[];let size=0;if(r.body)for await(const chunk of r.body){size+=chunk.length;if(size>1048576)throw Error('response_limit');chunks.push(Buffer.from(chunk));}
    const text=Buffer.concat(chunks).toString('utf8');
@@ -22,6 +23,7 @@ export async function verifyHost(config,{allowTestWrites=false}={}){
   origin=u.origin;
   if(!Array.isArray(config.customers)||config.customers.length!==2||!config.staff)throw Error('two_customers_and_staff_required');
   paths={me:'/host/me',session:'/host/chat-session',messages:'/chat/v1/messages',handoff:'/chat/v1/handoff',next:'/chat/v1/consultations',deskMe:'/desk/me',queue:'/desk/queue',action:'/desk/action',customerLogin:'/demo/login',customerLogout:'/demo/logout',staffLogin:'/desk/login',staffLogout:'/desk/logout',...config.paths};
+  paths.receipt=config.paths?.receipt??'/chat/v1/message-receipt';
   if(Object.values(paths).some(p=>typeof p!=='string'||!/^\/[A-Za-z0-9_/-]+$/.test(p)))throw Error('invalid_paths');
   const probe=makeClient();const meta=await probe(paths.me);
   ensure(meta.status===200&&meta.data.reply_mode==='fake'&&meta.data.human_enabled===true,'fake_human_preflight');
@@ -36,8 +38,22 @@ export async function verifyHost(config,{allowTestWrites=false}={}){
   const me=await staff(paths.deskMe);ensure(me.status===200&&typeof me.data.agent?.id==='string','staff_identity');
   const action=body=>staff(paths.action,post({conversation_id:id,expected_agent_id:me.data.agent.id,...body}));
   const event=randomUUID(),content='接入包测试 '+event;
-  ensure((await customer(paths.messages,{event_id:event,content})).status===200,'customer_send');
+  const sent=await customer(paths.messages,{event_id:event,content});
+  ensure(sent.status===200&&typeof sent.data?.message_id==='string'&&sent.data.message_id.length>0,'customer_send');
   ensure((await customer(paths.messages,{event_id:event,content})).status===200,'customer_retry');
+  const receipt=()=>customer(paths.receipt,{event_id:event,content});
+  const accepted=r=>r.status===200&&r.data?.accepted===true&&r.data.conversation_id===id&&r.data.event_id===event&&r.data.message_id===sent.data.message_id;
+  const before=await customer(paths.messages);
+  ensure(before.status===200,'receipt_history_before');
+  ensure(accepted(await receipt()),'receipt_accepted');
+  const unknownEvent=randomUUID(),unknown=await customer(paths.receipt,{event_id:unknownEvent,content});
+  ensure(unknown.status===200&&unknown.data?.accepted===false&&unknown.data.conversation_id===id&&unknown.data.event_id===unknownEvent&&!Object.hasOwn(unknown.data,'message_id'),'receipt_unknown');
+  ensure((await customer(paths.receipt,{event_id:event,content:content+' changed'})).status===409,'receipt_conflict');
+  ensure((await b(paths.receipt,{...post({event_id:event,content}),token})).status===401,'receipt_mixed_capability_denied');
+  const isolated=await b(paths.receipt,{...post({event_id:event,content}),token:sessions[1].access_token});
+  ensure(isolated.status===200&&isolated.data?.accepted===false&&isolated.data.conversation_id===sessions[1].conversation_id&&isolated.data.event_id===event&&!Object.hasOwn(isolated.data,'message_id'),'receipt_other_customer_isolated');
+  const after=await customer(paths.messages);
+  ensure(after.status===200&&JSON.stringify(after.data)===JSON.stringify(before.data),'receipt_read_only');
   const handoff=await customer(paths.handoff,{});ensure(handoff.status===200&&handoff.data.status==='waiting_human','handoff');
   const q=await staff(paths.queue);ensure(q.status===200&&q.data.items.some(x=>x.conversation_id===id),'queue');
   ensure((await action({action:'claim',revision:handoff.data.revision})).status===200,'claim');
@@ -50,15 +66,20 @@ export async function verifyHost(config,{allowTestWrites=false}={}){
   ensure((await action({action:'read',message_ids:h.data.messages.filter(m=>m.role==='customer').map(m=>m.id)})).status===200,'read');
   const state=await action({action:'history'});ensure(state.status===200,'staff_history');
   ensure((await action({action:'close',revision:state.data.revision})).status===200,'close');
+  ensure(accepted(await receipt()),'receipt_closed');
+  const closed=await customer(paths.messages);
+  ensure(closed.status===200&&closed.data.status==='closed'&&JSON.stringify(closed.data.messages)===JSON.stringify(h.data.messages),'receipt_closed_read_only');
   ensure((await customer(paths.messages,{event_id:randomUUID(),content:'must reject'})).status===409,'closed_send_denied');
   const next=await customer(paths.next,{});ensure(next.status===200&&next.data.conversation_id!==id,'next_round');
   ensure((await customer(paths.messages)).status===401,'old_binding_rejected');
+  ensure((await receipt()).status===401,'receipt_old_binding_rejected');
   const renewed=await a(paths.session,post({}));ensure(renewed.status===200&&renewed.data.conversation_id===next.data.conversation_id,'new_session');
   const empty=await a(paths.messages,{token:renewed.data.access_token});ensure(empty.status===200&&empty.data.messages.length===0,'new_round_empty');
   await a(paths.customerLogout,post({}));ensure((await a(paths.messages,{token:renewed.data.access_token})).status===401,'customer_logout');
+  ensure((await a(paths.receipt,{...post({event_id:event,content}),token:renewed.data.access_token})).status===401,'receipt_logout_denied');
   await staff(paths.staffLogout,post({}));ensure((await staff(paths.queue)).status===401,'staff_logout');
-  return report={passed:true,checks};
- }catch(e){return report={passed:false,checks,error:['test_write_consent_required','loopback_origin_required','two_customers_and_staff_required','invalid_paths'].includes(e.message)?e.message:'acceptance_failed',failed_check:e.check||'transport_or_configuration',failed_after:checks.at(-1)||null};}
+  return report={baseline,passed:true,checks};
+ }catch(e){return report={baseline,passed:false,checks,error:['test_write_consent_required','loopback_origin_required','two_customers_and_staff_required','invalid_paths'].includes(e.message)?e.message:'acceptance_failed',failed_check:e.check||'transport_or_configuration',failed_after:checks.at(-1)||null};}
  finally{
   let failures=0;
   for(let i=0;i<clients.length;i++)try{const r=await clients[i](i<2?paths.customerLogout:paths.staffLogout,post({}));if(![200,204].includes(r.status))failures++;}catch{failures++;}

@@ -1,5 +1,9 @@
 # 新系统接入验收流程
 
+当前闭环基线：`webchat-receipt-v1`，报告 `phases.lifecycle.baseline` 标识本版。新增只读回执的 accepted/unknown/冲突、跨客户、关闭后、旧凭据及退出拒绝检查。`lifecycle.paths.receipt` 默认 `/chat/v1/message-receipt`，可按业务同源路径配置。未支持此路由会失败，不自动降级或跳过；旧通过报告仍是历史证据，不能当作本版通过。
+
+回执查询不重发消息；未知或失败应保留待确认。此 CLI 验证 HTTP 契约，不替代浏览器缓存恢复、断网和 PostgreSQL 重启验收。只读预检不调用回执或发送消息，仍保留原行为。
+
 统一入口复用 preflight.mjs 和 verify.mjs，不修改客服核心，不依赖电商字段。适用于已实现本包协议的本机 Cookie 认证适配层，不是任意 URL 的自动接入器；CRMEB JWT 原入口仍需专门适配和验收。
 
 ## 1. 只读检查（默认）

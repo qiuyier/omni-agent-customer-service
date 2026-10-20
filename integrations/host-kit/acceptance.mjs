@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import {preflightHost,preflightExitCode} from './preflight.mjs';
 import {verifyHost} from './verify.mjs';
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
-const lifecyclePaths=['me','session','messages','handoff','next','deskMe','queue','action','customerLogin','customerLogout','staffLogin','staffLogout'];
+const lifecyclePaths=['me','session','messages','receipt','handoff','next','deskMe','queue','action','customerLogin','customerLogout','staffLogin','staffLogout'];
 export async function acceptHost(input,{allowTestWrites=false,preflight=preflightHost,verify=verifyHost}={}){
  const checks=[],phases={};
  const add=(id,status,detail)=>checks.push({id,status,detail});
