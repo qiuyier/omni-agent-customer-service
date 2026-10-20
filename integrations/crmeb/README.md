@@ -1,5 +1,7 @@
 # CRMEB 客户身份桥接（PHP 7.4+）
 
+当前本机试运行状态见[2026-10-20 交接表](Trial-handoff.md)：补齐专用网关和 PHP74 重启后的回执/历史验收；仅 fake、本机受控测试，不代表生产上线。
+
 2026-10-20 已补充[浏览器异常恢复验收](Receipt-browser-acceptance.md)：刷新、切号及关闭后重载均通过；单独记录一次接管未确认现象，尚未定位原因。
 
 2026-10-19 已完成[只读回执接入与真实登录验收](Receipt-acceptance.md)：新增受认证的 `POST /api/omni-chat/message-receipt`，支持页面恢复和手动刷新清理已确认的原事件缓存，不自动重发。
