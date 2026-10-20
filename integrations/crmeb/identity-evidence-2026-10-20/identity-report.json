@@ -1,0 +1,40 @@
+{
+  "completed": true,
+  "passed": false,
+  "checked_at": "2026-10-20T11:55:11.343Z",
+  "checks": [
+    "customer_initially_enabled",
+    "staff_initially_enabled",
+    "customer_login",
+    "staff_login",
+    "fake_required",
+    "initial_history",
+    "staff_mapped",
+    "customer_disabled",
+    "customer_disabled_reads_and_writes_denied",
+    "customer_disabled_login_denied",
+    "customer_restored",
+    "customer_login",
+    "customer_fresh_login_works",
+    "relogin_same_conversation",
+    "relogin_history_unchanged",
+    "staff_disabled",
+    "staff_disabled_reads_and_writes_denied",
+    "staff_disabled_login_denied",
+    "staff_restored",
+    "staff_login",
+    "staff_fresh_login_works",
+    "customer_short_token_initially_valid",
+    "staff_short_token_initially_valid",
+    "customer_short_token_expired_denied",
+    "staff_short_token_expired_denied"
+  ],
+  "observations": {
+    "customer_old_login_after_restore": 401,
+    "staff_old_login_after_restore": 200
+  },
+  "restore_failures": [],
+  "cleanup_failures": 0,
+  "external_model_calls": 0,
+  "expiry_scope": "server-signed short test JWT; 60s leeway respected; no global config changes; not 30-day natural expiry or browser test"
+}
