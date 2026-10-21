@@ -1,0 +1,73 @@
+{
+  "passed": true,
+  "checks": [
+    "mysql_dump_has_no_source_database_switch",
+    "isolated_databases_ready",
+    "mysql_restored_versions_exact",
+    "mysql_restored_account_states_exact",
+    "mysql_all_tables_checksums_exact",
+    "postgres_restored_exact_conversations",
+    "postgres_restored_exact_messages",
+    "postgres_restored_exact_desk_read_receipts",
+    "postgres_sequence_values_restored",
+    "postgres_constraints_restored",
+    "restored_business_events_disabled",
+    "isolated_internal_network",
+    "mysql_no_published_ports",
+    "postgres_no_published_ports",
+    "restored_identity_guard_verified",
+    "source_versions_unchanged",
+    "source_account_states_unchanged",
+    "source_mysql_all_tables_unchanged",
+    "source_unchanged_conversations",
+    "source_unchanged_messages",
+    "source_unchanged_desk_read_receipts"
+  ],
+  "backups": {
+    "mysql": {
+      "bytes": 9928256,
+      "sha256": "ade93d03b5cfd95b0adb6f25e38a06e2f2fe2c1154a4928766a8f855b84f8412"
+    },
+    "postgres": {
+      "bytes": 20682,
+      "sha256": "0ee8e37b2597c8bd8cc3a2a123ba0f2fff954ef8eb32c97934e341f66b5e05f6"
+    }
+  },
+  "mysql_tables_verified": 158,
+  "identity": {
+    "passed": true,
+    "checks": [
+      "isolated_database_selected",
+      "source_database_not_target",
+      "all_restored_triggers_exact",
+      "api_enabled_subject_exists",
+      "api_old_credential_initially_valid",
+      "api_revoked_before_restore",
+      "api_unsafe_old_snapshot_revives_permission",
+      "kefu_enabled_subject_exists",
+      "kefu_old_credential_initially_valid",
+      "kefu_revoked_before_restore",
+      "kefu_unsafe_old_snapshot_revives_permission",
+      "rotation_requires_offline_ack",
+      "missing_trigger_blocks_rotation",
+      "all_versions_rotated",
+      "api_restored_old_credential_denied_after_guard",
+      "api_fresh_signed_login_accepted",
+      "kefu_restored_old_credential_denied_after_guard",
+      "kefu_fresh_signed_login_accepted"
+    ],
+    "rotated_rows": 5,
+    "scope": "isolated restored MySQL + actual JwtAuth/IdentityRevision; synthetic signed login credentials; not browser/password login",
+    "external_model_calls": 0
+  },
+  "scope": "local logical backups restored to independent internal-network databases; no public support endpoint opened",
+  "external_model_calls": 0,
+  "checked_at": "2026-10-21T04:45:06.182Z",
+  "private_artifacts": "/var/folders/c9/f3mfsydd2ns7jx4bp2xlky2h0000gn/T/omni-restore-57eJuI",
+  "retained_containers": [
+    "omni-restore-75fa50e693-mysql",
+    "omni-restore-75fa50e693-pg"
+  ],
+  "network": "omni-restore-75fa50e693",
+  "stop_failures": []
+}

@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": [
+    "default_plan_no_rotation",
+    "wrong_target_denied",
+    "missing_offline_ack_denied",
+    "explicit_apply_rotates_without_opening_traffic"
+  ],
+  "rotated": 5
+}

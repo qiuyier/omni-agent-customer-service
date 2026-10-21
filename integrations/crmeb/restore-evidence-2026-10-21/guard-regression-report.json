@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "checks": [
+    "isolated_database_selected",
+    "source_database_not_target",
+    "all_restored_triggers_exact",
+    "api_enabled_subject_exists",
+    "api_old_credential_initially_valid",
+    "api_revoked_before_restore",
+    "api_unsafe_old_snapshot_revives_permission",
+    "kefu_enabled_subject_exists",
+    "kefu_old_credential_initially_valid",
+    "kefu_revoked_before_restore",
+    "kefu_unsafe_old_snapshot_revives_permission",
+    "rotation_requires_offline_ack",
+    "missing_trigger_blocks_rotation",
+    "changed_trigger_fixture_prepared",
+    "changed_trigger_literal_denied",
+    "all_versions_rotated",
+    "api_restored_old_credential_denied_after_guard",
+    "api_fresh_signed_login_accepted",
+    "kefu_restored_old_credential_denied_after_guard",
+    "kefu_fresh_signed_login_accepted"
+  ],
+  "rotated_rows": 5,
+  "scope": "isolated restored MySQL + actual JwtAuth/IdentityRevision; synthetic signed login credentials; not browser/password login",
+  "external_model_calls": 0
+}
