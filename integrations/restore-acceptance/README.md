@@ -1,5 +1,7 @@
 # 恢复后的标准 HTTP 验收
 
+真实业务密码登录也已接入：[密码宿主标准验收](Business-password-acceptance.md)。CLI 新增 `business-password`，使用已有服务端密码认证，不是示例账号选择；三种适配器复用同一 core。
+
 第二种宿主已通过同一流程：[独立宿主验收说明](Standalone-acceptance.md)。CLI 支持 `crmeb` 与 `standalone-demo` 两种适配器；后者为 Cookie 示例登录，不是生产密码认证，也不是第二次备份恢复演练。
 
 ## 2026-10-21 验证结果

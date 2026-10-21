@@ -3,7 +3,8 @@ import {resolve} from 'node:path';
 import {acceptRestore} from './core.mjs';
 import {createCRMEB, validateConfig} from './crmeb.mjs';
 import {createStandalone, validateStandalone} from './standalone.mjs';
-const adapters = {crmeb: {validate: validateConfig, create: createCRMEB}, 'standalone-demo': {validate: validateStandalone, create: createStandalone}};
+import {createBusiness, validateBusiness} from './business.mjs';
+const adapters = {'business-password': {validate: validateBusiness, create: createBusiness}, crmeb: {validate: validateConfig, create: createCRMEB}, 'standalone-demo': {validate: validateStandalone, create: createStandalone}};
 
 export async function main(args = process.argv.slice(2), input = process.stdin, output = process.stdout) {
   let report;

@@ -7,7 +7,7 @@ import {businessIdentity} from '../host-kit/identity.example.mjs';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const fail=status=>Object.assign(Error('request_rejected'),{status});
 async function read(stream,limit){let size=0;const chunks=[];for await(const chunk of stream){size+=chunk.length;if(size>limit)throw fail(413);chunks.push(Buffer.from(chunk));}return Buffer.concat(chunks);}
-export async function startBusiness({gatewayOrigin,hostSecret,agents,accounts,now=Date.now,serveUI=false}){
+export async function startBusiness({gatewayOrigin,hostSecret,agents,accounts,now=Date.now,serveUI=false,storage='memory',replyMode='fake'}){
  const people=new Map(),sessions=new Map();
  for(const a of accounts){
   if(!['customer','staff'].includes(a.role)||typeof a.password!=='string'||a.password.length<16||typeof a.account!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(a.id))throw Error('invalid test account');
@@ -28,7 +28,7 @@ export async function startBusiness({gatewayOrigin,hostSecret,agents,accounts,no
   const s=session(req,role);if(!s)return null;
   const a=people.get(s.accountKey);return {role,enabled:a.enabled,subjectID:a.id,displayName:a.id,sessionID:s.key,expiresAt:s.expiresAt};
  }};
- const adapter=await startAdapter({gatewayOrigin,hostSecret,agents,identity:businessIdentity({sessions:identityService}),now});
+ const adapter=await startAdapter({gatewayOrigin,hostSecret,agents,identity:businessIdentity({sessions:identityService}),now,storage,replyMode});
  const allowed=new Map([['/host/me','GET'],['/host/chat-session','POST'],['/chat/v1/messages','GET,POST'],['/chat/v1/handoff','POST'],['/chat/v1/consultations','POST'],['/chat/v1/previous-consultation','GET'],['/desk/me','GET'],['/desk/queue','GET'],['/desk/action','POST']]);
  allowed.set('/chat/v1/message-receipt','POST');
  let origin,attempts=0;

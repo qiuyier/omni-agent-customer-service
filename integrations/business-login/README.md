@@ -1,5 +1,7 @@
 # 业务密码登录接入验收（2026-10-13）
 
+2026-10-21 后续：已连接[新的标准验收流程](../restore-acceptance/Business-password-acceptance.md)，用专用 PostgreSQL 完成双轮闭环及身份停用/过期检查。原密码认证复用，仅新增可选存储/回复模式配置，默认行为不变。
+
 2026-10-14 后续：身份边界已提取至 web/chat/src/host-session.jsx；本样例的 business.jsx 仅负责登录页与配置装配。新的接入契约及待确认缓存分区升级说明见[通用业务页面模板](../host-kit/browser.md)。
 
 目的：将已有身份回调模板接到一个真正校验密码、维护登录会话的最小业务认证服务，再通过真实 HTTP 和 Go 网关验证人工闭环。
