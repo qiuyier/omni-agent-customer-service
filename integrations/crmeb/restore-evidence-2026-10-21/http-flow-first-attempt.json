@@ -1,0 +1,36 @@
+{
+  "scope": "restored-copy-real-http",
+  "checks": [
+    {
+      "name": "separate_customer_conversations",
+      "passed": true
+    },
+    {
+      "name": "cross_login_capability_denied",
+      "passed": true
+    },
+    {
+      "name": "fresh_staff_login_accepted",
+      "passed": true
+    },
+    {
+      "name": "receipt_matches_accepted_message",
+      "passed": true
+    },
+    {
+      "name": "duplicate_send_stored_once",
+      "passed": true
+    },
+    {
+      "name": "other_customer_cannot_see_test_message",
+      "passed": true
+    },
+    {
+      "name": "staff_claimed",
+      "passed": false
+    }
+  ],
+  "external_model_calls": 0,
+  "initial_status": "closed",
+  "initial_history_count": 2
+}

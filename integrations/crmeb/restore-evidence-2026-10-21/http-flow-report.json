@@ -1,0 +1,50 @@
+{
+  "scope": "restored-copy-real-http",
+  "checks": [
+    {
+      "name": "separate_customer_conversations",
+      "passed": true
+    },
+    {
+      "name": "cross_login_capability_denied",
+      "passed": true
+    },
+    {
+      "name": "fresh_staff_login_accepted",
+      "passed": true
+    },
+    {
+      "name": "receipt_matches_accepted_message",
+      "passed": true
+    },
+    {
+      "name": "duplicate_send_stored_once",
+      "passed": true
+    },
+    {
+      "name": "other_customer_cannot_see_test_message",
+      "passed": true
+    },
+    {
+      "name": "staff_claimed",
+      "passed": true
+    },
+    {
+      "name": "staff_reply_visible",
+      "passed": true
+    },
+    {
+      "name": "staff_closed",
+      "passed": true
+    },
+    {
+      "name": "closed_history_stable",
+      "passed": true
+    }
+  ],
+  "external_model_calls": 0,
+  "initial_status": "human_active",
+  "initial_history_count": 2,
+  "conversation_id": "wbc_9afe331197d7fecc0958eb3e7da895bd1fd81ccf834a184cfdb8a028555f2ea0",
+  "passed": true
+}

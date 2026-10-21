@@ -1,0 +1,20 @@
+{
+  "scope": "manual-browser-verification",
+  "date": "2026-10-21",
+  "origin": "http://127.0.0.1:64701",
+  "real_password_login_customer": true,
+  "real_password_login_staff": true,
+  "uses_original_built_chat_assets": true,
+  "login_form": "isolated test form, original CRMEB password APIs",
+  "conversation_suffix": "a028555f2ea0",
+  "after_reload": {
+    "status": "closed",
+    "visible_customer_messages": 1,
+    "visible_fake_replies": 1,
+    "visible_staff_replies": 1
+  },
+  "staff_identity_visible": true,
+  "closed_conversation_absent_from_pending_queue": true,
+  "mutations": "send/receipt/handoff/claim/reply/close performed by real HTTP script; browser verified login, page state and reload",
+  "external_model_calls": 0
+}

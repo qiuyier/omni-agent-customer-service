@@ -1,0 +1,55 @@
+{
+  "scope": "restored-copy-real-password-http",
+  "external_model_calls": 0,
+  "checks": [
+    {
+      "identity": "a",
+      "expected": 200,
+      "actual": 200,
+      "passed": true
+    },
+    {
+      "identity": "b",
+      "expected": 200,
+      "actual": 200,
+      "passed": true
+    },
+    {
+      "identity": "staff",
+      "expected": 200,
+      "actual": 200,
+      "passed": true
+    },
+    {
+      "identity": "a",
+      "expected": 401,
+      "actual": 401,
+      "passed": true
+    },
+    {
+      "identity": "b",
+      "expected": 401,
+      "actual": 401,
+      "passed": true
+    },
+    {
+      "identity": "staff",
+      "expected": 401,
+      "actual": 401,
+      "passed": true
+    }
+  ],
+  "rotation": {
+    "passed": true,
+    "mode": "rotate",
+    "result": {
+      "database": "omni_restore_75fa50e693",
+      "revision_rows": 5,
+      "triggers_checked": 6,
+      "rotated": 5,
+      "support_may_open": false,
+      "next": "verify_old_credentials_denied_and_fresh_login_before_opening"
+    }
+  },
+  "passed": true
+}
