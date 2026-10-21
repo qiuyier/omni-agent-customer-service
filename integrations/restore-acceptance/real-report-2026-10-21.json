@@ -1,0 +1,225 @@
+{
+  "scope": "real_restored_copy_cli",
+  "external_model_calls": 0,
+  "baseline": [
+    {
+      "identity": "a",
+      "status": 200
+    },
+    {
+      "identity": "b",
+      "status": 200
+    },
+    {
+      "identity": "staff",
+      "status": 200
+    }
+  ],
+  "runs": [
+    {
+      "exit_code": 0,
+      "report": {
+        "schema": 1,
+        "scope": "post_restore_http",
+        "passed": true,
+        "support_may_open": false,
+        "public_entry_state": "operator_attested_not_verified",
+        "checks": [
+          {
+            "name": "old_a_denied",
+            "passed": true
+          },
+          {
+            "name": "old_b_denied",
+            "passed": true
+          },
+          {
+            "name": "old_staff_denied",
+            "passed": true
+          },
+          {
+            "name": "fresh_staff",
+            "passed": true
+          },
+          {
+            "name": "isolated_customers",
+            "passed": true
+          },
+          {
+            "name": "cross_login_denied",
+            "passed": true
+          },
+          {
+            "name": "available_test_conversation",
+            "passed": true
+          },
+          {
+            "name": "message_identity",
+            "passed": true
+          },
+          {
+            "name": "receipt",
+            "passed": true
+          },
+          {
+            "name": "duplicate_identity",
+            "passed": true
+          },
+          {
+            "name": "stored_once",
+            "passed": true
+          },
+          {
+            "name": "history_isolated",
+            "passed": true
+          },
+          {
+            "name": "waiting_human",
+            "passed": true
+          },
+          {
+            "name": "claimed",
+            "passed": true
+          },
+          {
+            "name": "reply_visible",
+            "passed": true
+          },
+          {
+            "name": "closed",
+            "passed": true
+          },
+          {
+            "name": "stable_history",
+            "passed": true
+          }
+        ],
+        "cleanup_passed": true,
+        "browser_verified": false
+      }
+    },
+    {
+      "exit_code": 0,
+      "report": {
+        "schema": 1,
+        "scope": "post_restore_http",
+        "passed": true,
+        "support_may_open": false,
+        "public_entry_state": "operator_attested_not_verified",
+        "checks": [
+          {
+            "name": "old_a_denied",
+            "passed": true
+          },
+          {
+            "name": "old_b_denied",
+            "passed": true
+          },
+          {
+            "name": "old_staff_denied",
+            "passed": true
+          },
+          {
+            "name": "fresh_staff",
+            "passed": true
+          },
+          {
+            "name": "isolated_customers",
+            "passed": true
+          },
+          {
+            "name": "cross_login_denied",
+            "passed": true
+          },
+          {
+            "name": "available_test_conversation",
+            "passed": true
+          },
+          {
+            "name": "message_identity",
+            "passed": true
+          },
+          {
+            "name": "receipt",
+            "passed": true
+          },
+          {
+            "name": "duplicate_identity",
+            "passed": true
+          },
+          {
+            "name": "stored_once",
+            "passed": true
+          },
+          {
+            "name": "history_isolated",
+            "passed": true
+          },
+          {
+            "name": "waiting_human",
+            "passed": true
+          },
+          {
+            "name": "claimed",
+            "passed": true
+          },
+          {
+            "name": "reply_visible",
+            "passed": true
+          },
+          {
+            "name": "closed",
+            "passed": true
+          },
+          {
+            "name": "stable_history",
+            "passed": true
+          }
+        ],
+        "cleanup_passed": true,
+        "browser_verified": false
+      }
+    }
+  ],
+  "expected_failure": {
+    "exit_code": 1,
+    "report": {
+      "schema": 1,
+      "scope": "post_restore_http",
+      "passed": false,
+      "support_may_open": false,
+      "public_entry_state": "operator_attested_not_verified",
+      "checks": [],
+      "cleanup_passed": true,
+      "browser_verified": false,
+      "failed_stage": "old_a_denied"
+    }
+  },
+  "rotation": {
+    "passed": true,
+    "mode": "rotate",
+    "result": {
+      "database": "omni_restore_75fa50e693",
+      "revision_rows": 5,
+      "triggers_checked": 6,
+      "rotated": 5,
+      "support_may_open": false,
+      "next": "verify_old_credentials_denied_and_fresh_login_before_opening"
+    }
+  },
+  "passed": true,
+  "baseline_logout": [
+    {
+      "identity": "a",
+      "passed": true
+    },
+    {
+      "identity": "b",
+      "passed": true
+    },
+    {
+      "identity": "staff",
+      "passed": true
+    }
+  ]
+}
