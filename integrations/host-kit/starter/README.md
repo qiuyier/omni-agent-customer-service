@@ -1,5 +1,7 @@
 # 新系统最小接入包
 
+首次接入优先阅读[最短执行路径](../quickstart.md)：新增共享装配入口，集中身份/配置/挂载要求，并区分首次接入与恢复验收。干净业务示例已实际使用此入口。
+
 本模板对应 `webchat-receipt-v1`：除发送/人工闭环外，还须开放经过同等鉴权的回执路由。`acceptance.example.json` 的 `lifecycle.paths.receipt` 可配置业务同源路径。缺失接口会失败；旧报告须重验，浏览器及部署项目仍单独填写交接表。见[本轮基线验收](../../../docs/integration-baseline-acceptance.md)。
 
 先按[统一交付指南](../../../docs/integration-delivery.md)选择部署与复跑路径；本目录保留装配材料、配置样板和目标交接表。

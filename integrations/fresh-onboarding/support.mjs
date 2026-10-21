@@ -1,10 +1,5 @@
-// Business identity and lifecycle stay here; HTTP safety lives in host-kit.
-import {startAdapter} from '../host-kit/adapter.mjs';
-import {businessIdentity} from '../host-kit/identity.example.mjs';
-import {createSupportProxy} from '../host-kit/proxy.mjs';
-export async function attachSupport(business,{gatewayOrigin,hostSecret,agents,storage='memory'}){
- const adapter=await startAdapter({gatewayOrigin,hostSecret,agents,storage,replyMode:'fake',identity:businessIdentity({sessions:business.sessions})});
- try{business.mount(createSupportProxy({adapterOrigin:adapter.origin,publicOrigin:()=>business.origin,sessions:business.sessions}));}
- catch(e){await adapter.close();throw e;}
- return {close:()=>adapter.close()};
+// Only business identity and configuration binding; shared assembly stays in host-kit.
+import {mountSupport} from '../host-kit/onboarding.mjs';
+export function attachSupport(business,{gatewayOrigin,hostSecret,agents,storage='memory'}){
+ return mountSupport({config:{gatewayOrigin,hostSecret,agents,storage,replyMode:'fake'},sessions:business.sessions,publicOrigin:()=>business.origin,mount:handler=>business.mount(handler)});
 }
