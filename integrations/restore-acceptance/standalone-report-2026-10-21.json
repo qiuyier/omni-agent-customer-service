@@ -1,0 +1,254 @@
+{
+  "scope": "second_host_real_http",
+  "authentication": "demo_cookie_account_selection",
+  "database_restored": false,
+  "external_model_calls": 0,
+  "passed": true,
+  "runs": [
+    {
+      "exit_code": 0,
+      "report": {
+        "schema": 1,
+        "scope": "post_restore_http",
+        "passed": true,
+        "support_may_open": false,
+        "public_entry_state": "operator_attested_not_verified",
+        "checks": [
+          {
+            "name": "old_a_denied",
+            "passed": true
+          },
+          {
+            "name": "old_b_denied",
+            "passed": true
+          },
+          {
+            "name": "old_staff_denied",
+            "passed": true
+          },
+          {
+            "name": "fresh_staff",
+            "passed": true
+          },
+          {
+            "name": "isolated_customers",
+            "passed": true
+          },
+          {
+            "name": "cross_login_denied",
+            "passed": true
+          },
+          {
+            "name": "available_test_conversation",
+            "passed": true
+          },
+          {
+            "name": "message_identity",
+            "passed": true
+          },
+          {
+            "name": "receipt",
+            "passed": true
+          },
+          {
+            "name": "duplicate_identity",
+            "passed": true
+          },
+          {
+            "name": "stored_once",
+            "passed": true
+          },
+          {
+            "name": "history_isolated",
+            "passed": true
+          },
+          {
+            "name": "waiting_human",
+            "passed": true
+          },
+          {
+            "name": "claimed",
+            "passed": true
+          },
+          {
+            "name": "reply_visible",
+            "passed": true
+          },
+          {
+            "name": "closed",
+            "passed": true
+          },
+          {
+            "name": "stable_history",
+            "passed": true
+          }
+        ],
+        "cleanup_passed": true,
+        "browser_verified": false
+      }
+    },
+    {
+      "exit_code": 0,
+      "report": {
+        "schema": 1,
+        "scope": "post_restore_http",
+        "passed": true,
+        "support_may_open": false,
+        "public_entry_state": "operator_attested_not_verified",
+        "checks": [
+          {
+            "name": "old_a_denied",
+            "passed": true
+          },
+          {
+            "name": "old_b_denied",
+            "passed": true
+          },
+          {
+            "name": "old_staff_denied",
+            "passed": true
+          },
+          {
+            "name": "fresh_staff",
+            "passed": true
+          },
+          {
+            "name": "isolated_customers",
+            "passed": true
+          },
+          {
+            "name": "cross_login_denied",
+            "passed": true
+          },
+          {
+            "name": "available_test_conversation",
+            "passed": true
+          },
+          {
+            "name": "message_identity",
+            "passed": true
+          },
+          {
+            "name": "receipt",
+            "passed": true
+          },
+          {
+            "name": "duplicate_identity",
+            "passed": true
+          },
+          {
+            "name": "stored_once",
+            "passed": true
+          },
+          {
+            "name": "history_isolated",
+            "passed": true
+          },
+          {
+            "name": "waiting_human",
+            "passed": true
+          },
+          {
+            "name": "claimed",
+            "passed": true
+          },
+          {
+            "name": "reply_visible",
+            "passed": true
+          },
+          {
+            "name": "closed",
+            "passed": true
+          },
+          {
+            "name": "stable_history",
+            "passed": true
+          }
+        ],
+        "cleanup_passed": true,
+        "browser_verified": false
+      }
+    }
+  ],
+  "cleanup": {
+    "host_closed": true,
+    "gateway_stopped": true,
+    "owned_database_removed": true,
+    "temporary_binaries_removed": true
+  },
+  "support_may_open": false,
+  "core_sha256_before": "bfdec5d8c4a15aded3cc64f91850e65b0600e08802521e13f4eb6dcac9ddd332",
+  "baseline": [
+    {
+      "identity": "a",
+      "passed": true
+    },
+    {
+      "identity": "b",
+      "passed": true
+    },
+    {
+      "identity": "staff",
+      "passed": true
+    }
+  ],
+  "expected_failure": {
+    "exit_code": 1,
+    "report": {
+      "schema": 1,
+      "scope": "post_restore_http",
+      "passed": false,
+      "support_may_open": false,
+      "public_entry_state": "operator_attested_not_verified",
+      "checks": [],
+      "cleanup_passed": true,
+      "browser_verified": false,
+      "failed_stage": "old_a_denied"
+    }
+  },
+  "midflow_failure": {
+    "schema": 1,
+    "scope": "post_restore_http",
+    "passed": false,
+    "support_may_open": false,
+    "public_entry_state": "operator_attested_not_verified",
+    "checks": [
+      {
+        "name": "old_a_denied",
+        "passed": true
+      },
+      {
+        "name": "old_b_denied",
+        "passed": true
+      },
+      {
+        "name": "old_staff_denied",
+        "passed": true
+      },
+      {
+        "name": "fresh_staff",
+        "passed": true
+      },
+      {
+        "name": "isolated_customers",
+        "passed": true
+      },
+      {
+        "name": "cross_login_denied",
+        "passed": true
+      },
+      {
+        "name": "available_test_conversation",
+        "passed": true
+      },
+      {
+        "name": "message_identity",
+        "passed": true
+      }
+    ],
+    "cleanup_passed": true,
+    "browser_verified": false,
+    "failed_stage": "receipt"
+  },
+  "core_sha256_after": "bfdec5d8c4a15aded3cc64f91850e65b0600e08802521e13f4eb6dcac9ddd332"
+}

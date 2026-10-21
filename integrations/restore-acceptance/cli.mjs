@@ -2,6 +2,8 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {acceptRestore} from './core.mjs';
 import {createCRMEB, validateConfig} from './crmeb.mjs';
+import {createStandalone, validateStandalone} from './standalone.mjs';
+const adapters = {crmeb: {validate: validateConfig, create: createCRMEB}, 'standalone-demo': {validate: validateStandalone, create: createStandalone}};
 
 export async function main(args = process.argv.slice(2), input = process.stdin, output = process.stdout) {
   let report;
@@ -11,8 +13,11 @@ export async function main(args = process.argv.slice(2), input = process.stdin, 
     const run = args.includes('--run');
     if (run && !allowed.every(a => args.includes(a))) throw Error('confirmation_required');
     let text = ''; for await (const chunk of input) { text += chunk; if (Buffer.byteLength(text) > 65536) throw Error('input_limit'); }
-    const c = validateConfig(JSON.parse(text), run);
-    report = run ? await acceptRestore(createCRMEB(c)) : {
+    const inputConfig = JSON.parse(text);
+    if (!inputConfig || !Object.hasOwn(adapters, inputConfig.adapter)) throw Error('unknown_adapter');
+    const adapter = adapters[inputConfig.adapter];
+    const c = adapter.validate(inputConfig, run);
+    report = run ? await acceptRestore(adapter.create(c)) : {
       schema: 1, mode: 'plan', executed: false, support_may_open: false,
       checks: ['old_credentials_denied', 'fresh_logins', 'customer_isolation', 'receipt_and_deduplication', 'human_lifecycle', 'stable_history', 'logout'],
     };
