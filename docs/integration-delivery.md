@@ -15,6 +15,8 @@
 
 两者均需 DATABASE_URL；人工服务另配 WEBCHAT_AGENTS_JSON，来源必须存在、同来源坐席 ID 唯一、所有密钥独立。参见[配置模板](../deploy/webchat-server.env.example)和[多宿主约束](webchat-multi-host.md)。共享聊天记录来源隔离不等于知识、模型、工具授权和资源配额隔离。跨主机/容器私有网络另设计，现有入口限回环，不直接公网暴露。
 
+跨容器接入现有独立实验：[私有分容器说明](../deploy/private-containers/README.md)。保留核心回环监听，以固定目标双向 TLS 通道连接，验证认证拒绝、断连及重启恢复；不等于生产网络或浏览器界面已验收。[本轮脱敏报告](evidence/private-containers-2026-10-21.json)。
+
 ## 2. 从空配置复跑本地参考链路
 
 前置：仓库要求的 Go（见 go.mod）、Node 20+、Docker Compose、OpenSSL 可用；Docker 已启动；15433 未被其他服务占用；允许下载/使用依赖。不要先 source 根目录 .env。脚本会在独立的 omni_agent_webchat_demo 库迁移并新增随机测试数据，不能替换为业务生产库。已有该测试卷时保留旧数据，不删除卷来制造“全新环境”。
