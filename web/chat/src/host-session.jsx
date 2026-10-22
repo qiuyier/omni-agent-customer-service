@@ -5,7 +5,7 @@ import {createPinnedFetch,readHostIdentity,announceHostIdentityChange} from './h
 function SessionContent({config,identity,current,invalidate,children}) {
   const alive=useRef(true);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
-  const fetcher=useMemo(()=>createPinnedFetch({version:identity.version,isCurrent:()=>alive.current&&current.current?.version===identity.version&&current.current?.id===identity.id,onUnauthorized:invalidate}),[identity.id,identity.version]);
+  const fetcher=useMemo(()=>createPinnedFetch({version:identity.version,identity,identityURL:config.identityURL,isCurrent:()=>alive.current&&current.current?.version===identity.version&&current.current?.id===identity.id,onUnauthorized:invalidate}),[identity.id,identity.version]);
   const request=useMemo(()=>(path,options)=>requestJSON(path,{...options,fetcher}),[fetcher]);
   return children({identity,fetcher,request,storageScope:JSON.stringify([config.channelName,config.role,identity.id,identity.version])+':' });
 }

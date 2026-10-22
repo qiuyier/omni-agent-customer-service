@@ -23,7 +23,7 @@ node deploy/private-containers/check.mjs --allow-isolated-test-writes --report /
 4. 页面发送一条消息，确认显示待确认而不是成功。
 5. rotate-activate：安装新客户端证书/密钥及新宿主密钥，发送 SIGUSR2，等待本次重载成功事件。不会仅凭文件替换就宣称生效。
 6. rotate-verify：新证书+新宿主密钥应为 201；新证书+旧宿主密钥为 401；旧证书+新宿主密钥为 403。
-7. 页面重试，等待自动核对身份后再次手动重试。用 records 只读核对消息，再 stop 清理。
+7. 页面只点击一次“重试待确认消息”：同一业务身份允许更新聊天令牌并重试原消息。用 records 只读核对消息，再 stop 清理。详见 [恢复修复验收](chat-token-recovery.md)。
 
 ## 失败恢复规则
 

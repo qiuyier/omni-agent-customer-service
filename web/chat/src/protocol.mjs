@@ -42,7 +42,7 @@ export class APIError extends Error {
 
 const knownErrors = new Set(['unauthorized', 'invalid_request', 'busy', 'rate_limited', 'event_conflict', 'unavailable', 'conversation_closed', 'not_found']);
 
-export async function requestJSON(path, { method = 'GET', body, token, signal, fetcher = globalThis.fetch, timeout = 45000 } = {}) {
+export async function requestJSON(path, { method = 'GET', body, token, signal, fetcher = globalThis.fetch, timeout = 45000, chatTokenRecovery = false } = {}) {
   const controller = new AbortController();
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
@@ -54,6 +54,7 @@ export async function requestJSON(path, { method = 'GET', body, token, signal, f
     if (token) headers.Authorization = `Bearer ${token}`;
     const response = await fetcher(path, {
       method, headers, credentials: 'same-origin', cache: 'no-store',
+      ...(chatTokenRecovery?{chatTokenRecovery:true}:{}),
       body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal,
     });
     if (response.status === 204 && response.ok) return null;
@@ -100,7 +101,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
     const check=()=>{if(started!==revision||signal?.aborted)throw new DOMException('Aborted','AbortError');};
     const expected = current.conversation_id;
     try {
-      const result=await requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
+      const result=await requestJSON(path, { method, body, token, signal, fetcher, chatTokenRecovery:true, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
       check();return result;
     } catch (error) {
       check();

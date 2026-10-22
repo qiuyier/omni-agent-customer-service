@@ -1,12 +1,36 @@
 // A public login-version nonce pins requests, but never authenticates them.
-export function createPinnedFetch({version,isCurrent,onUnauthorized,fetcher=globalThis.fetch}) {
+export function createPinnedFetch({version,isCurrent,onUnauthorized,identity,identityURL,fetcher=globalThis.fetch}) {
+  const chatPaths=new Set(['/chat/v1/messages','/chat/v1/message-receipt','/chat/v1/handoff','/chat/v1/consultations','/chat/v1/previous-consultation']);
+  if(identityURL!==undefined&&(!/^\/(?!\/)[A-Za-z0-9_./-]*$/.test(identityURL)||identityURL.includes('..')))throw Error('same-origin identity path required');
   return async (path,options={})=>{
+    const {chatTokenRecovery=false,...requestOptions}=options;
+    const check=()=>{if(!isCurrent()||options.signal?.aborted)throw new DOMException('Identity changed','AbortError');};
     if(!isCurrent())throw new DOMException('Identity changed','AbortError');
     if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//')||/[\\\s\u0000-\u001f]/.test(path))throw Error('same-origin path required');
     const headers=new Headers(options.headers);headers.set('X-Business-Session',version);
-    const response=await fetcher(path,{...options,headers,credentials:'same-origin',redirect:'error'});
+    const response=await fetcher(path,{...requestOptions,headers,credentials:'same-origin',redirect:'error'});
     if(!isCurrent())throw new DOMException('Identity changed','AbortError');
-    if(response.status===401)onUnauthorized();
+    if(response.status===401){
+      // Only the first attempt of a chat operation may recover. No renewal of
+      // business sessions, staff authority or a failed second chat attempt.
+      if(chatTokenRecovery===true&&identity?.role==='customer'&&identity.version===version&&identityURL&&chatPaths.has(path)&&headers.has('Authorization')){
+        let verified;
+        try{
+          const r=await fetcher(identityURL,{method:'GET',headers:{Accept:'application/json','X-Business-Session':version},credentials:'same-origin',redirect:'error',cache:'no-store',signal:options.signal});
+          check();
+          if(!r.ok&&r.status!==401&&r.status!==403)throw Error('identity unavailable');
+          verified=r.ok?readHostIdentity(await r.json(),'customer'):null;
+        }catch(error){
+          check();
+          // Unverifiable identity never authorizes a resend; preserve pending
+          // content and report a service error instead of claiming logout.
+          return new Response('{"error":"unavailable"}',{status:503,headers:{'Content-Type':'application/json'}});
+        }
+        check();
+        if(verified?.id===identity.id&&verified?.version===version)return response;
+      }
+      onUnauthorized();
+    }
     return response;
   };
 }
