@@ -58,7 +58,7 @@ try{
  await docker('run','--rm','--network',nets[0],'--env-file',join(dir,'gateway.env'),'--entrypoint','/migrate',image);
  await container(gateway,'--network',nets[0],'--network-alias','gateway','--env-file',join(dir,'gateway.env'),image);
  // Copy only runtime modules: never mount repository .env, reports or Git data.
- const modules=['integrations/fresh-onboarding/business.mjs','integrations/fresh-onboarding/support.mjs','integrations/office-portal/legacy.mjs',...['adapter','identity.example','onboarding','proxy'].map(n=>'integrations/host-kit/'+n+'.mjs'),...['transport','edge','reloadable','business-worker','gateway-worker','probe'].map(n=>'deploy/private-containers/'+n+'.mjs')];
+ const modules=['integrations/fresh-onboarding/business.mjs','integrations/fresh-onboarding/support.mjs','integrations/office-portal/legacy.mjs',...['adapter','identity.example','onboarding','proxy'].map(n=>'integrations/host-kit/'+n+'.mjs'),...['browser-gate','transport','edge','reloadable','business-worker','gateway-worker','probe'].map(n=>'deploy/private-containers/'+n+'.mjs')];
  if(browserMode)for(const name of ['index.html','app.js','app.css'])modules.push('integrations/fresh-onboarding/public/'+name);
  for(const path of modules){await mkdir(dirname(join(dir,'source',path)),{recursive:true});await copyFile(join(root,path),join(dir,'source',path));}
  const nodeMount=['--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','-v',join(dir,'source')+':/src:ro'];
@@ -111,12 +111,14 @@ try{
  }
  if(browserMode){
   stage='browser_lab';
-  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'disconnect | reconnect | restart-gateway | rotate-stage | rotate-bad-config | rotate-activate | rotate-verify | audit | records | stop'}));
+  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'hold-renewal | hold-send | release | gate-audit | disconnect | reconnect | restart-gateway | rotate-stage | rotate-bad-config | rotate-activate | rotate-verify | audit | records | stop'}));
   const input=createInterface({input:process.stdin});
   const interrupt=()=>input.close();for(const signal of ['SIGINT','SIGTERM'])process.once(signal,interrupt);
   try{for await(const line of input){
    const command=line.trim();if(command==='stop')break;
-   if(command==='rotate-stage')await rotation.stage();
+   if(['hold-renewal','hold-send','release'].includes(command))await writeFile(join(dir,'business/browser-gate'),command==='hold-renewal'?'renewal':command==='hold-send'?'send':'');
+   else if(command==='gate-audit'){const logs=(await docker('logs',business)).stdout;console.log(logs.split('\n').filter(x=>x.startsWith('{')&&x.includes('browser_gate')).join('\n'));}
+   else if(command==='rotate-stage')await rotation.stage();
    else if(command==='rotate-bad-config')await rotation.rejectInvalid();
    else if(command==='rotate-activate')await rotation.activate();
    else if(command==='rotate-verify')await rotation.verify();

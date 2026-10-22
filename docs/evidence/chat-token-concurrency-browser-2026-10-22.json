@@ -1,0 +1,477 @@
+{
+  "date": "2026-10-22",
+  "browser_verified": true,
+  "verification": "CUA UI actions plus read-only container logs and PostgreSQL query",
+  "checks": {
+    "double_click_retry_one_forwarded_request": true,
+    "logout_during_renewal_no_saved_message": true,
+    "switch_during_renewal_no_saved_message": true,
+    "new_account_has_no_old_messages": true,
+    "concurrent_send_and_poll_share_completed_renewal": true
+  },
+  "database": [
+    {
+      "content": "BROWSER-CONCURRENT-RETRY",
+      "conversation_id": "wbc_d9bbf65ef186be7834bd9ddbbc346420501136ad3581c17317d9ee5cca9d581f",
+      "count": 1
+    },
+    {
+      "content": "BROWSER-HUMAN-SHARED",
+      "conversation_id": "wbc_45e01d572df048b90563b77f4da3347a6fb008d13c0087175f778425d7c89360",
+      "count": 1
+    },
+    {
+      "content": "BROWSER-SHARED-RENEWAL",
+      "conversation_id": "wbc_d9bbf65ef186be7834bd9ddbbc346420501136ad3581c17317d9ee5cca9d581f",
+      "count": 1
+    }
+  ],
+  "absent_messages": [
+    "BROWSER-CANCEL-LOGOUT",
+    "BROWSER-CANCEL-SWITCH"
+  ],
+  "concurrent_request_sequence": [
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 401
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "held",
+        "method": "POST",
+        "path": "/host/chat-session"
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 401
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "released",
+        "method": "POST",
+        "path": "/host/chat-session"
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/host/chat-session",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/host/me",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    }
+  ],
+  "external_model_calls": 0
+}
