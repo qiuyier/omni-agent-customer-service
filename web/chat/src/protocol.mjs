@@ -80,6 +80,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
   let token = '';
   let current = null;
   let revision = 0;
+  let renewal = null;
   const acquire = async (signal, expectedConversation) => {
     const started = revision;
     const result = await requestJSON('/host/chat-session', { method: 'POST', body: {}, signal, fetcher });
@@ -95,18 +96,55 @@ export function createChatAPI(fetcher = globalThis.fetch) {
     current = { conversation_id: result.conversation_id, expires_at: result.expires_at, user: result.user, demo: result.demo, storage: normalizeStorage(result.storage), reply_mode: normalizeReplyMode(result.reply_mode), human_enabled: result.human_enabled===true, new_consultation_enabled:result.new_consultation_enabled===true };
     return current;
   };
+  // Renewal belongs to this API lifetime, not to its first caller. Each caller
+  // can cancel independently; the last departing caller cancels the transport.
+  const renew = (signal, expectedConversation) => {
+    if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+    if (!renewal) {
+      const flight = { controller: new AbortController(), waiters: 0, settled: false };
+      renewal = flight;
+      flight.promise = acquire(flight.controller.signal, expectedConversation).finally(() => {
+        flight.settled = true;
+        if (renewal === flight) renewal = null;
+      });
+    }
+    const flight = renewal;
+    flight.waiters++;
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const finish = (callback, value) => {
+        if (done) return;
+        done = true;
+        signal?.removeEventListener('abort', abort);
+        flight.controller.signal.removeEventListener('abort', abort);
+        flight.waiters--;
+        if (!flight.waiters && !flight.settled) {
+          if (renewal === flight) renewal = null;
+          flight.controller.abort();
+        }
+        callback(value);
+      };
+      const abort = () => finish(reject, new DOMException('Aborted', 'AbortError'));
+      signal?.addEventListener('abort', abort, { once: true });
+      flight.controller.signal.addEventListener('abort', abort, { once: true });
+      flight.promise.then(value => finish(resolve, value), error => finish(reject, error));
+    });
+  };
   const authorized = async (method, body, signal, path='/chat/v1/messages') => {
     if (!current || !token) throw new APIError('unauthorized', 401);
     const started=revision;
     const check=()=>{if(started!==revision||signal?.aborted)throw new DOMException('Aborted','AbortError');};
     const expected = current.conversation_id;
+    const attemptedToken = token;
     try {
       const result=await requestJSON(path, { method, body, token, signal, fetcher, chatTokenRecovery:true, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
       check();return result;
     } catch (error) {
       check();
       if (error.status !== 401) throw error;
-      await acquire(signal, expected);
+      // A delayed 401 for an old token must not replace a newer capability.
+      if (token === attemptedToken) await renew(signal, expected);
+      if (!current || current.conversation_id !== expected || !token) throw new APIError('account_changed');
       check();
       // The same body object (and event_id) is reused after token renewal.
       const result=await requestJSON(path, { method, body, token, signal, fetcher, timeout: method === 'POST' ? replyRequestTimeout(current.reply_mode) : 45000 });
@@ -121,7 +159,7 @@ export function createChatAPI(fetcher = globalThis.fetch) {
     history: (signal) => authorized('GET', undefined, signal),
     receipt: (pending,signal) => authorized('POST',{event_id:pending.event_id,content:pending.content},signal,'/chat/v1/message-receipt'),
     send: (pending, signal) => authorized('POST', { event_id: pending.event_id, content: pending.content }, signal),
-    clear: () => { revision++; token = ''; current = null; },
+    clear: () => { revision++; token = ''; current = null; const flight = renewal; renewal = null; flight?.controller.abort(); },
   };
 }
 
