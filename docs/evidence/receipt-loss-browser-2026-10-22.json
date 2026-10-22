@@ -1,0 +1,225 @@
+{
+  "browser_verified": true,
+  "model_calls": 0,
+  "database": [
+    {
+      "content": "BROWSER-LOSS-RECEIPT-OUTAGE",
+      "messages": 1,
+      "replies": 1
+    },
+    {
+      "content": "BROWSER-LOSS-RELOAD",
+      "messages": 1,
+      "replies": 1
+    },
+    {
+      "content": "BROWSER-LOSS-RETRY",
+      "messages": 1,
+      "replies": 1
+    }
+  ],
+  "checks": {
+    "manual_retry_no_duplicate_message_or_reply": true,
+    "reload_resolves_pending_via_receipt": true,
+    "receipt_outage_keeps_pending": true,
+    "outage_reload_and_recovery_no_message_post": true
+  },
+  "note": "Socket destruction produced repeated upstream requests for the first send. All persisted message and reply counts remained one. No claim about exactly-once network delivery.",
+  "request_sequence": [
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 409
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 401
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 409
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 401
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 401
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/",
+        "status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "response-dropped",
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "upstream_status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "response-dropped",
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "upstream_status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "response-dropped",
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "upstream_status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "response-dropped",
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "upstream_status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/",
+        "status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "response-dropped",
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "upstream_status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "response-dropped",
+        "method": "POST",
+        "path": "/chat/v1/messages",
+        "upstream_status": 200
+      }
+    },
+    {
+      "edge_request": {
+        "method": "GET",
+        "path": "/chat/",
+        "status": 200
+      }
+    },
+    {
+      "browser_gate": {
+        "gate": "receipt-blocked",
+        "method": "POST",
+        "path": "/chat/v1/message-receipt"
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 503
+      }
+    },
+    {
+      "edge_request": {
+        "method": "POST",
+        "path": "/chat/v1/message-receipt",
+        "status": 200
+      }
+    }
+  ]
+}

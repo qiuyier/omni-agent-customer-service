@@ -1,4 +1,4 @@
-import {browserGate} from './browser-gate.mjs';
+import {browserGate,responseLoss} from './browser-gate.mjs';
 import {reloadable} from './reloadable.mjs';
 import {createSecureContext} from 'node:tls';
 import {validateSupportConfig} from '../../integrations/host-kit/onboarding.mjs';
@@ -24,6 +24,7 @@ const support=reloadable({readConfig:()=>JSON.parse(readFileSync(settings)),vali
 business.mount((...args)=>support.handle(...args));await support.reload();
 process.on('SIGUSR2',()=>support.reload().then(()=>console.log('support-reloaded')).catch(()=>console.log('support-reload-failed')));
 const gate=c.serveUI?browserGate({readMode:()=>{try{return readFileSync('/run/business/browser-gate','utf8').trim();}catch{return '';}},log:entry=>console.log(JSON.stringify({browser_gate:entry}))}):undefined;
-const edge=await startEdge({beforeForward:gate,origin:c.origin,upstreamOrigin:business.origin,serveUI:c.serveUI===true,audit:c.serveUI?(entry=>console.log(JSON.stringify({edge_request:entry}))):undefined});
+const loss=c.serveUI?responseLoss({readMode:()=>{try{return readFileSync('/run/business/browser-gate','utf8').trim();}catch{return '';}},log:entry=>console.log(JSON.stringify({browser_gate:entry}))}):undefined;
+const edge=await startEdge({afterResponse:loss,beforeForward:gate,origin:c.origin,upstreamOrigin:business.origin,serveUI:c.serveUI===true,audit:c.serveUI?(entry=>console.log(JSON.stringify({edge_request:entry}))):undefined});
 console.log('business-ready');
 for(const signal of ['SIGINT','SIGTERM'])process.once(signal,async()=>{await edge.close();await business.close();await support.close();});

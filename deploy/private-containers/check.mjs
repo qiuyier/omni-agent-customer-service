@@ -111,12 +111,13 @@ try{
  }
  if(browserMode){
   stage='browser_lab';
-  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'hold-renewal | hold-send | release | gate-audit | disconnect | reconnect | restart-gateway | rotate-stage | rotate-bad-config | rotate-activate | rotate-verify | audit | records | stop'}));
+  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'drop-response | drop-response-block-receipt | hold-renewal | hold-send | release | gate-audit | disconnect | reconnect | restart-gateway | rotate-stage | rotate-bad-config | rotate-activate | rotate-verify | audit | records | stop'}));
   const input=createInterface({input:process.stdin});
   const interrupt=()=>input.close();for(const signal of ['SIGINT','SIGTERM'])process.once(signal,interrupt);
   try{for await(const line of input){
    const command=line.trim();if(command==='stop')break;
    if(['hold-renewal','hold-send','release'].includes(command))await writeFile(join(dir,'business/browser-gate'),command==='hold-renewal'?'renewal':command==='hold-send'?'send':'');
+   else if(['drop-response','drop-response-block-receipt'].includes(command))await writeFile(join(dir,'business/browser-gate'),command==='drop-response'?'drop':'drop-block');
    else if(command==='gate-audit'){const logs=(await docker('logs',business)).stdout;console.log(logs.split('\n').filter(x=>x.startsWith('{')&&x.includes('browser_gate')).join('\n'));}
    else if(command==='rotate-stage')await rotation.stage();
    else if(command==='rotate-bad-config')await rotation.rejectInvalid();
