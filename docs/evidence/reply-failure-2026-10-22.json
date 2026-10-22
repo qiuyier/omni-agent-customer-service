@@ -1,0 +1,69 @@
+{
+  "browser_verified": true,
+  "external_model_calls": 0,
+  "model": "local controlled mock only",
+  "sends": [
+    {
+      "method": "POST",
+      "path": "/chat/v1/messages",
+      "status": 503,
+      "event_id": "94577b03-3315-4768-9239-ea8311f26849",
+      "content": "BROWSER-REPLY-FAIL 请说明测试服务",
+      "result": {
+        "code": "gateway_unavailable"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/v1/messages",
+      "status": 200,
+      "event_id": "94577b03-3315-4768-9239-ea8311f26849",
+      "content": "BROWSER-REPLY-FAIL 请说明测试服务",
+      "message_id": "ee037c11-353d-42b1-b69d-95932dbf0396",
+      "reply_message_id": "e2d4b06e-873f-4426-825f-855c5ebe9c93",
+      "result": {
+        "conversation_id": "wbc_c782ae9f18a0769678ba84aeb4f306993ade155424460a2d8d305b2a183c338b",
+        "message_id": "ee037c11-353d-42b1-b69d-95932dbf0396",
+        "reply_message_id": "e2d4b06e-873f-4426-825f-855c5ebe9c93",
+        "outcome": "replied"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/v1/messages",
+      "status": 200,
+      "event_id": "7cc3932c-9274-4234-ab88-1edf415a4bd9",
+      "content": "BROWSER-REPLY-HANDOFF 请延迟回复",
+      "message_id": "ea42e801-9269-4f35-89da-34ab8df58bdf",
+      "result": {
+        "conversation_id": "wbc_c782ae9f18a0769678ba84aeb4f306993ade155424460a2d8d305b2a183c338b",
+        "message_id": "ea42e801-9269-4f35-89da-34ab8df58bdf",
+        "outcome": "superseded"
+      }
+    }
+  ],
+  "database": [
+    {
+      "content": "BROWSER-REPLY-FAIL 请说明测试服务",
+      "messages": 1,
+      "replies": 1
+    },
+    {
+      "content": "BROWSER-REPLY-HANDOFF 请延迟回复",
+      "messages": 1,
+      "replies": 0
+    }
+  ],
+  "postgres_lifecycle": {
+    "test": "TestDatabaseDelayedBotAcrossHumanLifecycle",
+    "race": true,
+    "repetitions": 3,
+    "phases": [
+      "waiting",
+      "active",
+      "closed"
+    ],
+    "passed": true
+  },
+  "scope": "Browser covers failure/retry and waiting-human handoff. Active and closed phases verified by PostgreSQL HTTP integration test, not staff browser clicks."
+}

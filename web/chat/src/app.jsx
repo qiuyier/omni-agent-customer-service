@@ -4,7 +4,7 @@ import {requestJSON as baseRequest} from './protocol.mjs';
 import { demoPresentation } from './demo.mjs';
 import {usePolling,pollingLabel} from './use-polling.jsx';
 import {canReadDuringSend} from './handoff-read.mjs';
-import {reconcilePending} from './pending-receipt.mjs';
+import {reconcilePending,probeAccepted} from './pending-receipt.mjs';
 
 function Icon({ name, className = 'size-5', ...props }) {
   const paths = {
@@ -135,6 +135,7 @@ function useChat(fetcher,storageScope) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [pending, setPending] = useState(null);
+  const [pendingAccepted,setPendingAccepted] = useState(false);
   const [storageAvailable, setStorageAvailable] = useState(true);
   const [identityChecking, setIdentityChecking] = useState(false);
   const [sending, setSending] = useState(false);
@@ -171,7 +172,7 @@ function useChat(fetcher,storageScope) {
   async function initialize() {
     const task = start(); busyRef.current = true;
     setPrevious(null);setPreviousLoaded(false);setStartingRound(false);round.current=null;
-    setPhase('loading'); setError(''); setNotice(''); setMustReload(false); setPending(null); setMessages([]); setSession(null); setDraft(''); setSending(false); setRefreshing(false); setIdentityChecking(false);
+    setPhase('loading'); setError(''); setNotice(''); setMustReload(false); setPending(null); setPendingAccepted(false); setMessages([]); setSession(null); setDraft(''); setSending(false); setRefreshing(false); setIdentityChecking(false);
     identity.current = null;
     api.current.clear();
     try {
@@ -290,7 +291,7 @@ function useChat(fetcher,storageScope) {
       setPending(outgoing); setDraft('');
     }
     busyRef.current = true;
-    const task = start(); setSending(true); setError(''); setNotice('');
+    const task = start(); setSending(true); setPendingAccepted(false); setError(''); setNotice('');
     try {
       const result = await api.current.send(outgoing, task.signal);
       if (!task.active()) return;
@@ -312,7 +313,17 @@ function useChat(fetcher,storageScope) {
         if (task.active() && e.name !== 'AbortError') { setError('消息已确认发送，但最新记录暂时读取失败。请点击“刷新记录”，不需要重新发送。'); if (e.code === 'account_changed' || e.code === 'unauthorized') setMustReload(true); }
       }
     } catch (e) {
-      if (task.active() && e.name !== 'AbortError') report(e);
+      if (task.active() && e.name !== 'AbortError') {
+        report(e);
+        if(!['unauthorized','account_changed','event_conflict','invalid_request'].includes(e.code)){
+          try {
+            const accepted=await probeAccepted({api:api.current,conversationID:session.conversation_id,pending:outgoing,signal:task.signal,active:task.active});
+            if(accepted){setPendingAccepted(true);setError('');setNotice('消息已送达，但回复结果尚未确认。可刷新记录核对，或沿用原消息重试处理；无需重新输入问题。');}
+          } catch(receiptError) {
+            if(task.active()&&['unauthorized','account_changed'].includes(receiptError.code))report(receiptError);
+          }
+        }
+      }
     } finally { if (task.active()) { busyRef.current = false; setSending(false); } }
   }
 
@@ -349,7 +360,7 @@ function useChat(fetcher,storageScope) {
     }catch(e){if(task.active()&&e.name!=='AbortError')report(e);}
     finally{if(task.active()){busyRef.current=false;setRefreshing(false);}}
   }
-  return { session, phase, messages, status, truncated, error, notice, pending, storageAvailable, identityChecking, sending, refreshing, draft, setDraft, mustReload, initialize, refresh, send, handoff, requestingHuman, nextRound, startingRound, loadPrevious, previous, previousLoaded, updateState:autoUpdate.state };
+  return { session, phase, messages, status, truncated, error, notice, pending, pendingAccepted, storageAvailable, identityChecking, sending, refreshing, draft, setDraft, mustReload, initialize, refresh, send, handoff, requestingHuman, nextRound, startingRound, loadPrevious, previous, previousLoaded, updateState:autoUpdate.state };
 }
 
 function ChatSkeleton() {
@@ -409,7 +420,7 @@ export function Chat({fetcher=globalThis.fetch,storageScope="",businessAuthentic
             {chat.truncated && <p className="text-center text-[11px] leading-6 text-stone-400">仅显示最近的消息，较早记录未在此页展示。</p>}
             {chat.messages.length === 0 && !chat.pending && <div className="pb-8 pt-6 md:pt-10"><span className="mb-6 grid size-12 place-items-center rounded-2xl border border-stone-200 text-emerald-900"><Icon name="chat" className="size-6" /></span><h3 className="text-xl font-medium tracking-tight text-stone-800">你好，{chat.session.user.display_name}。</h3><p className="mt-3 max-w-md text-sm leading-7 text-stone-500">{demo.emptyDescription}</p><div className="mt-6 flex flex-wrap gap-2">{['你好，我想了解这个演示', '这个聊天页是如何工作的？'].map((value) => <button type="button" key={value} onClick={() => prompt(value)} disabled={blocked} className="rounded-full border border-stone-200 px-3.5 py-2.5 text-xs text-stone-500 transition-colors hover:border-emerald-800/30 hover:text-emerald-900 active:scale-[0.98] disabled:opacity-50">{value}</button>)}</div></div>}
             {chat.messages.map((message) => <Message key={message.id} message={message} />)}
-            {chat.pending && !canReadDuringSend(chat.sending,chat.status) && <article className="flex justify-end"><div className="max-w-[90%] sm:max-w-[82%]"><p className="mb-2 text-right text-[11px] text-stone-400">你 · {chat.sending ? '发送中' : '等待确认'}</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-tr-md border border-dashed border-emerald-800/30 bg-emerald-50/50 px-4 py-3.5 text-sm leading-7 text-stone-600 [overflow-wrap:anywhere]">{chat.pending.content}</p></div></article>}
+            {chat.pending && !canReadDuringSend(chat.sending,chat.status) && <article className="flex justify-end"><div className="max-w-[90%] sm:max-w-[82%]"><p className="mb-2 text-right text-[11px] text-stone-400">你 · {chat.sending ? '处理中' : chat.pendingAccepted ? '已送达 · 回复待确认' : '等待确认'}</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-tr-md border border-dashed border-emerald-800/30 bg-emerald-50/50 px-4 py-3.5 text-sm leading-7 text-stone-600 [overflow-wrap:anywhere]">{chat.pending.content}</p></div></article>}
             {chat.sending && <div role="status" className="flex items-center gap-2 text-xs text-stone-400"><span className="sending-dot size-1.5 rounded-full bg-emerald-700" />{canReadDuringSend(chat.sending,chat.status)?'已转入人工流程，消息记录持续更新；原发送请求收尾中，暂不能再次发送。':'正在发送并等待服务确认…'}</div>}
             <div ref={end} />
           </div>}
@@ -418,7 +429,7 @@ export function Chat({fetcher=globalThis.fetch,storageScope="",businessAuthentic
           {chat.error && <div className="mb-3"><InlineError>{chat.error}{chat.mustReload && <a href="/" className="ml-2 underline underline-offset-4">返回站点</a>}</InlineError></div>}
           {chat.notice && <p role="status" className="mb-3 text-xs leading-6 text-stone-500">{chat.notice}</p>}
           {!chat.storageAvailable && chat.session && <div className="mb-3 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs leading-6 text-stone-600"><p>浏览器会话存储不可用，或原待确认记录无法读取。为确保刷新后可以安全重试，发送已暂停。请允许会话存储，或更换浏览器后重新载入页面。</p></div>}
-          {chat.pending && !chat.sending ? <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-stone-200 bg-[#f8f8f4] p-4 sm:flex-row sm:items-center"><p className="max-w-md text-xs leading-6 text-stone-500">有一条消息尚未确认。重试会使用同一消息标识，不会创建新的发送请求标识。</p><button type="button" onClick={chat.send} disabled={chat.refreshing || chat.mustReload || closed || !chat.storageAvailable} className="primary-button shrink-0 disabled:opacity-40">重试待确认消息</button></div> : <form onSubmit={(event) => { event.preventDefault(); chat.send(); }}>
+          {chat.pending && !chat.sending ? <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-stone-200 bg-[#f8f8f4] p-4 sm:flex-row sm:items-center"><p className="max-w-md text-xs leading-6 text-stone-500">{chat.pendingAccepted?'原消息已接收，回复结果尚未确认。重试沿用原消息标识，不会新增问题。':'有一条消息尚未确认。重试会使用同一消息标识，不会创建新的发送请求标识。'}</p><button type="button" onClick={chat.send} disabled={chat.refreshing || chat.mustReload || closed || !chat.storageAvailable} className="primary-button shrink-0 disabled:opacity-40">{chat.pendingAccepted?'重试原消息处理':'重试待确认消息'}</button></div> : <form onSubmit={(event) => { event.preventDefault(); chat.send(); }}>
             <label htmlFor="message" className="mb-2 block text-xs font-medium text-stone-600">发送消息</label>
             <div className="rounded-xl border border-stone-200 bg-[#fcfcfa] p-3 transition-colors focus-within:border-emerald-800/60 focus-within:ring-2 focus-within:ring-emerald-800/5"><textarea ref={composer} id="message" name="message" rows={2} value={chat.draft} onChange={(event) => chat.setDraft(event.target.value)} disabled={blocked} aria-describedby="composer-help composer-count" aria-invalid={bytes > MAX_BYTES} placeholder={closed ? '当前会话已结束' : chat.sending ? '正在发送，请稍候…' : '写下你想说的…'} onKeyDown={(event) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.nativeEvent.isComposing) { event.preventDefault(); chat.send(); } }} className="block max-h-36 min-h-14 w-full resize-y bg-transparent text-sm leading-7 text-stone-800 outline-none placeholder:text-stone-400 disabled:cursor-not-allowed" /><div className="mt-2 flex items-center justify-between gap-3"><span id="composer-count" className={`font-mono text-[10px] ${bytes > MAX_BYTES ? 'font-semibold text-stone-900' : 'text-stone-400'}`}>{bytes.toLocaleString()} / 4,000 bytes</span><button type="submit" disabled={blocked || !validContent(chat.draft) || !chat.storageAvailable} className="primary-button inline-flex min-h-10 items-center gap-2 px-4 py-2 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400">{chat.sending ? '发送中…' : '发送'}<Icon name="send" className="size-4" /></button></div></div>
             <p id="composer-help" className="mt-2 text-[10px] leading-5 text-stone-400">Enter 换行 · Ctrl / ⌘ + Enter 发送 · 请勿发送真实个人信息</p>
