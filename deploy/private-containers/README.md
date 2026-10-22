@@ -16,7 +16,7 @@
 在仓库根目录运行（报告路径必须不存在）：
 
 ```sh
-node --test deploy/private-containers/transport.test.mjs
+node --test deploy/private-containers/*.test.mjs
 node deploy/private-containers/check.mjs --allow-isolated-test-writes --report /tmp/private-containers-new-report.json
 ```
 
@@ -24,7 +24,7 @@ node deploy/private-containers/check.mjs --allow-isolated-test-writes --report /
 
 ## 网络与凭据边界
 
-- 业务容器连接 edge 网络及 internal 私有网络；edge 仅发布随机宿主回环端口。edge 不是互联网反向代理，本轮也不提供页面 UI。
+- 业务容器连接 edge 网络及 internal 私有网络；edge 仅发布随机宿主回环端口。edge 不是互联网反向代理；默认不开放页面，显式 `--browser` 才提供已有登录页、聊天页和工作台。
 - 网关与数据库仅连接 internal 网络，没有宿主端口。TLS 通道共享网关网络命名空间，也不发布端口。网关原始 HTTP 仅监听该命名空间回环，业务容器不能直连 8093。
 - 通道使用本轮独立 CA、1 天有效期的服务端/客户端证书，校验服务器名 `gateway`，服务端额外固定客户端证书 SHA-256 指纹。CA 私钥从不挂载进容器。
 - 服务端证书/私钥仅挂载 TLS 容器；客户端证书/私钥及业务凭据仅挂载业务容器。宿主密钥和坐席密钥仍由网关检查，mTLS 不替代业务授权。
@@ -46,6 +46,28 @@ node deploy/private-containers/check.mjs --allow-isolated-test-writes --report /
 
 ## 不代表什么
 
-这不是生产发布包：公共侧仍是本机 HTTP，证书为临时测试证书，未实现证书轮换、生产域名、业务会话持久化、备份恢复、容量验收或多宿主 AI 隔离。本轮是 HTTP 协议与真实容器验收，没有进行浏览器 UI 验收，也没有模型请求。因此报告始终保留 `browser_verified: false`、`support_may_open: false`。
+这不是生产发布包：公共侧仍是本机 HTTP，证书为临时测试证书，未实现证书轮换、生产域名、业务会话持久化、备份恢复、容量验收或多宿主 AI 隔离。自动脚本证明 HTTP 协议与真实容器验收；打开浏览器实验环境不等于 UI 验收通过。脚本自身报告始终保留 `browser_verified: false`、`support_may_open: false`。
 
 业务入口不限定电商。更换业务系统时替换原业务身份适配和业务查询能力；通道、客服核心、人工流程及隔离验收可以复用。
+
+## 浏览器验收模式
+
+在交互终端执行（非交互 stdin 会拒绝启动）：
+
+```sh
+node deploy/private-containers/check.mjs --allow-isolated-test-writes --report /tmp/private-browser-new.json --browser
+```
+
+先自动跑接口验收，再输出本轮回环网址和临时登录账号。账号密码只用于本轮，不进入报告或页面资源；不要将终端完整输出粘贴进文档。界面复用仓库已有 fresh-onboarding/public 构建产物，不改页面设计。
+
+- 客户登录入口为输出的根地址，员工入口为 /staff-login；登录后分别进入 /chat/ 和 /desk/。
+- 终端命令 disconnect / reconnect 仅停止、恢复本轮通道；restart-gateway 仅重启本轮网关及通道。
+- audit 输出入口请求的方法、白名单路径和状态码，不记录 Cookie、Authorization、请求体或拒绝路径的查询参数。这是服务端观测，不是浏览器 HAR。
+- records 只读显示以 BROWSER- 开头的虚构消息，用于核对页面与数据库。测试消息请使用该前缀，不输入真实个人资料。
+- stop 结束实验并清理。失去交互进程或强制中止后，容器可能仍在；通过 Docker inspect 确认该轮名字、挂载目录和网络，再精确清理，不删除其他测试环境。
+
+验收步骤：客户一发送标记 → 切换客户二确认无客户一内容并发送另一标记 → 切回客户一确认无客户二内容 → 申请人工、员工登录接管回复 → disconnect 后发送并确认待确认提示 → reconnect 后重试 → restart-gateway 后核对历史 → 坐席关闭 → 客户刷新看到关闭并发起空白新咨询 → records 核对消息唯一及归属。
+
+页面资源保留正确 MIME，并返回 nosniff 和限制同源连接的 CSP。静态路径不支持 POST，不开放 .env、source map、任意路径或内部网关接口。
+
+2026-10-22 已完成上述真实浏览器操作：[验收记录](../../docs/private-container-browser-acceptance.md)。这是本机假回复验收，不是生产发布结论。

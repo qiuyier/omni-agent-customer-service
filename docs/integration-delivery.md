@@ -17,6 +17,8 @@
 
 跨容器接入现有独立实验：[私有分容器说明](../deploy/private-containers/README.md)。保留核心回环监听，以固定目标双向 TLS 通道连接，验证认证拒绝、断连及重启恢复；不等于生产网络或浏览器界面已验收。[本轮脱敏报告](evidence/private-containers-2026-10-21.json)。
 
+分容器实验已补充[本机浏览器验收记录](private-container-browser-acceptance.md)：双客户切换、人工处理、断连重试、网关重启和新咨询已验证；仍不代表生产发布或完整网络审计。
+
 ## 2. 从空配置复跑本地参考链路
 
 前置：仓库要求的 Go（见 go.mod）、Node 20+、Docker Compose、OpenSSL 可用；Docker 已启动；15433 未被其他服务占用；允许下载/使用依赖。不要先 source 根目录 .env。脚本会在独立的 omni_agent_webchat_demo 库迁移并新增随机测试数据，不能替换为业务生产库。已有该测试卷时保留旧数据，不删除卷来制造“全新环境”。

@@ -1,3 +1,4 @@
+import {createInterface} from 'node:readline';
 import {execFile as exec} from 'node:child_process';
 import {promisify} from 'node:util';
 import {mkdtemp,mkdir,writeFile,readFile,copyFile,rm,open,rename} from 'node:fs/promises';
@@ -8,7 +9,9 @@ import {randomBytes,X509Certificate,randomUUID} from 'node:crypto';
 import {verifyHost} from '../../integrations/host-kit/verify.mjs';
 const run=promisify(exec),root=fileURLToPath(new URL('../../',import.meta.url));
 const args=process.argv.slice(2);
-if(args.length!==3||args[0]!=='--allow-isolated-test-writes'||args[1]!=='--report')throw Error('usage: --allow-isolated-test-writes --report NEW_FILE');
+const browserMode=args.at(-1)==='--browser';if(browserMode)args.pop();
+if(browserMode&&!process.stdin.isTTY)throw Error('browser_mode_requires_interactive_terminal');
+if(args.length!==3||args[0]!=='--allow-isolated-test-writes'||args[1]!=='--report')throw Error('usage: --allow-isolated-test-writes --report NEW_FILE [--browser]');
 const reportFile=await open(resolve(args[2]),'wx',0o600);
 const report={started_at:new Date().toISOString(),passed:false,external_model_calls:0,browser_verified:false,support_may_open:false,checks:[]};
 const prefix='omni-private-'+randomBytes(5).toString('hex'),owned=[],nets=[];
@@ -35,7 +38,7 @@ try{
  await writeFile(join(dir,'transport/settings.json'),JSON.stringify({clientFingerprint:fingerprint}),{mode:0o600});
  const password=secret(),hostSecret=secret(),agentSecret=secret();
  const accounts=[{realm:'member',handle:'lin',number:'MEM:731',passphrase:password},{realm:'member',handle:'zhou',number:'MEM:864',passphrase:password},{realm:'operator',handle:'staff',number:'OPS:42',passphrase:password}];
- const config={accounts,hostSecret,agents:[{id:'staff-1',name:'Test staff',secret:agentSecret}]};
+ const config={serveUI:browserMode,accounts,hostSecret,agents:[{id:'staff-1',name:'Test staff',secret:agentSecret}]};
  await writeFile(join(dir,'business/settings.json'),JSON.stringify(config),{mode:0o600});
  stage='build_current_gateway';console.log(stage);
  const arch=(await docker('info','--format','{{.Architecture}}')).stdout.trim();
@@ -53,7 +56,8 @@ try{
  await docker('run','--rm','--network',nets[0],'--env-file',join(dir,'gateway.env'),'--entrypoint','/migrate',image);
  await container(gateway,'--network',nets[0],'--network-alias','gateway','--env-file',join(dir,'gateway.env'),image);
  // Copy only runtime modules: never mount repository .env, reports or Git data.
- const modules=['integrations/fresh-onboarding/business.mjs','integrations/fresh-onboarding/support.mjs','integrations/office-portal/legacy.mjs',...['adapter','identity.example','onboarding','proxy'].map(n=>'integrations/host-kit/'+n+'.mjs'),...['transport','business-worker','gateway-worker','probe'].map(n=>'deploy/private-containers/'+n+'.mjs')];
+ const modules=['integrations/fresh-onboarding/business.mjs','integrations/fresh-onboarding/support.mjs','integrations/office-portal/legacy.mjs',...['adapter','identity.example','onboarding','proxy'].map(n=>'integrations/host-kit/'+n+'.mjs'),...['transport','edge','business-worker','gateway-worker','probe'].map(n=>'deploy/private-containers/'+n+'.mjs')];
+ if(browserMode)for(const name of ['index.html','app.js','app.css'])modules.push('integrations/fresh-onboarding/public/'+name);
  for(const path of modules){await mkdir(dirname(join(dir,'source',path)),{recursive:true});await copyFile(join(root,path),join(dir,'source',path));}
  const nodeMount=['--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','-v',join(dir,'source')+':/src:ro'];
  await container(transport,'--network','container:'+gateway,...nodeMount,'-v',join(dir,'transport')+':/run/transport:ro','node:24-alpine','node','/src/deploy/private-containers/gateway-worker.mjs');
@@ -91,6 +95,23 @@ try{
  s=await call('/host/chat-session',{});ensure(s.status===200&&s.data.conversation_id===conversation,'restart_binding_preserved');token=s.data.access_token;
  const history=await call('/chat/v1/messages',undefined,token);ensure(history.status===200&&history.data.messages.filter(x=>x.content===content).length===1,'restart_history_preserved');
  const receipt=await call('/chat/v1/message-receipt',{event_id,content},token);ensure(receipt.status===200&&receipt.data.accepted&&receipt.data.message_id===sent.data.message_id,'restart_receipt_preserved');
+ if(browserMode){
+  stage='browser_lab';
+  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'disconnect | reconnect | restart-gateway | audit | records | stop'}));
+  const input=createInterface({input:process.stdin});
+  const interrupt=()=>input.close();for(const signal of ['SIGINT','SIGTERM'])process.once(signal,interrupt);
+  try{for await(const line of input){
+   const command=line.trim();if(command==='stop')break;
+   if(command==='disconnect')await docker('stop','-t','2',transport);
+   else if(command==='reconnect')await docker('start',transport);
+   else if(command==='restart-gateway'){await docker('stop','-t','2',transport);await docker('restart','-t','2',gateway);await docker('start',transport);}
+   else if(command==='audit'){const logs=(await docker('logs',business)).stdout;const entries=logs.split('\n').filter(x=>x.startsWith('{')).map(x=>JSON.parse(x)).filter(x=>x.edge_request);console.log(JSON.stringify({requests:entries}));}
+   else if(command==='records'){const sql="SELECT json_build_object('sender',sender,'content',content,'conversation_id',conversation_id,'id',id) FROM customer_service.messages WHERE content LIKE 'BROWSER-%' ORDER BY created_at,id";console.log((await docker('exec',pg,'psql','-U','lab','-d','lab','-At','-c',sql)).stdout);}
+   else {console.log('unknown command');continue;}
+   console.log(JSON.stringify({command,completed:true}));
+  }}finally{input.close();process.stdin.pause();for(const signal of ['SIGINT','SIGTERM'])process.removeListener(signal,interrupt);}
+  report.browser_lab_opened=true; // UI acceptance must be recorded separately; opening is not verification.
+ }
  report.passed=true;
 }catch{report.failed_stage=stage;process.exitCode=1;}
 finally{
