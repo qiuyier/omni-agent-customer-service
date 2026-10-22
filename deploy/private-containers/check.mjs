@@ -1,3 +1,4 @@
+import {rotationLab} from './rotation.mjs';
 import {createInterface} from 'node:readline';
 import {execFile as exec} from 'node:child_process';
 import {promisify} from 'node:util';
@@ -9,9 +10,10 @@ import {randomBytes,X509Certificate,randomUUID} from 'node:crypto';
 import {verifyHost} from '../../integrations/host-kit/verify.mjs';
 const run=promisify(exec),root=fileURLToPath(new URL('../../',import.meta.url));
 const args=process.argv.slice(2);
+const rotationMode=args.includes('--rotation');if(rotationMode)args.splice(args.indexOf('--rotation'),1);
 const browserMode=args.at(-1)==='--browser';if(browserMode)args.pop();
 if(browserMode&&!process.stdin.isTTY)throw Error('browser_mode_requires_interactive_terminal');
-if(args.length!==3||args[0]!=='--allow-isolated-test-writes'||args[1]!=='--report')throw Error('usage: --allow-isolated-test-writes --report NEW_FILE [--browser]');
+if(args.length!==3||args[0]!=='--allow-isolated-test-writes'||args[1]!=='--report')throw Error('usage: --allow-isolated-test-writes --report NEW_FILE [--browser] [--rotation]');
 const reportFile=await open(resolve(args[2]),'wx',0o600);
 const report={started_at:new Date().toISOString(),passed:false,external_model_calls:0,browser_verified:false,support_may_open:false,checks:[]};
 const prefix='omni-private-'+randomBytes(5).toString('hex'),owned=[],nets=[];
@@ -52,11 +54,11 @@ try{
  await writeFile(join(dir,'gateway.env'),['DATABASE_URL=postgres://lab:'+dbpass+'@'+pg+':5432/lab?sslmode=disable','WEBCHAT_HOST_ID='+prefix,'WEBCHAT_HOST_SECRET='+hostSecret,'WEBCHAT_REPLY_MODE=fake','WEBCHAT_ADDRESS=127.0.0.1:8093','WEBCHAT_AGENTS_JSON='+JSON.stringify([{source_id:prefix,id:'staff-1',secret:agentSecret}])].join('\n'),{mode:0o600});
  stage='start_isolated_services';console.log(stage);
  await container(pg,'--network',nets[0],'--env-file',join(dir,'pg.env'),'--tmpfs','/var/lib/postgresql/data','postgres:16-alpine');
- await wait(async()=>{await docker('exec',pg,'pg_isready','-U','lab','-d','lab');return true;});
+ await wait(async()=>{await docker('exec',pg,'pg_isready','-h','127.0.0.1','-U','lab','-d','lab');return true;});
  await docker('run','--rm','--network',nets[0],'--env-file',join(dir,'gateway.env'),'--entrypoint','/migrate',image);
  await container(gateway,'--network',nets[0],'--network-alias','gateway','--env-file',join(dir,'gateway.env'),image);
  // Copy only runtime modules: never mount repository .env, reports or Git data.
- const modules=['integrations/fresh-onboarding/business.mjs','integrations/fresh-onboarding/support.mjs','integrations/office-portal/legacy.mjs',...['adapter','identity.example','onboarding','proxy'].map(n=>'integrations/host-kit/'+n+'.mjs'),...['transport','edge','business-worker','gateway-worker','probe'].map(n=>'deploy/private-containers/'+n+'.mjs')];
+ const modules=['integrations/fresh-onboarding/business.mjs','integrations/fresh-onboarding/support.mjs','integrations/office-portal/legacy.mjs',...['adapter','identity.example','onboarding','proxy'].map(n=>'integrations/host-kit/'+n+'.mjs'),...['transport','edge','reloadable','business-worker','gateway-worker','probe'].map(n=>'deploy/private-containers/'+n+'.mjs')];
  if(browserMode)for(const name of ['index.html','app.js','app.css'])modules.push('integrations/fresh-onboarding/public/'+name);
  for(const path of modules){await mkdir(dirname(join(dir,'source',path)),{recursive:true});await copyFile(join(root,path),join(dir,'source',path));}
  const nodeMount=['--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','-v',join(dir,'source')+':/src:ro'];
@@ -95,14 +97,30 @@ try{
  s=await call('/host/chat-session',{});ensure(s.status===200&&s.data.conversation_id===conversation,'restart_binding_preserved');token=s.data.access_token;
  const history=await call('/chat/v1/messages',undefined,token);ensure(history.status===200&&history.data.messages.filter(x=>x.content===content).length===1,'restart_history_preserved');
  const receipt=await call('/chat/v1/message-receipt',{event_id,content},token);ensure(receipt.status===200&&receipt.data.accepted&&receipt.data.message_id===sent.data.message_id,'restart_receipt_preserved');
+ const rotation=rotationLab({dir,config,docker,ssl,gateway,transport,business,image,network:nets[0],nodeMount,ensure,wait});
+ if(rotationMode&&!browserMode){
+  stage='rotation';await rotation.stage();await rotation.rejectInvalid();
+  const pending={event_id:randomUUID(),content:'ROTATION pending message'};
+  ensure([401,403,502,503].includes((await call('/chat/v1/messages',pending,token)).status),'rotation_mismatch_fails_closed');
+  await rotation.activate();await rotation.verify();
+  s=await call('/host/chat-session',{});ensure(s.status===200&&s.data.conversation_id===conversation,'rotation_business_login_preserved');token=s.data.access_token;
+  const sentPending=await call('/chat/v1/messages',pending,token);ensure(sentPending.status===200,'rotation_pending_retry_accepted');
+  ensure((await call('/chat/v1/messages',pending,token)).status===200,'rotation_pending_identical_retry');
+  const restored=await call('/chat/v1/messages',undefined,token);ensure(restored.status===200&&restored.data.messages.filter(m=>m.content===pending.content).length===1&&restored.data.messages.filter(m=>m.content===content).length===1,'rotation_history_and_deduplication');
+  const rr=await call('/chat/v1/message-receipt',pending,token);ensure(rr.status===200&&rr.data.accepted&&rr.data.message_id===sentPending.data.message_id,'rotation_receipt_consistent');
+ }
  if(browserMode){
   stage='browser_lab';
-  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'disconnect | reconnect | restart-gateway | audit | records | stop'}));
+  console.log(JSON.stringify({browser_lab_ready:true,origin:config.origin,accounts:accounts.map(a=>({account:a.handle,password:a.passphrase,role:a.realm})),commands:'disconnect | reconnect | restart-gateway | rotate-stage | rotate-bad-config | rotate-activate | rotate-verify | audit | records | stop'}));
   const input=createInterface({input:process.stdin});
   const interrupt=()=>input.close();for(const signal of ['SIGINT','SIGTERM'])process.once(signal,interrupt);
   try{for await(const line of input){
    const command=line.trim();if(command==='stop')break;
-   if(command==='disconnect')await docker('stop','-t','2',transport);
+   if(command==='rotate-stage')await rotation.stage();
+   else if(command==='rotate-bad-config')await rotation.rejectInvalid();
+   else if(command==='rotate-activate')await rotation.activate();
+   else if(command==='rotate-verify')await rotation.verify();
+   else if(command==='disconnect')await docker('stop','-t','2',transport);
    else if(command==='reconnect')await docker('start',transport);
    else if(command==='restart-gateway'){await docker('stop','-t','2',transport);await docker('restart','-t','2',gateway);await docker('start',transport);}
    else if(command==='audit'){const logs=(await docker('logs',business)).stdout;const entries=logs.split('\n').filter(x=>x.startsWith('{')).map(x=>JSON.parse(x)).filter(x=>x.edge_request);console.log(JSON.stringify({requests:entries}));}
