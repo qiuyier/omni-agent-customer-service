@@ -2,6 +2,8 @@
 
 入口：.github/workflows/recovery.yml，名称 Recovery regression。
 
+优先级更新（2026-10-24）：按用户决定，云端首跑验收延后至 1.0.0 正式发布后，统一跟踪于[发布后优化录 OPT-001](post-1.0.0-improvements.md#opt-001github-云端-ci-首跑验收)。下文首次启用步骤保留为后续操作说明，不代表当前待立即执行任务。本地必要回归继续运行。
+
 ## 触发与范围
 
 - push / pull_request：运行默认回归，不创建数据库。
