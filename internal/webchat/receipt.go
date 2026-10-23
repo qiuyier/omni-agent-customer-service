@@ -30,6 +30,8 @@ func (g *Gateway) receipt(w http.ResponseWriter, r *http.Request, claims identit
 		ConversationID string `json:"conversation_id"`
 		EventID        string `json:"event_id"`
 		Accepted       bool   `json:"accepted"`
+		ReplyStatus    string `json:"reply_status,omitempty"`
+		RetryAllowed   bool   `json:"retry_allowed"`
 		MessageID      string `json:"message_id,omitempty"`
 	}{ConversationID: claims.conversation, EventID: request.EventID}
 	err := g.repo.WithinTx(r.Context(), func(tx conversation.Transaction) error {
@@ -58,6 +60,32 @@ func (g *Gateway) receipt(w http.ResponseWriter, r *http.Request, claims identit
 		}
 		result.Accepted = true
 		result.MessageID = message.ID()
+		_, replyErr := tx.FindReplyByTriggerMessageID(message.ID())
+		if replyErr == nil {
+			result.ReplyStatus = "replied"
+			return nil
+		}
+		if !errors.Is(replyErr, conversation.ErrReplyNotFound) {
+			return replyErr
+		}
+		result.ReplyStatus = "unavailable"
+		if current.Status() != conversation.StatusBotActive {
+			return nil
+		}
+		messages, listErr := tx.ListMessages(claims.conversation)
+		if listErr != nil {
+			return listErr
+		}
+		latest := ""
+		for _, candidate := range messages {
+			if candidate.Sender() == conversation.SenderCustomer {
+				latest = candidate.ID()
+			}
+		}
+		if latest == message.ID() {
+			result.ReplyStatus = "not_replied"
+			result.RetryAllowed = true
+		}
 		return nil
 	})
 	if err != nil {

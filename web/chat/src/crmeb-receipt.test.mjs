@@ -9,7 +9,7 @@ const pending={event_id:'11111111-1111-4111-a111-111111111111',content:'receipt 
 const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)};};
 test('CRMEB receipt renews only its query, never sends, and clears exact cache',async()=>{
  const paths=[],store=storage();savePending(store,s.conversation_id,pending);
- const replies=[response(s),response({},401),response(s),response({conversation_id:s.conversation_id,event_id:pending.event_id,accepted:true,message_id:'m'})];
+ const replies=[response(s),response({},401),response(s),response({conversation_id:s.conversation_id,event_id:pending.event_id,accepted:true,message_id:'m',reply_status:'replied',retry_allowed:false})];
  const api=createCRMEBAPI({getLogin:()=> 'a.b.c',fetcher:async(p,o)=>{paths.push(p);if(p.endsWith('message-receipt')){assert.deepEqual(JSON.parse(o.body),pending);assert.equal(o.headers['Authori-zation'],'Bearer a.b.c');assert.equal(o.headers['X-Omni-Chat-Token'],s.access_token);}return replies.shift();}});
  await api.open();assert.equal(await reconcilePending({api,storage:store,conversationID:s.conversation_id,pending,active:()=>true}),true);
  assert.equal(readPending(store,s.conversation_id),null);
@@ -19,6 +19,6 @@ for(const status of [200,401,503])test('late CRMEB receipt after account change 
  let login='a.b.c',finish;const store=storage();savePending(store,s.conversation_id,pending);
  const paths=[];const api=createCRMEBAPI({getLogin:()=>login,fetcher:async(p)=>{paths.push(p);return p.endsWith('session')?response(s):new Promise(r=>finish=r);}});
  await api.open();const task=reconcilePending({api,storage:store,conversationID:s.conversation_id,pending,active:()=>true});
- login='d.e.f';api.clear();finish(response({conversation_id:s.conversation_id,event_id:pending.event_id,accepted:true,message_id:'m'},status));
+ login='d.e.f';api.clear();finish(response({conversation_id:s.conversation_id,event_id:pending.event_id,accepted:true,message_id:'m',reply_status:'replied',retry_allowed:false},status));
  await assert.rejects(task,{name:'AbortError'});assert.deepEqual(readPending(store,s.conversation_id),{version:1,conversation_id:s.conversation_id,...pending});assert.equal(paths.length,2);
 });

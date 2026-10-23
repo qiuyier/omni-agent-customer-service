@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-23",
+  "browser_verified": true,
+  "external_model_calls": 0,
+  "checks": {
+    "reload_preserves_retry_button": true,
+    "explicit_retry_reuses_original_event": true,
+    "reload_never_generates_reply": true,
+    "handoff_disables_retry_and_reload_removes_it": true
+  },
+  "sends": [
+    {
+      "method": "POST",
+      "path": "/chat/v1/messages",
+      "status": 503,
+      "event_id": "4634532c-aa2a-4e1e-90e6-2cfff5431f94",
+      "content": "BROWSER-RELOAD-REPLY-20261023",
+      "result": {
+        "code": "gateway_unavailable"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/v1/messages",
+      "status": 200,
+      "event_id": "4634532c-aa2a-4e1e-90e6-2cfff5431f94",
+      "content": "BROWSER-RELOAD-REPLY-20261023",
+      "message_id": "74740b31-94f5-4316-903b-14eaf7b27e47",
+      "reply_message_id": "b61bc257-b226-42b5-a3a4-796657795988",
+      "result": {
+        "conversation_id": "wbc_d10585a8d4adec91e99c2157824cc6a17a3c805d6437335df9ece5e89e1c677c",
+        "message_id": "74740b31-94f5-4316-903b-14eaf7b27e47",
+        "reply_message_id": "b61bc257-b226-42b5-a3a4-796657795988",
+        "outcome": "replied"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/v1/messages",
+      "status": 503,
+      "event_id": "d226ec93-e78b-4907-8b36-395d1cd84133",
+      "content": "BROWSER-RELOAD-HANDOFF-20261023",
+      "result": {
+        "code": "gateway_unavailable"
+      }
+    }
+  ],
+  "database": [
+    {
+      "content": "BROWSER-RELOAD-HANDOFF-20261023",
+      "messages": 1,
+      "replies": 0
+    },
+    {
+      "content": "BROWSER-RELOAD-REPLY-20261023",
+      "messages": 1,
+      "replies": 1
+    }
+  ],
+  "scope": "Local mock only. Closed/claimed/superseded eligibility verified by Go gateway regression, not staff UI actions."
+}

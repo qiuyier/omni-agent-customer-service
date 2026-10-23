@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {savePending,readPending} from './protocol.mjs';
 import {reconcilePending,probeAccepted} from './pending-receipt.mjs';
 const pending={event_id:'2c8b50a1-0500-4000-9000-361942851810',content:'original'};
-const good={conversation_id:'a',event_id:pending.event_id,accepted:true,message_id:'m-1'};
+const good={conversation_id:'a',event_id:pending.event_id,accepted:true,message_id:'m-1',reply_status:'replied',retry_allowed:false};
 function fixture(){
  const map=new Map();const storage={getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};
  savePending(storage,'a',pending);savePending(storage,'b',pending);
@@ -45,5 +45,20 @@ test('send failure acceptance probe never clears pending or generates a reply',a
 test('acceptance probe rejects mismatches and late identity changes',async()=>{
  for(const value of [{...good,accepted:false},{...good,conversation_id:'b'},{...good,event_id:'other'},{...good,message_id:''},{}])assert.equal(await probeAccepted({...fixture(),api:{receipt:async()=>value}}),false);
  let current=true;const f=fixture();assert.equal(await probeAccepted({...f,active:()=>current,api:{receipt:async()=>{current=false;return good;}}}),false);
+});
+
+
+test('reload retains accepted unanswered event and never sends',async()=>{
+ const f=fixture();let state;const result={...good,reply_status:'not_replied',retry_allowed:true};
+ assert.equal(await reconcilePending({...f,onReplyState:s=>state=s,api:{receipt:async()=>result,send:()=>{throw Error('unexpected send');}}}),false);
+ assert.equal(state,'retry');assert.deepEqual(readPending(f.storage,'a').event_id,pending.event_id);
+});
+test('unknown reply contracts retain event without granting retry',async()=>{
+ for(const fields of [{reply_status:undefined,retry_allowed:undefined},{reply_status:'not_replied',retry_allowed:false},{reply_status:'replied',retry_allowed:true},{reply_status:'not_replied',retry_allowed:'true'}]){
+  const f=fixture();let state;assert.equal(await reconcilePending({...f,onReplyState:s=>state=s,api:{receipt:async()=>({...good,...fields})}}),false);assert.equal(state,'unknown');assert.ok(readPending(f.storage,'a'));
+ }
+});
+test('handoff closure and superseded receipt clear only local recovery state',async()=>{
+ const f=fixture();let state;assert.equal(await reconcilePending({...f,onReplyState:s=>state=s,api:{receipt:async()=>({...good,reply_status:'unavailable',retry_allowed:false})}}),true);assert.equal(state,'unavailable');assert.equal(readPending(f.storage,'a'),null);assert.ok(readPending(f.storage,'b'));
 });
 
