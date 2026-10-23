@@ -1,0 +1,45 @@
+# 生成中身份变化验收（2026-10-24）
+
+## 结论
+
+跨账号和生成中登录到期两个准确命中的真实浏览器场景通过。已受理的生成可以继续完成并保存到原会话，但旧身份失效后宿主拒绝其迟到响应；不能让 A 的回复进入 B。重新登录 A 后读取已保存结果，不能把“未收到成功响应”当成必须再次生成。
+
+没有修改应用认证、消息存储或前端逻辑。本轮增强测试工具并新增确定性宿主边界测试。
+
+## 实测
+
+### 生成中切换账号
+
+A 发送 INFLIGHT-SWITCH-20261023 A的生成中问题，页面显示处理中；在第二页切换 B。原聊天页随身份切为 B，空历史、空输入且无 A 的恢复入口。45 秒 mock 成功后，宿主原消息响应为 401 chat_session_required，B 仍为空。切回 A 后显示已完成回复、清除待确认提示，没有再次发送。
+
+SQL：该问题 customer=1、关联 bot=1，B 的会话消息=0。
+
+### 生成中到期：定序复测
+
+先启用 mock-fast 和 expire-next-model，再在页面发送 INFLIGHT-EXPIRY-HOOK-20261024 定序到期验收。测试工具收到模型请求后，通过私有父子 IPC 触发宿主正常到期清理，完成后才允许模拟回复返回。
+
+原始 UTC 时序：模型进入 2026-10-23T18:32:28.660Z，到期完成 18:32:28.662Z，总请求耗时204ms、mock成功200。宿主向原请求返回401 chat_session_required。页面显示登录失效、重试禁用，不显示迟到机器人回复。重新登录同账号后显示已有回复并清除待确认提示。
+
+本次报告只有1次消息POST、1次mock请求、0次外部模型请求。SQL：customer=1、关联bot=1。身份恢复只读取结果，没有自动补发。
+
+### 不计为命中的尝试
+
+第一次手动执行到期命令太晚：模型已完成，消息响应200，随后才登录到期。标记 INFLIGHT-EXPIRE-20261023 的尝试仅是“完成后到期”，不能充当生成中到期证据。保留原记录，没有隐藏这次未命中。
+
+## 回归与范围
+
+121项网页、独立宿主和实验参数测试通过。新增 inflight-identity.test.mjs 以Promise控制次序，覆盖到期和切换后迟到发送结果被拒绝、旧登录不能换凭证、B读不到A内容、A重登可读已有结果且不新增发送。其上游存储为内存模拟；真实PostgreSQL证据来自上述浏览器实验，不混为同一测试。
+
+本轮未验证真实外部SSO或真实模型取消，也不承诺登录到期会撤销已受理的后台任务。到期通过测试宿主时钟推进与正常清理实现，不修改系统时间、不新增公开故障HTTP接口。未完成生成的手动重试沿用此前登录到期恢复验收，本轮主要补齐生成成功但响应因身份变化被拒绝的边界。
+
+## 阅读顺序与证据
+
+1. 本文。
+2. integrations/standalone-host/inflight-identity.test.mjs。
+3. integrations/host-kit/adapter.mjs 中发送完成后的 current(login)/cap 检查。
+4. integrations/standalone-host/browser-lab.mjs 的 expireLogin、expire-next-model 和模型时序记录。
+5. [跨账号及首次未命中记录](../examples/archive/integration/standalone-host/2026-10-23T13-22-27-075Z-9bf2cf09/report.json)、[定序到期复测记录](../examples/archive/integration/standalone-host/2026-10-23T18-21-52-115Z-88f9ab29/report.json)。目录名为UTC时间，后者对应北京时间10月24日。
+
+截图：/tmp/omni-inflight-switch-b-20261023.png、/tmp/omni-inflight-expiry-recovered-20261024.png。原始报告passed仍为null：工具不自动认证人工验收，以本文的限定结论为准。
+
+两次实验服务均已停止，持久卷和虚构数据保留；没有修改外部CRMEB、共享PHP74或发布上线。

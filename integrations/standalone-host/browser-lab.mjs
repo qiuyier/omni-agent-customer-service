@@ -46,6 +46,14 @@ report.max_external_model_calls=maxExternalCalls;
 const faqFile=human?'ai-human-faq.json':'ai-faq.json';
 const agentEnv={WEBCHAT_AGENTS_JSON:JSON.stringify(agents.map(a=>({id:a.id,source_id:report.source_id,secret:a.secret}))),STANDALONE_AGENTS_JSON:JSON.stringify(agents)};
 let gateway,host,proxy,modelProxy,modelDown=false,dbStarted=false;
+let expireNextModel=false;
+async function expireLogin(){
+ await new Promise((resolve,reject)=>{
+  const done=message=>{if(message?.type!=='expire-demo-login-done')return;clearTimeout(timer);host.child.off('message',done);message.ok?resolve():reject(Error('expiry_failed'));};
+  const timer=setTimeout(()=>{host.child.off('message',done);reject(Error('expiry_timeout'));},5000);
+  host.child.on('message',done);host.child.send({type:'expire-demo-login'});
+ });
+}
 const children=[];
 async function launch(binary,args,environment,pattern,role){
   const child=spawn(binary,args,{cwd:root,env:environment,stdio:role==='business-backend'?['ignore','pipe','pipe','ipc']:['ignore','pipe','pipe']});
@@ -82,6 +90,7 @@ try {
         let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>1048576)throw Error('request too large');chunks.push(chunk);}
         if(modelDown){record.status=503;res.writeHead(503,{'Content-Type':'application/json'}).end(JSON.stringify({error:{message:'local injected failure',type:'unavailable'}}));return;}
         if(mockSlow){
+          if(expireNextModel){expireNextModel=false;await expireLogin();record.login_expired_before_reply_at=new Date().toISOString();}
           record.mock=true;record.mock_delay_ms=mockDelayMs;report.mock_requests++;save();console.log('mock-model: waiting up to '+mockDelayMs+'ms or release-model');
           await new Promise(resolve=>{
             const finish=()=>{clearTimeout(timer);pendingMock.delete(finish);res.off('close',finish);resolve();};
@@ -144,25 +153,21 @@ try {
   await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));publicOrigin='http://127.0.0.1:'+proxy.address().port;
   report.browser_origin=publicOrigin;save();
   console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','fail-next-receipt','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model','mock-fast','mock-slow']:[]),'stop']}));
-  console.log('Additional local-only command: expire-login (expire demo customer sessions through private worker IPC)');
+  console.log('Additional local-only commands: expire-login (expire demo customer sessions through private worker IPC), mock-window (45s mock reply window), expire-next-model (mock only: expire login after next model request enters, before replying)');
   const lines=readline.createInterface({input:process.stdin});
   for await(const line of lines){
     const command=line.trim();
     if(command==='stop')break;
     if(command==='restart-gateway'){await stop(gateway,'SIGKILL');gateway=await startGateway(gatewayPort);}
-    else if(command==='expire-login'){
-      await new Promise((resolve,reject)=>{
-        const done=message=>{if(message?.type!=='expire-demo-login-done')return;clearTimeout(timer);host.child.off('message',done);message.ok?resolve():reject(Error('expiry_failed'));};
-        const timer=setTimeout(()=>{host.child.off('message',done);reject(Error('expiry_timeout'));},5000);
-        host.child.on('message',done);host.child.send({type:'expire-demo-login'});
-      });
-    }
+    else if(command==='expire-login')await expireLogin();
+    else if(mockSlow&&command==='expire-next-model')expireNextModel=true;
     else if(command==='restart-backend'){await stop(host,'SIGKILL');host=await startBackend(hostPort);}
     else if(command==='drop-next')dropNext=true;
     else if(command==='fail-next-receipt')failNextReceipt=true;
     else if(command==='drop-next-consultation')dropNextConsultation=true;
     else if(mockSlow&&command==='release-model'){for(const finish of [...pendingMock])finish();}
     else if(mockSlow&&command==='mock-fast')mockDelayMs=200;
+    else if(mockSlow&&command==='mock-window')mockDelayMs=45000;
     else if(mockSlow&&command==='mock-slow')mockDelayMs=90000;
     else if(ai&&command==='model-down')modelDown=true;
     else if(ai&&command==='model-up')modelDown=false;
