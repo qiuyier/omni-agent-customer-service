@@ -157,16 +157,20 @@ function useChat(fetcher,storageScope) {
   };
   const report = (e) => { setError(errorMessage(e)); if (e.code === 'account_changed' || e.code === 'unauthorized') setMustReload(true); };
 
-  async function confirmPending(task,owner,recovered){
+  async function confirmPending(task,owner,recovered,busy=false){
     if(!recovered||!task.active())return;
     try{
+      let verified=false;
       const confirmed=await reconcilePending({api:api.current,storage:chatStorage(),conversationID:owner,pending:recovered,signal:task.signal,active:()=>task.active()&&round.current===owner,onReplyState:state=>{
+        verified=true;
         setError('');setPendingAccepted(true);setReplyRetryAllowed(state==='retry');
-        setNotice(state==='retry'?'原问题已送达，尚无机器人回复。可重试回复，沿用原消息，不会自动发送。':state==='replied'?'原问题已有回复，已清除待确认提示。':state==='unavailable'?'原问题已接收，但已转人工、关闭或被后续问题替代，不再重试机器人回复。':'原问题已接收，但暂无法核实回复状态。请刷新记录，暂不重试。');
+        setNotice(state==='retry'&&busy?'原问题正在其他请求中处理，请等待记录更新；不会自动重试。':state==='retry'?'原问题已送达，尚无机器人回复。可重试回复，沿用原消息，不会自动发送。':state==='replied'?'原问题已有回复，已清除待确认提示。':state==='unavailable'?'原问题已接收，但已转人工、关闭或被后续问题替代，不再重试机器人回复。':'原问题已接收，但暂无法核实回复状态。请刷新记录，暂不重试。');
       }});
+      if(!verified&&task.active())setReplyRetryAllowed(false);
       if(confirmed&&task.active()){setPending(null);setReplyRetryAllowed(false);}
     }catch(e){
       if(task.active()&&e.name!=='AbortError'){
+        setReplyRetryAllowed(false);
         setNotice('暂未能核实原消息的接收结果，待确认内容已保留，不会自动重发。');
         if(e.code==='account_changed'||e.code==='unauthorized')report(e);
       }
@@ -264,6 +268,8 @@ function useChat(fetcher,storageScope) {
       if(host?.user?.id!==session.user.id){await initialize();return;}
       const data=await api.current.history(task.signal);
       if(active())applyHistory(data,owner);
+      // A receipt probe is read-only; never reconcile an in-flight local send.
+      if(active()&&!sending&&pending)await confirmPending({signal:task.signal,active},owner,pending);
     }catch(e){if(active()&&(e.code==='account_changed'||e.code==='unauthorized'))report(e);throw e;}
   },phase==='ready'&&!!session&&!mustReload&&!identityChecking&&(!sending||handoffRead)&&!refreshing&&!startingRound&&!requestingHuman,session?.conversation_id);
 
@@ -328,7 +334,7 @@ function useChat(fetcher,storageScope) {
         report(e);
         if(!['unauthorized','account_changed','event_conflict','invalid_request'].includes(e.code)){
           try {
-            await confirmPending(task,session.conversation_id,outgoing);
+            await confirmPending(task,session.conversation_id,outgoing,e.code==='busy');
           } catch(receiptError) {
             if(task.active()&&['unauthorized','account_changed'].includes(receiptError.code))report(receiptError);
           }

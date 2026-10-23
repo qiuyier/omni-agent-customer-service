@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {savePending,readPending} from './protocol.mjs';
 import {reconcilePending,probeAccepted} from './pending-receipt.mjs';
+import {createPoller} from './polling.mjs';
+import {readFileSync} from 'node:fs';
 const pending={event_id:'2c8b50a1-0500-4000-9000-361942851810',content:'original'};
 const good={conversation_id:'a',event_id:pending.event_id,accepted:true,message_id:'m-1',reply_status:'replied',retry_allowed:false};
 function fixture(){
@@ -60,5 +62,33 @@ test('unknown reply contracts retain event without granting retry',async()=>{
 });
 test('handoff closure and superseded receipt clear only local recovery state',async()=>{
  const f=fixture();let state;assert.equal(await reconcilePending({...f,onReplyState:s=>state=s,api:{receipt:async()=>({...good,reply_status:'unavailable',retry_allowed:false})}}),true);assert.equal(state,'unavailable');assert.equal(readPending(f.storage,'a'),null);assert.ok(readPending(f.storage,'b'));
+});
+
+test('background probes revoke previously allowed retry without generating',async()=>{
+ for(const terminal of ['replied','unavailable']){
+  const f=fixture();let receipt={...good,reply_status:'not_replied',retry_allowed:true},next,state,calls=0;
+  const api={receipt:async()=>{calls++;return receipt;},send:()=>assert.fail('poll must not send')};
+  const poller=createPoller({schedule:fn=>{next=fn;return 1;},unschedule:()=>{},read:async task=>{
+   await reconcilePending({...f,api,...task,onReplyState:s=>state=s});
+  }});
+  await next();assert.equal(state,'retry');assert.ok(readPending(f.storage,'a'));
+  receipt={...good,reply_status:terminal,retry_allowed:false};
+  await next();assert.equal(state,terminal);assert.equal(readPending(f.storage,'a'),null);assert.equal(calls,2);poller.stop();
+ }
+});
+test('invalidated background probe cannot clear pending or restore retry eligibility',async()=>{
+ for(const reply_status of ['replied','not_replied']){
+  const f=fixture();let next,finish;const states=[];
+  const poller=createPoller({schedule:fn=>{next=fn;return 1;},unschedule:()=>{},read:task=>reconcilePending({...f,...task,onReplyState:s=>states.push(s),api:{receipt:()=>new Promise(r=>finish=r)}})});
+  const work=next();poller.invalidate();finish({...good,reply_status,retry_allowed:reply_status==='not_replied'});await work;
+  assert.deepEqual(states,[]);assert.ok(readPending(f.storage,'a'));poller.stop();
+ }
+});
+test('customer polling wires idle receipt reconciliation with operation-scoped validity',()=>{
+ const source=readFileSync(new URL('./app.jsx',import.meta.url),'utf8');
+ assert.match(source,/version===operation.current.id&&round.current===owner/);
+ assert.match(source,/if\(active\(\)&&!sending&&pending\)await confirmPending\(\{signal:task.signal,active\},owner,pending\)/);
+ assert.match(source,/setReplyRetryAllowed\(false\);\s*setNotice\('暂未能核实/);
+ assert.match(source,/confirmPending\(task,session.conversation_id,outgoing,e.code==='busy'\)/);
 });
 
