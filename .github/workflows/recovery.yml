@@ -1,0 +1,74 @@
+name: Recovery regression
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      postgres:
+        description: Run disposable PostgreSQL regression (test writes only)
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      RUN_POSTGRES: ${{ github.event_name == 'workflow_dispatch' && inputs.postgres }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Prepare artifact directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/omni-recovery-ci"
+          printf 'TMPDIR=%s/omni-recovery-ci\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Validate regression runner
+        run: |
+          set -o pipefail
+          node --test scripts/recovery_check.test.mjs scripts/recovery_check_cli.test.mjs scripts/recovery_ci.test.mjs 2>&1 | tee "$TMPDIR/runner-tests.log"
+      - name: Compile dependencies before bounded test execution
+        run: |
+          set -o pipefail
+          go build -o "$RUNNER_TEMP/recovery-host-gateway" ./integrations/standalone-host/gateway 2>&1 | tee "$TMPDIR/compile.log"
+          go test -race -run '^$' ./internal/webchat ./internal/persistence/postgres 2>&1 | tee -a "$TMPDIR/compile.log"
+      - name: Configure isolated local Docker context
+        if: github.event_name == 'workflow_dispatch' && inputs.postgres
+        run: |
+          set -o pipefail
+          docker context create desktop-linux --docker host=unix:///var/run/docker.sock 2>&1 | tee "$TMPDIR/docker-context.log"
+          docker --context desktop-linux info 2>&1 | tee -a "$TMPDIR/docker-context.log"
+      - name: Run recovery regression
+        run: |
+          set -o pipefail
+          if [[ "$RUN_POSTGRES" == 'true' ]]; then
+            node scripts/recovery_check.mjs --postgres --allow-test-writes 2>&1 | tee "$TMPDIR/recovery-console.log"
+          else
+            node scripts/recovery_check.mjs 2>&1 | tee "$TMPDIR/recovery-console.log"
+          fi
+      - name: Upload reports even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/omni-recovery-ci/*.log
+            ${{ runner.temp }}/omni-recovery-ci/omni-recovery-check-*/report.json
+            ${{ runner.temp }}/omni-recovery-ci/omni-recovery-check-*/*.log
+          if-no-files-found: warn
+          retention-days: 14

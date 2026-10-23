@@ -1,5 +1,7 @@
 # 恢复与身份隔离统一回归
 
+GitHub Actions 自动运行、手动数据库验收及日志下载见 [CI 使用说明](recovery-ci.md)。
+
 ## 使用
 
 在仓库根目录运行（需要项目支持的 Node.js、Go，race 测试需要可用的本机 C 工具链）：
