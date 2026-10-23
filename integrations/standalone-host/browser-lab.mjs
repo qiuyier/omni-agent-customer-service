@@ -41,6 +41,7 @@ report.human_enabled=human;
 report.mock_slow_ai=mockSlow;
 report.mock_requests=0;
 const pendingMock=new Set();
+let mockDelayMs=90000;
 report.max_external_model_calls=maxExternalCalls;
 const faqFile=human?'ai-human-faq.json':'ai-faq.json';
 const agentEnv={WEBCHAT_AGENTS_JSON:JSON.stringify(agents.map(a=>({id:a.id,source_id:report.source_id,secret:a.secret}))),STANDALONE_AGENTS_JSON:JSON.stringify(agents)};
@@ -81,10 +82,10 @@ try {
         let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>1048576)throw Error('request too large');chunks.push(chunk);}
         if(modelDown){record.status=503;res.writeHead(503,{'Content-Type':'application/json'}).end(JSON.stringify({error:{message:'local injected failure',type:'unavailable'}}));return;}
         if(mockSlow){
-          record.mock=true;report.mock_requests++;save();console.log('mock-model: waiting for release-model');
+          record.mock=true;record.mock_delay_ms=mockDelayMs;report.mock_requests++;save();console.log('mock-model: waiting up to '+mockDelayMs+'ms or release-model');
           await new Promise(resolve=>{
             const finish=()=>{clearTimeout(timer);pendingMock.delete(finish);res.off('close',finish);resolve();};
-            const timer=setTimeout(finish,90000);
+            const timer=setTimeout(finish,mockDelayMs);
             pendingMock.add(finish);res.once('close',finish);
           });
           if(res.destroyed){record.status=499;return;}
@@ -141,7 +142,7 @@ try {
   });
   await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));publicOrigin='http://127.0.0.1:'+proxy.address().port;
   report.browser_origin=publicOrigin;save();
-  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','fail-next-receipt','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model']:[]),'stop']}));
+  console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','fail-next-receipt','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model','mock-fast','mock-slow']:[]),'stop']}));
   const lines=readline.createInterface({input:process.stdin});
   for await(const line of lines){
     const command=line.trim();
@@ -152,6 +153,8 @@ try {
     else if(command==='fail-next-receipt')failNextReceipt=true;
     else if(command==='drop-next-consultation')dropNextConsultation=true;
     else if(mockSlow&&command==='release-model'){for(const finish of [...pendingMock])finish();}
+    else if(mockSlow&&command==='mock-fast')mockDelayMs=200;
+    else if(mockSlow&&command==='mock-slow')mockDelayMs=90000;
     else if(ai&&command==='model-down')modelDown=true;
     else if(ai&&command==='model-up')modelDown=false;
     else {console.log('unknown command');continue;}

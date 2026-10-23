@@ -90,5 +90,6 @@ test('customer polling wires idle receipt reconciliation with operation-scoped v
  assert.match(source,/if\(active\(\)&&!sending&&pending\)await confirmPending\(\{signal:task.signal,active\},owner,pending\)/);
  assert.match(source,/setReplyRetryAllowed\(false\);\s*setNotice\('暂未能核实/);
  assert.match(source,/confirmPending\(task,session.conversation_id,outgoing,e.code==='busy'\)/);
+ assert.match(source,/setSending\(true\); if\(!pending\)setPendingAccepted\(false\); setReplyRetryAllowed\(false\)/);
 });
 

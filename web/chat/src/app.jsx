@@ -301,7 +301,7 @@ function useChat(fetcher,storageScope) {
       setPending(outgoing); setDraft('');
     }
     busyRef.current = true;
-    const task = start(); setSending(true); setPendingAccepted(false); setError(''); setNotice('');
+    const task = start(); setSending(true); if(!pending)setPendingAccepted(false); setReplyRetryAllowed(false); setError(''); setNotice('');
     try {
       if(pending){
         const receipt=await api.current.receipt(outgoing,task.signal);
