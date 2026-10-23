@@ -16,6 +16,9 @@
 
 示例资料、回归样本和历史实验的分类入口见 [examples 阅读指南](examples/README.md)。
 
+回复恢复、人工接管与身份隔离的一键回归入口：`node scripts/recovery_check.mjs`。
+可选一次性 PostgreSQL 验收及报告说明见[恢复与身份隔离回归](docs/recovery-regression.md)。
+
 ## 当前进度
 
 校验器新增共享建议边界与 `advice_kind` 约束：12 题有 10 题符合预期、2 题错误，
