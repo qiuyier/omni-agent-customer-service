@@ -48,7 +48,7 @@ const agentEnv={WEBCHAT_AGENTS_JSON:JSON.stringify(agents.map(a=>({id:a.id,sourc
 let gateway,host,proxy,modelProxy,modelDown=false,dbStarted=false;
 const children=[];
 async function launch(binary,args,environment,pattern,role){
-  const child=spawn(binary,args,{cwd:root,env:environment,stdio:['ignore','pipe','pipe']});
+  const child=spawn(binary,args,{cwd:root,env:environment,stdio:role==='business-backend'?['ignore','pipe','pipe','ipc']:['ignore','pipe','pipe']});
   const record={role,pid:child.pid,stopped:false};report.processes.push(record);
   const entry={child,record,closed:new Promise(resolve=>child.once('close',(code,signal)=>{record.exit_code=code;record.signal=signal;resolve();}))};children.push(entry);
   child.stderr.resume();
@@ -124,6 +124,7 @@ try {
       const upstream=await fetch(host.origin+req.url,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:body,redirect:'manual',signal:AbortSignal.timeout(ai?130000:25000)});
       const data=Buffer.from(await upstream.arrayBuffer());
       const entry={method:req.method,path:req.url,status:upstream.status};
+      if(upstream.status>=400){try{const code=JSON.parse(data).code;if(typeof code==='string'&&/^[a-z_]{1,64}$/.test(code))entry.error_code=code;}catch{}}
       if(req.method==='POST'&&['/chat/v1/handoff','/chat/v1/consultations','/desk/action'].includes(req.url)){try{entry.request=JSON.parse(body);entry.result=JSON.parse(data);}catch{}}
       if(req.url==='/chat/v1/messages'&&req.method==='POST'){
         try{const sent=JSON.parse(body);entry.event_id=sent.event_id;entry.content=sent.content;const result=JSON.parse(data);entry.message_id=result.message_id;entry.reply_message_id=result.reply_message_id;entry.result=result;}catch{}
@@ -143,11 +144,19 @@ try {
   await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));publicOrigin='http://127.0.0.1:'+proxy.address().port;
   report.browser_origin=publicOrigin;save();
   console.log(JSON.stringify({browser_origin:publicOrigin,report:output+'/report.json',reply_mode:report.reply_mode,mock_slow_ai:mockSlow,commands:['restart-gateway','restart-backend','drop-next','fail-next-receipt','drop-next-consultation',...(ai?['model-down','model-up']:[]),...(mockSlow?['release-model','mock-fast','mock-slow']:[]),'stop']}));
+  console.log('Additional local-only command: expire-login (expire demo customer sessions through private worker IPC)');
   const lines=readline.createInterface({input:process.stdin});
   for await(const line of lines){
     const command=line.trim();
     if(command==='stop')break;
     if(command==='restart-gateway'){await stop(gateway,'SIGKILL');gateway=await startGateway(gatewayPort);}
+    else if(command==='expire-login'){
+      await new Promise((resolve,reject)=>{
+        const done=message=>{if(message?.type!=='expire-demo-login-done')return;clearTimeout(timer);host.child.off('message',done);message.ok?resolve():reject(Error('expiry_failed'));};
+        const timer=setTimeout(()=>{host.child.off('message',done);reject(Error('expiry_timeout'));},5000);
+        host.child.on('message',done);host.child.send({type:'expire-demo-login'});
+      });
+    }
     else if(command==='restart-backend'){await stop(host,'SIGKILL');host=await startBackend(hostPort);}
     else if(command==='drop-next')dropNext=true;
     else if(command==='fail-next-receipt')failNextReceipt=true;

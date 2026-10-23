@@ -173,5 +173,13 @@ test('logout suppresses an in-flight history response; expired login cannot acce
   assert.equal((await call('/demo/logout',{method:'POST',body:{},cookie:login.cookie})).status,204);release();
   const result=await pending;assert.equal(result.status,401);assert.doesNotMatch(JSON.stringify(result.data),/must not escape/);
   const next=await call('/demo/login',{method:'POST',body:{account:'lin'}});clock+=1800001;
+  const expired=await call('/host/chat-session',{method:'POST',body:{},cookie:next.cookie});
+  assert.equal(expired.status,401);assert.equal(expired.data.code,'host_login_required');
+  const anonymous=await call('/host/me',{cookie:next.cookie});
+  assert.equal(anonymous.status,200);assert.equal(anonymous.data.user,null);
+  assert.equal((await call('/chat/v1/messages',{method:'POST',body:{event_id:'expired',content:'must not send'},cookie:next.cookie,token})).status,401);
+  const relogin=await call('/demo/login',{method:'POST',body:{account:'lin'}});
+  const recovered=await call('/host/chat-session',{method:'POST',body:{},cookie:relogin.cookie});
+  assert.equal(recovered.status,200);assert.equal(recovered.data.conversation_id,conversation);
   assert.equal((await call('/host/chat-session',{method:'POST',body:{},cookie:next.cookie})).status,401);
 });
