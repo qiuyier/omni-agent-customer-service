@@ -23,6 +23,8 @@
 
 当前优先级（2026-10-24）：先跑通通用客服系统的核心端到端流程。非阻断完善统一记录在[1.0.0 发布后优化录](docs/post-1.0.0-improvements.md)，正式发布后再安排；GitHub 云端 CI 首跑已转入该清单。核心功能与安全阻断问题仍须发布前解决。
 
+本轮[核心接待闭环验收](docs/core-flow-acceptance.md)：独立入口真实 AI → 人工 → 结束 → 新咨询通过；CRMEB 真实身份人工链路 32 项通过。CRMEB 同实例真实 AI 联合浏览器验收仍未完成，不混用两套证据。
+
 校验器新增共享建议边界与 `advice_kind` 约束：12 题有 10 题符合预期、2 题错误，
 未放宽覆盖检查、未接入正式回复，见[建议边界修正记录](examples/archive/knowledge/webchat/grounding-advice-v4.md)。
 

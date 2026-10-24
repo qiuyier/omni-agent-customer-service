@@ -18,12 +18,23 @@ try{
  ensure((await call('/api/omni-chat/desk/me','GET',customers[0])).status===401,'customer_cannot_be_staff');
  ensure((await call('/api/omni-chat/session','POST',staff,{})).status===401,'staff_cannot_be_customer');
  const sessions=[];for(const t of customers){const r=await call('/api/omni-chat/session','POST',t,{});ensure(r.status===200&&r.data.human_enabled&&r.data.reply_mode==='fake','fake_human_session_'+sessions.length);sessions.push(r.data);}
- const [a,b]=sessions;ensure(a.conversation_id!==b.conversation_id,'customer_isolation');
+ let [a,b]=sessions;ensure(a.conversation_id!==b.conversation_id,'customer_isolation');
+ // Existing test accounts may be left on a closed consultation. Start a new
+ // round through the public API; never erase history or steal an active desk.
+ const initial=await call('/api/omni-chat/messages','GET',customers[0],undefined,a.access_token);
+ ensure(initial.status===200,'initial_history');
+ if(initial.data.status==='closed'){
+  const next=await call('/api/omni-chat/consultations','POST',customers[0],{},a.access_token);
+  ensure(next.status===200,'start_after_existing_closed_round');
+  const fresh=await call('/api/omni-chat/session','POST',customers[0],{});
+  ensure(fresh.status===200&&fresh.data.conversation_id===next.data.conversation_id,'bind_fresh_round');a=fresh.data;
+ }else ensure(initial.data.status==='bot_active','initial_round_not_bot_active');
  ensure((await call('/api/omni-chat/handoff','POST',customers[1],{},a.access_token)).status===401,'foreign_handoff_rejected');
  const client=(path,method,body)=>call('/api/omni-chat/'+path,method,customers[0],body,a.access_token);
  const action=body=>call('/api/omni-chat/desk/action','POST',staff,{conversation_id:a.conversation_id,expected_agent_id:me.data.agent.id,...body});
  const content='人工链路自动验收 '+crypto.randomUUID();
- ensure((await client('messages','POST',{event_id:crypto.randomUUID(),content})).status===200,'customer_message');
+ const sentCustomer=await client('messages','POST',{event_id:crypto.randomUUID(),content});
+ ensure(sentCustomer.status===200,'customer_message_http_'+sentCustomer.status);
  const handoff=await client('handoff','POST',{});ensure(handoff.status===200&&handoff.data.status==='waiting_human','handoff');
  const queue=await call('/api/omni-chat/desk/queue','GET',staff);ensure(queue.data.items?.some(x=>x.conversation_id===a.conversation_id),'queue_visible');
  ensure((await action({action:'reply',event_id:crypto.randomUUID(),content:'不得在接管前发送'})).status!==200,'reply_before_claim_denied');
