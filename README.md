@@ -8,6 +8,8 @@
 
 首次使用先读[最小使用指南](docs/minimal-use.md)：离线启动、真实业务接入、模型/资料配置、人工接待和停止恢复。1.0.0 尚未发布，剩余交付与上线条件见[发布前清单](docs/release-readiness.md)。
 
+要直接运行带持久化和人工接待的整套本机参考系统，见[固定参考部署](deploy/reference/README.md)：稳定配置、专用 PostgreSQL 卷、网关及业务/页面入口，停止后重启可恢复历史；当前仅演示认证和固定回复，不是公网生产安装包。
+
 本项目是通用客服底座，不绑定电商或其他行业；业务资料、规则和外部系统适配由接入方提供。
 浏览器客户与坐席接入优先阅读[当前 WebChat 接口与职责](docs/system-integration.md)及[交付指南](docs/integration-delivery.md)。当前自动闭环基线为 `webchat-receipt-v1`，旧报告需重新验证回执能力。
 

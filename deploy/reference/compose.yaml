@@ -1,0 +1,22 @@
+name: omni-reference-local
+services:
+  postgres:
+    image: postgres:16.15-bookworm
+    environment:
+      POSTGRES_DB: omni_reference
+      POSTGRES_USER: omni_reference
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    ports: ["127.0.0.1:15435:5432"]
+    volumes: ["data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: [CMD, pg_isready, -U, omni_reference, -d, omni_reference]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+secrets:
+  postgres_password:
+    file: ../../.local/reference/postgres-password
+volumes:
+  data:
