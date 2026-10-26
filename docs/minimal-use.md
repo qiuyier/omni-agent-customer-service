@@ -49,7 +49,7 @@ go build -o "$delivery_bin/migrate" ./cmd/migrate
 
 `-check-config` 检查格式；`-check-resources` 连接数据库/检查表结构，在 AI 模式读取 FAQ，但不调用模型。缺表不能靠切成内存模式绕过。迁移输出需按敏感运维日志保管，不能直接公开底层错误。
 
-5. 在业务服务挂载身份适配及同源路由，提供客户聊天页和坐席页。Node 优先使用 [host-kit 最短装配](../integrations/host-kit/quickstart.md)；该便捷装配当前仅 fake＋人工。PHP/Java 按 [接口与职责](system-integration.md)实现等价边界。AI 适配参照 C，不能直接把便捷装配的模式改成 ai 就认为支持。
+5. 在业务服务挂载身份适配及同源路由，提供客户聊天页和坐席页。Node 优先使用 [host-kit 最短装配](../integrations/host-kit/quickstart.md)，默认 fake＋人工；显式 ai 需 postgres、已配置的 AI 网关及一致的模式元数据，参照 [固定部署 AI 说明](../deploy/reference/AI.md)。PHP/Java 按 [接口与职责](system-integration.md)实现等价边界，不能只改模式提示代替实际配置。
 6. 前端身份、登录、退出 URL 与原系统保持一致；私有宿主/坐席密钥只在服务端，禁止公开 `/internal/*`。网关只监听回环；跨容器不等于把它改成公网监听，参考 [私有通道实验的边界](../deploy/private-containers/README.md)。
 7. 按 [交接表](../integrations/host-kit/starter/handoff.md)验收真实登录、两个客户隔离、转人工、接管、回复、关闭、新咨询、注销与重启恢复。示例通过不能代填你的系统。
 

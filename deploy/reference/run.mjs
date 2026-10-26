@@ -1,10 +1,11 @@
 // Stable local reference entry point. No random runtime identity, fault proxy,
-// model configuration, migrations-on-start or automatic Docker lifecycle.
+// implicit model activation, migrations-on-start or automatic Docker lifecycle.
 import {mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {initialize,load,environment,ports} from './config.mjs';
 import {assertAvailable} from './ports.mjs';
+import {loadAI} from './ai.mjs';
 import {startBusiness} from '../../integrations/fresh-onboarding/business.mjs';
 import {attachSupport} from '../../integrations/fresh-onboarding/support.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
@@ -22,17 +23,21 @@ async function shutdown(){
  if(child&&child.exitCode===null&&child.signalCode===null){child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),8000);await child.done;clearTimeout(timer);}
 }
 try{
- const command=process.argv[2];if(process.argv.length!==3||!['init','check','migrate','start'].includes(command))throw Error('invalid command');
+ const command=process.argv[2];if(process.argv.length!==3||!['init','check','migrate','start','check-ai','start-ai'].includes(command))throw Error('invalid command');
+ const ai=command.endsWith('-ai'),starting=command==='start'||command==='start-ai';
  if(command==='init'){
   await mkdir(root+'.local',{recursive:true,mode:0o700});await initialize(directory);
   console.log('Initialized .local/reference once. Private test passwords are in config.json; do not publish this file.');
  }else{
-  const c=await load(directory),env=environment(c);
-  if(command!=='start'){
+  const c=await load(directory),env={...environment(c),...(ai?await loadAI(directory):{})};
+  if(!starting){
    for(const [name,args] of command==='migrate'?[['migrate',[]]]:[['webchat-server',['-check-config']],['webchat-server',['-check-resources']]]){
     const code=await run(name,args,env).done;if(code!==0)throw Error('reference command failed');
    }
   }else{
+   // Keyword resource checks do not call model/embedding services. Refuse bad
+   // FAQ/database/config before opening either the gateway or business page.
+   if(ai&&await run('webchat-server',['-check-resources'],env).done!==0)throw Error('AI resources invalid');
    // Refuse a second instance before spawning; never use an existing unrelated
    // gateway's readyz as proof our child started. Child exit is also observed.
    await assertAvailable(ports.gateway);await assertAvailable(ports.business);
@@ -47,8 +52,8 @@ try{
    }
    if(!ready||abort.signal.aborted)throw Error('gateway not ready');
    business=await startBusiness({accounts:c.accounts,port:ports.business,serveUI:true,cookieNamespace:'reference'});
-   support=await attachSupport(business,{gatewayOrigin:`http://127.0.0.1:${ports.gateway}`,hostSecret:c.hostSecret,agents:[{id:'staff-1',name:'演示坐席',secret:c.agentSecret}],storage:'postgres'});
-   console.log(`LOCAL REFERENCE ONLY: ${business.origin}/ (customer), ${business.origin}/staff-login (staff). Demo authentication; fake replies; PostgreSQL retained.`);
+   support=await attachSupport(business,{gatewayOrigin:`http://127.0.0.1:${ports.gateway}`,hostSecret:c.hostSecret,agents:[{id:'staff-1',name:'演示坐席',secret:c.agentSecret}],storage:'postgres',replyMode:ai?'ai':'fake'});
+   console.log(`LOCAL REFERENCE ONLY: ${business.origin}/ (customer), ${business.origin}/staff-login (staff). Demo authentication; ${ai?'AI enabled: messages may incur model charges':'fake replies'}; PostgreSQL retained.`);
    if(!abort.signal.aborted)await new Promise(resolve=>abort.signal.addEventListener('abort',resolve,{once:true}));
    if(!stopping)throw Error('gateway exited unexpectedly');
   }

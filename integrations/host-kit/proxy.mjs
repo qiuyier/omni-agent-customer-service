@@ -11,7 +11,7 @@ function localOrigin(value){const u=new URL(value);if(u.protocol!=='http:'||u.ho
 async function bounded(stream,limit){let size=0;const chunks=[];if(stream)for await(const chunk of stream){size+=chunk.length;if(size>limit)throw failure(413,'payload_limit');chunks.push(Buffer.from(chunk));}return Buffer.concat(chunks);}
 export function createSupportProxy({adapterOrigin,publicOrigin,sessions,now=Date.now,timeoutMs=20000}){
  localOrigin(adapterOrigin);
- if(typeof publicOrigin!=='function'||typeof sessions?.authenticate!=='function'||typeof now!=='function'||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>120000)throw Error('invalid support proxy configuration');
+ if(typeof publicOrigin!=='function'||typeof sessions?.authenticate!=='function'||typeof now!=='function'||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>125000)throw Error('invalid support proxy configuration');
  async function identity(request,role){
   let p;try{p=await sessions.authenticate(request,role);}catch{throw failure(503,'authentication_unavailable');}
   if(!p||p.role!==role||p.enabled!==true||typeof p.subjectID!=='string'||!p.subjectID||typeof p.sessionID!=='string'||!p.sessionID||!Number.isFinite(p.expiresAt)||p.expiresAt<=now())return null;

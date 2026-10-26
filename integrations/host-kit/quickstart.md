@@ -35,7 +35,7 @@ const support = await mountSupport({
 
 新装配函数组合现有 `businessIdentity`、`startAdapter` 和 `createSupportProxy`：配置与回调先验证，后创建私有监听器；挂载抛错会关闭本次监听器且隐藏原异常。`close()` 可重复调用，关闭的是自己的适配器。它不会反向迁移业务路由或自动卸载框架中的 handler；若只关闭客服而保持业务运行，应由业务框架卸载路由。残留代理不能继续成功访问已关闭适配器。
 
-配置必须显式给出，不加载 `.env`、不内置账号或默认密钥。本入口只支持回环 HTTP + fake + 已授权人工坐席，memory 仅用于本地快速演练，正式消息存储选择 postgres 并匹配真实网关。语法校验不证明网关已运行或元数据真实；先按 [部署指南](../../docs/host-onboarding.md)完成网关资源检查。AI、远端部署、TLS、生产会话存储不在此便捷装配范围，不为跑通样例降低生产校验。
+配置必须显式给出，不加载 `.env`、不内置账号或默认密钥。本入口支持回环 HTTP + fake + 已授权人工坐席；新增显式 replyMode=ai 时必须选择 postgres，外层代理等待预算同步为 125 秒，fake 仍 20 秒。memory 仅用于固定回复的本地演练。语法校验不证明网关已运行或元数据真实；先按 [部署指南](../../docs/host-onboarding.md)完成资源检查，并保持网关/适配的模式一致。完整参考配置见 [显式 AI 入口](../../deploy/reference/AI.md)。远端部署、TLS、生产会话存储不在此便捷装配范围，不为跑通样例降低生产校验。
 
 页面复用 [浏览器模板](browser.md) 中的 Chat、Desk、HostSessionBoundary。业务方配置真实身份/登录/退出路径与导航，确保 Cookie Path 覆盖 API。装配函数不安装前端，也不替代浏览器切号/退出验收。
 

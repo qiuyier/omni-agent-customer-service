@@ -1,0 +1,8 @@
+{
+  "provider": "custom",
+  "protocol": "chat_completions",
+  "model": "",
+  "baseURL": "https://api.example.invalid/v1",
+  "apiKey": "",
+  "faqPath": ""
+}
