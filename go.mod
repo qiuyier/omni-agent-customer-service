@@ -13,7 +13,7 @@ require (
 	github.com/openai/openai-go/v3 v3.35.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/qiuyier/omni-agent-kit v0.0.0-20260805082658-f91829f653e0
+	github.com/qiuyier/omni-agent-kit v0.1.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/time v0.15.0
 )

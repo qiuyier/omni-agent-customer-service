@@ -1,0 +1,2651 @@
+{
+  "date": "2026-10-27",
+  "baseCommit": "f95ada68ea34c7238b2258b9f546994610fa93c8",
+  "kitVersion": "v0.1.0",
+  "scope": "Source-only candidate; historical binary module union used conservatively for supplemental notice collection. Not an assertion all module-graph packages are shipped.",
+  "goSupplementalNotices": [
+    {
+      "module": "github.com/bytedance/gopkg",
+      "version": "v0.1.4",
+      "file": "internal/httpguts/LICENSE.golang",
+      "sha256": "0670ec6f31d7c3b08802831990ba6af875a863516dc96ab226cb41925ffc7cff"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "licenses/LICENSE-Drachennest",
+      "sha256": "8d8291caf1cee26d23acf3eb67c9f9a2d58f1c681b16a4fbe8cbfb9e3c0b5a9b"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "licenses/LICENSE-eisel_lemire",
+      "sha256": "cc3a949197f7f066770ae05ced2a2e1dfebb850f5a7587f085dd314bdbbce5c0"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "licenses/LICENSE-golang",
+      "sha256": "4214d8afcc3620b7fb7aa9c7695e8f659a90011a830caf0e0c72a385d7d3b2a5"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "licenses/LICENSE-golang-asm",
+      "sha256": "4214d8afcc3620b7fb7aa9c7695e8f659a90011a830caf0e0c72a385d7d3b2a5"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "licenses/LICENSE-simdjson",
+      "sha256": "1c351ddfc2b959867290106301ba287d0525071630896709f74b3c3a621b0586"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "licenses/LICENSE-yyjson",
+      "sha256": "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947"
+    },
+    {
+      "module": "github.com/bytedance/sonic",
+      "version": "v1.15.3-0.20260730064818-2a36d6da63e2",
+      "file": "testdata/JSONTestSuite/LICENSE",
+      "sha256": "8bd0e0578be788c617ea01d18b2a8146e3746ae50bddadc65a5f9d3aad08ad49"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "internal/tagexpr/LICENSE",
+      "sha256": "f5ab2190b092c94315e98d5b575794b46a807dab56ab9896cc9780866541a955"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-echo.txt",
+      "sha256": "2f77e11b6c268b71dfafb396ca740845123dcf4e76fc46588f3e1bba4bb3af25"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-fasthttp.txt",
+      "sha256": "ce032b792daf8cb19c1aeaee50457719aee1092d00bc82fed1815c569dfe3d0a"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-fsnotify",
+      "sha256": "076e4adf22f8e461ac25b8d0952cea9ad63af2aad8441300af4955c771470ca8"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-gin.txt",
+      "sha256": "6fb1407994fb4b49d3e7ca20e318fff8ea749d13b0a9c5af18efa6f70d2c70e2"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-go-version.txt",
+      "sha256": "aa5484a7d44ff89928c01318ed3fd633b9fc9c3778d6de2185eabea7bf879b0e"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-protobuf.txt",
+      "sha256": "4835612df0098ca95f8e7d9e3bffcb02358d435dbb38057c844c99d7f725eb20"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-protoreflect.txt",
+      "sha256": "20321104a707d80252f9b2c2104f1bde27ed1d1189595b1ca3eda5d732944e31"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-sprig.txt",
+      "sha256": "81568a451f749278deaf1e6d7ac1c6b9a9fbbc2640f686b358c6b9e641f7ad54"
+    },
+    {
+      "module": "github.com/cloudwego/hertz",
+      "version": "v0.10.5",
+      "file": "licenses/LICENSE-yaml.txt",
+      "sha256": "c5accbbd8546e94c34aed24afe689a617627d18eed5a6c48277e48db57c23851"
+    },
+    {
+      "module": "github.com/qiuyier/omni-agent-kit",
+      "version": "v0.1.0",
+      "file": "LICENSE",
+      "sha256": "3597cf8a45f4ad543b6c75431d2bd7010181c49110b84f1fde0a46be3eb4a756"
+    },
+    {
+      "module": "github.com/cloudwego/eino-ext/libs/acl/openai",
+      "version": "v0.1.18-0.20260527084435-846f52bd97c6",
+      "file": "upstream-root/LICENSE-APACHE",
+      "source": "https://github.com/cloudwego/eino-ext/blob/846f52bd97c6/LICENSE-APACHE",
+      "sha256": "69849221bfb90053de2134ef5e6d540287b4b98062326492f1f96f5da685524b"
+    },
+    {
+      "module": "Go toolchain",
+      "version": "go version go1.27.0 darwin/arm64",
+      "file": "LICENSE",
+      "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+      "scope": "informational for prior local binary tests; no Go executable/runtime shipped by source-only candidate"
+    }
+  ],
+  "media": [
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/account-a-restored.png",
+      "sha256": "3d7813f10922e9d99079a3b5635ff597f2b4e287262cd99c288700a0aa3ff327",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/account-b.png",
+      "sha256": "6141bdd6fab9bad6c80f4464704bfaaaf9868e4689d3f8c992ecee5e72642c00",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/closed-recovered.png",
+      "sha256": "f43a46e295a832f7c6462876a221666a4fc8afc790d51f63d906e3ccab379564",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/pending.png",
+      "sha256": "e91c4acb3989e1f51313d8a5be0f273a11665d150f96253ad62041d5ee3b1294",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/refreshed.png",
+      "sha256": "bd2760f0b2eba0a72f6996cfb8d5ed496ec97cdb2374ae1b33755ea2a5cc79c3",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-20T04-57-54-879Z/claim-success.png",
+      "sha256": "c93f301c436953ec060bc92ff01453a08a88def8451f078f716b265810ccebf5",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T12-20-42-276Z-7b91f14c/account-b.jpg",
+      "sha256": "89212171fe36778ac04a8209f68133091fed3a347b1c033d72709a0f3a952288",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T12-20-42-276Z-7b91f14c/recovered.jpg",
+      "sha256": "92d99a6a778ff1f858ce8cbef47c91e9fd2d3e92fff07dcca988ea482e1257ae",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T17-21-44-713Z-03201472/ai-account-a.jpg",
+      "sha256": "a8136dd5db6237564db34b08def8eee4c6dff55cec5b912abee5af8be9710c7c",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T17-21-44-713Z-03201472/ai-account-b.jpg",
+      "sha256": "79bab9327c006016a254fcfcf6a98768e999faf81263e96860495bb670d965f0",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-09T09-52-44-271Z-797b94e8/customer-finished.jpg",
+      "sha256": "1172a4a02af2ea882fa3469762004920fd8b9e9fc7c4695a1d12dafdefea3721",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-09T09-52-44-271Z-797b94e8/desk-finished.jpg",
+      "sha256": "8f20a0278f5745f73fef28393777346f7724e6503c5d3730ad510e5e348d48ba",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-09T15-23-37-565Z-67fb1a4e/rounds-final.png",
+      "sha256": "45c25444fc878b27d27dca342cd43bdfe972215ff4b8f96ab415041543d005a3",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-11T14-01-23-866Z-2c3f96c0/auto-updated.png",
+      "sha256": "a3d0fbc9d9dd781a4be92f8396745bfb861bf59465b8b3c3b0da31633352ad7e",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-11T16-59-38-506Z-ed8d6d34/unread-desk.png",
+      "sha256": "1f3470c9166222db1229546fecfd96201bb3b07cb30088fb572070f84d7bcd1d",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-12T05-07-11-651Z-91062fae/pagination-final.png",
+      "sha256": "8eff939f6088614763e816b969dd31839173cd342986faff91eb86f93f5fb5f4",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-17T16-26-53-802Z-62ba37dc/ai-human-closed.png",
+      "sha256": "5e880983d0fc0fa9e11bfc0ce636e6ad980b83ac845855e11745509645128c4d",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T05-42-05-595Z-c1d7a2a7/browser-overlap-closed.png",
+      "sha256": "edd4de87f9bbc7e338d0c7744b2b96a2469959b7dc764bcdcf91239afa1587e8",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/live-human-reply.png",
+      "sha256": "b61c9b3649b7a6fc8c417808ad3089c79d4b46c42f045ebb958d19bad9945d74",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-a-closed.png",
+      "sha256": "8afdb7ed6f3d9ae6d96fe2fb0b656cc035cd2b8452e3501b0fbce3d30293a476",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-b-empty.png",
+      "sha256": "7aca0cb452ba19682cc47f56532a051d67612b37d333517779fc877f6c553af8",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-19T07-40-21-715Z-a2fd90d6/receipt-recovered.png",
+      "sha256": "083de51ae977723a7f2021c46c170f2c91e93263043444676befa49bdd62b8e6",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/h5-evidence/ai.png",
+      "sha256": "3ae54ee41e271771d2ec1cb9f58f89440369a6cc75513a8c595c6bbf449956f0",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/h5-evidence/logout.png",
+      "sha256": "e73afbe8a8791c7b686f79bd876276884a9bae5cb608a6a397f1bdb4a39d590e",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/h5-evidence/persistent.png",
+      "sha256": "1ef2e6da273f49ac1107d3aebff3867bfc5714af6f972f6578c38c6f54c16570",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/h5-evidence/receipt-closed.png",
+      "sha256": "a08037fda79de2416a6c9466ad6d66a84f3a0f5df812fe5b9fab875096e94a59",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/h5-evidence/user1.png",
+      "sha256": "e73afbe8a8791c7b686f79bd876276884a9bae5cb608a6a397f1bdb4a39d590e",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/h5-evidence/user2.png",
+      "sha256": "1830ae4b3247cd669a0d5f813e332ab0e359edd166699cdd8d13902e2a3d9042",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/joint-human.png",
+      "sha256": "9effca6a9926c6a8d1dc534346e2250cb11fd2426c52d0401a11c7c9d1f021e4",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    },
+    {
+      "path": "integrations/crmeb/joint-new.png",
+      "sha256": "bcc26e743c845148610a898114188612ce1941da21c5a4140f63c1487b201cac",
+      "decision": "hold-from-public-package",
+      "reason": "historical acceptance screenshot; not required runtime asset; no blanket public-content clearance"
+    }
+  ],
+  "historicalReportFiles": [
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/report.json",
+      "sha256": "77da441d081cbb4f6e4b2188194efef8103b1ea6d6bd81e05c8579cd1b875c49",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/crmeb/2026-10-20T04-57-54-879Z/report.json",
+      "sha256": "617b9aafb783c3deb635c9aef3ebfbf685977796feb727bbc7e79c7dabbe56e2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/office-portal/2026-10-15T08-23-46-810Z-485f8f55/report.json",
+      "sha256": "7718b5b24165b331fa6f16f1636ceca67f9d15ff84090b5528af518b41422e61",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/office-portal/2026-10-15T08-30-12-747Z-72920d87/report.json",
+      "sha256": "d8078c03e9566f9628e24674d4ae74749b592125738ae84f5b55d2eb3529e8af",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/office-portal/2026-10-15T15-01-29-586Z-59a45752/report.json",
+      "sha256": "763c12d478b7627bda2e8fa3a2e1378f2a162ee32202e95107c91e61ee201775",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/office-portal/2026-10-15T15-08-31-786Z-0a7ea30c/report.json",
+      "sha256": "481e84e3843be4c30a2c74a28ddd203446689d4dbcec97556931d61634dec1a0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T10-49-26-697Z-778b773f/pending-event.json",
+      "sha256": "04131989f5a5ac7276dc248d14e8e3b79b0ef33fa14d337acafacbca46e32406",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T10-49-26-697Z-778b773f/report.json",
+      "sha256": "5e27f93e188690a06d4e07b38fcfd5d36d2c419fd1f420ecfa37201ba41e34c8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T12-20-42-276Z-7b91f14c/report.json",
+      "sha256": "461f21f254fe14061fa5232b8613c4f33befc810740757241fa6acfc828fd661",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-08T17-21-44-713Z-03201472/report.json",
+      "sha256": "aa0eded5d5c7867ed0f6a5e6eceb7e901b66000fa75be2b8a293a7b2c0aa3f4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-09T09-52-44-271Z-797b94e8/report.json",
+      "sha256": "b72066f0319d09c28dea49a2cbc859cfbaad117c7367d786764eebee250dce3c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-09T15-23-37-565Z-67fb1a4e/report.json",
+      "sha256": "89adeb40887871b82babf915de94ec8e23d5c533d61120d51fc83212d9200e52",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-10T04-18-20-882Z-43fc2492/report.json",
+      "sha256": "3961f96ce1046cc6241a5c94cd2cae91989ee97a463da7845683cf0f0a39b200",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-11T14-01-23-866Z-2c3f96c0/report.json",
+      "sha256": "16a7d223341a78a9920be9f4f66a27ced71fe1e44c0e23ab6414163a253e68ed",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-11T16-59-38-506Z-ed8d6d34/report.json",
+      "sha256": "5626eaab3c06e55ef59750add2fa097e1be9940f7da8278878039eb9a28695a2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-12T05-07-11-651Z-91062fae/report.json",
+      "sha256": "de18eb883ec58a8ea5e89b97c6300a8a8860bdcd818ed67f5aabd0e8dce1f6d8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-15T07-35-46-986Z-362f0f5a/pending-event.json",
+      "sha256": "04131989f5a5ac7276dc248d14e8e3b79b0ef33fa14d337acafacbca46e32406",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-15T07-35-46-986Z-362f0f5a/pending-human-event.json",
+      "sha256": "8c41a80a7b70ce328b5a591e12290707f374b0001d4cb3232ecb030efc3102ba",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-15T07-35-46-986Z-362f0f5a/report.json",
+      "sha256": "fea4d5abf284166c2bd5215bec1b1b78b9a0a0ae0fe85820b95981b11a3ae01f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-15T07-47-26-338Z-1760724c/pending-event.json",
+      "sha256": "04131989f5a5ac7276dc248d14e8e3b79b0ef33fa14d337acafacbca46e32406",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-15T07-47-26-338Z-1760724c/pending-human-event.json",
+      "sha256": "8c41a80a7b70ce328b5a591e12290707f374b0001d4cb3232ecb030efc3102ba",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-15T07-47-26-338Z-1760724c/report.json",
+      "sha256": "662fff87cadd9ecbeab1bd61225c203c9f985e451a69b7a31ae849fd75ef1b72",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-17T16-26-53-802Z-62ba37dc/report.json",
+      "sha256": "a27cc820f90cad232ad7c61e03fb17c5f0354aa9fd0148688687a3fb177e4495",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T05-42-05-595Z-c1d7a2a7/report.json",
+      "sha256": "bfd57aa3242c3bec7fe247f4c167a783b40a2c0511c78a1cd4ce847539d65807",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T05-50-15-006Z-27b21b70/report.json",
+      "sha256": "36f326a3b7c79a51e3941909de409a864fe3e0a53828a76a00fe875b0e676015",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/report.json",
+      "sha256": "8fd6ac25f97656a6e9ab8ee1704605a8ab20c24daffa1b77d7c71f0639170cdf",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/report.json",
+      "sha256": "c9a55dfb97ca53215ae1a7a6170148bfe60940fab5d1d1058a2156c2658fcd3a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-19T07-38-46-184Z-f67422bf/report.json",
+      "sha256": "2a77d0c7d28901c161471d765b9c1db20e0b9a9ad833cbc014c39b256da146ec",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-19T07-40-21-715Z-a2fd90d6/report.json",
+      "sha256": "04c5aa75202ff38302136e3b1d4f0d732c6223044afd1c2c653b5d065a294a1a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-22T15-41-51-442Z-a7fa1271/report.json",
+      "sha256": "1839ab13ca7ee7b47197cf28ad32353f30ae9a77f789d494898e777601a76d5f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-22T15-45-09-225Z-d1270c6d/report.json",
+      "sha256": "e49361c7f41f008bb948307450a23f3cc09d0b1176dcbcb114e9e3afdf41722d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T01-38-15-269Z-3d7be42e/report.json",
+      "sha256": "e3e52ac0fdbe9cab73c86eb7f81c68e8d3b5e979d1b3765ad43e009f57376861",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T02-22-55-595Z-186df59c/report.json",
+      "sha256": "e3a1305dd31b5d9dd2a45331944f60f4d92716fa18d7fdf19818f63a6af03303",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T07-24-28-887Z-c935dff2/report.json",
+      "sha256": "60a366d59e84edbcc7555d119a62ff8cda0b429c1d171f8de756ac8a21b168e1",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T07-35-22-520Z-26bc1d30/report.json",
+      "sha256": "6b1803c3274354a5d9257cd3c565cade54a89fb78ebf647108c2aba7378e279f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T13-01-00-947Z-06b8feca/report.json",
+      "sha256": "17eb564aaef1753c0f53165c61d88a3674ec559d34be724b51e3230377a09ac5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T13-22-27-075Z-9bf2cf09/report.json",
+      "sha256": "9a093802277729961553d33e7451a8fda7337dc127e52d388217fcf2d5210227",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-23T18-21-52-115Z-88f9ab29/report.json",
+      "sha256": "4616e930b1277495292c26fde692a26047daaf80583915f9dcb1c1c4857b51c8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/2026-10-24T06-02-49-754Z-33a63c01/report.json",
+      "sha256": "528b2322983c7ce4b1071b638c64d471c9aa448c9364db0840a0630db495cc34",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/integration/standalone-host/preflight-2026-10-09.json",
+      "sha256": "29658feda670577badb2db51dc72ee9d23061aae6198ae7d2cafbaa221886fa8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/cross-domain/eval_runs/2026-10-08T09-36-51-627Z/report.json",
+      "sha256": "66ea49c8c23082c661d1a540467a2e768b8fade7e3cd5bee7bbcac2c7db52d1a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/device-repair/eval_runs/2026-10-08T07-33-24-112Z/report.json",
+      "sha256": "a9ddec7764cf38b50608823ff469d5e6fabf8015ee26b7bd264a4b831c235b8e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/device-repair/eval_runs/2026-10-08T07-50-26-457Z/report.json",
+      "sha256": "e7599fa74ec9e7b776e6ed72c3e89896b057e670592543b4754e395cb60534ad",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/ecommerce/eval_runs/2026-09-10/keyword-dev.json",
+      "sha256": "b74f92f1722690d6c280943fa1b0cb4976af039fa53a8cc515d75b350d57da1a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/ecommerce/eval_runs/2026-09-10/keyword-holdout.json",
+      "sha256": "814c7ee72de8950718fb318985be85f8f2c93310028323749403e801c124ca66",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/ecommerce/eval_runs/2026-09-10/reply-check-glm.json",
+      "sha256": "84aa8462dce2a56ccc254963c3e98e7c2c831eca27312046527fe2a8038238a4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/ecommerce/eval_runs/2026-09-10/semantic-dev-diagnostics.json",
+      "sha256": "c92b0d902b0cc11641b073e6fa97cbba7821f405858b4eebe3a9c840aaeb3c0f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/ecommerce/eval_runs/2026-09-10/semantic-dev.json",
+      "sha256": "89a96b34cdf16c8d489591a2e9cf9a592a8ca5a6da1526bb1bb7090516ed233b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/ecommerce/eval_runs/2026-09-10/semantic-holdout.json",
+      "sha256": "0efe7693dbb517344a671deca218b67be7e90f5a6627260c6dd7e2c9f20b753c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-09/keyword-baseline.json",
+      "sha256": "9af34beec8a1177f0e31e0cae6964ad2f386ce692cd1d5dd7e94ab688462e39d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-09/keyword-holdout.json",
+      "sha256": "620e65840b04b8d9724e9167ac9c38f187fc33422badc5017bbf0de237ba3cdb",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-09/reply-check.json",
+      "sha256": "32efab7bb301ebb5c3ad5a7e6df964c9dec43f24a6eb29ccbdf42c7c4553368e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-09/semantic-baseline.json",
+      "sha256": "e670ede2e2b8669297f535f3953b6d2095074186fb46b900462d31bb2ddb2bce",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-09/semantic-holdout.json",
+      "sha256": "11b55bfd981bd3409a759e1211eb20504711f50dd1e2c5cf607e027f514b6da3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-10/reply-check-glm-capability-boundary.json",
+      "sha256": "5837c47b25f0231e029b3c9dd080047103e06fdf53e1def8562d7a3c6dba13b6",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-10/reply-check-glm.json",
+      "sha256": "b07fe68960c96e373dd9c9e480d5c654244c037e56e4f9745fd25c829ed9eacc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/eval_runs/2026-09-10/reply-check.json",
+      "sha256": "95b0936029840bf0a9b69f54e3c471bea7db5416f8dce9230006da490a0c5fd8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-22/acceptance.json",
+      "sha256": "60d31b390cb8f389b12981ec24efe03c4e06975eaf3da1c2135616ad6f9e2bb3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-22/grounding-judge.json",
+      "sha256": "12a2538070a2f47a308ed660944b05f7f93c275aa59c37ba7b039223353188f2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-22/grounding-regression.json",
+      "sha256": "b2fe038bea37493fda4659dcc161c75d904d608773cff2ddad34d656f4b13a34",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/audit-part1.json",
+      "sha256": "86c36552e6bf917065023938e746410f4874785127f3886c77aa9f155fb91407",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/audit-part2.json",
+      "sha256": "a0a0ca1aacaf4a084b3bbff0ad5a43b0481e1a2e0ae7567e0330365e051ae1e0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/freeze.json",
+      "sha256": "579ad1208dee27f8753a878ac102a5dfa138f3e18fa024d34ae43b3329ba4765",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/remaining-cases.json",
+      "sha256": "f0610c8ad92eb52bf1cb98d9ec2d22adaf717558c9d294ada97143af95ad77ec",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/results-part1.json",
+      "sha256": "5605cdedfca03128f89871ca5a63d068e56ffa696a1562f273d00fad1c478181",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/results-part2.json",
+      "sha256": "a64b96255e51709a01b9737b84745f020a62972ad9ceb2b5ee8f8c4e175e4cde",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/advice-v4/summary.json",
+      "sha256": "77f8543768633ead6e8e161b974c22a1df2f6157a61ffa7d37e338498e801e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/dev-exit.json",
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/dev-progress.txt",
+      "sha256": "824f65c14977f98700685a468473a36b40977d93e83af110c967435b8e909b43",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/dev.json",
+      "sha256": "b1a4162f7b3afe24d67dfaaab629acb2d86a21459e0467764852ebd1d86f5e09",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/freeze.json",
+      "sha256": "c0807e47bdcef2c8ee929f826c8bf8040402aab66f7ef919f36f10050a00b727",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/holdout-exit.json",
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/holdout-progress.txt",
+      "sha256": "72a85b02edde0d90e065161345da5b00ad54350588c3c798f336f7f08f42a60f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/holdout.json",
+      "sha256": "f0e47df2c31db8bbbc9eeb28495cd1cac7f3540ec39fd28841d5705523171557",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/assisted-v1/summary.json",
+      "sha256": "030a7c04407204cc8d82fb79694f2b68c3460a5cee1b216a3d54e0d50a77fb59",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/frozen-v3/dev-audit.json",
+      "sha256": "faaf3aa623ca82502c5daae4257887fbfd3b2cf38aa065a1c80c4d5e9cd8db41",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/frozen-v3/dev.json",
+      "sha256": "8a01d150371188f52777084dae40885051a348fe600b78cdd360bc355dfe783f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/frozen-v3/freeze.json",
+      "sha256": "98207538c453155bc4325936774d246c1c4cac66e6d13539e49d308ddf903414",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/frozen-v3/holdout-audit.json",
+      "sha256": "8ab4e155bd310d69b8fa633079e6ea82d34fb91b384e3587df61dd01e9ca434d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/frozen-v3/holdout.json",
+      "sha256": "d16b6120783ecda3390796210188be99182b091e1a149743718f4b53a1106f49",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/frozen-v3/summary.json",
+      "sha256": "f69527b42f903b388a11f6417ac5ca8087bc2db618e13634a25f1896ec637dc5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/grounding-v2-dev.json",
+      "sha256": "6caf4abb3e27521291875d415fc4ce8f92b54ade09c0973b511d91e76d4fdfaa",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/grounding-v2-transfer.json",
+      "sha256": "3ce5ca9024a9a20bb2ad5a4cbf75f3f0d60e9b78f38d7475889b9c041085a805",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/grounding-v3-targeted.json",
+      "sha256": "570201401499593f72cef20149ea50ed7e8eb773a6f955e798f1a876bf02e5f4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/0-omitted.json",
+      "sha256": "e899379a58cfae9a67e9b19dfde10bb5b801410c3e5516c0bab0e8e75cd14f26",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/0-recorded.json",
+      "sha256": "152eff215ef4d53f9032b945b4b8acf5f71dbfd584794042b8c95aafefc52562",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/1-omitted.json",
+      "sha256": "9900fe97b38b28346fe9211e7bbfd07714439c71a78b499fe7f26a3ced779531",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/1-recorded.json",
+      "sha256": "997b9062d23bb66a025a642bad1857ed80548f1f357169dc3c2eb42781403ab7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/2-omitted.json",
+      "sha256": "37bcf8ab69ad17a4316b353e96db144615e1875b121cd7b883b9835737e3d4b0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/2-recorded.json",
+      "sha256": "166b671195439568cb3cc67aec85e7db523b95601cb8f2a4a94f251875505786",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/3-omitted.json",
+      "sha256": "e66ca2a5b5602080d66fac122bda0f404d7726a058c1c7b116e18a33926615a3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/3-recorded.json",
+      "sha256": "41d0aa7b6bed10ec313453094e09e3c77c1ac1c4cb08a2045f3a54c1eceaab64",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/4-omitted.json",
+      "sha256": "92aecebfa52af90d2789580c123f341469e1f5620a658b2a7119d9ad46bd3dad",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/4-recorded.json",
+      "sha256": "ce46921084fcc31f6d054e9ab4ac47848cbe51a978889dfc851c6ce694fc3ed2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/audit.json",
+      "sha256": "6e275b224e0d73bbfc3588e59b674483e7ce20879b2543d56ebc153906da1b95",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/case-0.json",
+      "sha256": "4c83892d2657a0974774480df1c028f96ebda57ed19ef4133892e1559cb97d12",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/case-1.json",
+      "sha256": "e4b1668d56c40c9d978870e8bc56804617e1d4715ccba50d3d2285a63856b59b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/case-2.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/case-3.json",
+      "sha256": "3eb4fc6fd28490caef4fab278b10a80aa199ebb7009933bb79bd2d62b0ad63f5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/case-4.json",
+      "sha256": "32c2b5adf86fa80fb527c993739e66dacbf34712f983e411fc641364eb3eb208",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/freeze.json",
+      "sha256": "aeaffb906e92f2ad561027883b46b93f5a528e4f133f830516514696eb023990",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/hint-0.json",
+      "sha256": "d451a7c9c528c92dd0f66ab51ef60c1f67f68e7d8d27a49fd2c2f7768d86a22c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/hint-1.json",
+      "sha256": "bbddc305d845390a87f3878305154162e5a63e8a69a39da063edef17d05f8c42",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/hint-2.json",
+      "sha256": "54f2df5d826bf7044b27be5e7a240917c12465216403f4a59d7faa3ea57038cf",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/hint-3.json",
+      "sha256": "f136e4a612d17bf700ae03fc58183f9e75b55c98d16d26bc2557532c6edba329",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/hint-4.json",
+      "sha256": "481b60602ef7360e93b24f3cfd613f2b0d84665556e1c60a2530b0df240a4e93",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/hint-comparison-v1/summary.json",
+      "sha256": "89a3bf10c6847ec9630cd3d522f043771def4b128f89678330b936008c1660bd",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-long-v1/audit.json",
+      "sha256": "c8762ee5f45d376546db30713a70b9edc66b703c527d121b6a5ac77c1133eba2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-long-v1/exit.json",
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-long-v1/freeze.json",
+      "sha256": "026575d24f6965331e50974bffdc98ac95d853cb3e26a95b9bfc10108b271c7e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-long-v1/progress.txt",
+      "sha256": "570479a0ed3e3af897e36805695afedf7a6abd00678368eb6c5cfe563434172e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-long-v1/results.json",
+      "sha256": "172619633b1c24ea27c666a73a81dab013d0ce4a29068300cfb8bf8c3ea5830b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-v1/exit.json",
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-v1/freeze.json",
+      "sha256": "0676544b4478506828994d7a68c461dc9534ee31ee73b556fe4e560da9322b49",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-v1/progress.txt",
+      "sha256": "80198ccbcaad3be6078550c19e073128f481214084787127db18cd5b15fec1e8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/speech-v1/results.json",
+      "sha256": "0a08f0693de709495c4bb6fda101fe4fffa75ff723fb64b3fe64d9bfcd6a4428",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/structure-v5/cases.json",
+      "sha256": "56451b3c58c42e1a077fcd20ea149191f093a2a59c176949bb9c3b7de25acd81",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/structure-v5/exit.json",
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/structure-v5/freeze.json",
+      "sha256": "11e1b18715d2c7bb0db6600334133f87e246a7b451f64d45b74ee5790abe6dde",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/structure-v5/progress.txt",
+      "sha256": "c7eb72eb5fe5fe5b41ecde868ba067db76dcbdd603c73120fc72ffb87a26ebbc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-23/structure-v5/results.json",
+      "sha256": "93960c081b47e74a49eecb6ebf8990c2386f51e4f0dd7477ff59e6e94380a82c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/0.json",
+      "sha256": "8bf95f113b533db283e36c89c8c52fc5612240ec6f92f9cdf2ad422a448fb9d7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/1.json",
+      "sha256": "f96adfbf327cd33d4bc59211f105e7b8b68b3ee274c4425a9281f0ef660180ce",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/10.json",
+      "sha256": "4d1bee908e31a0a05646a17d3bcf97cc74f493a2d4e9f535f5954268826a2fb0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/11.json",
+      "sha256": "5fd99291ae1ad84650b9d7aa10d8ce0c60e523cf65edb2de50073dbf748e94d9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/12.json",
+      "sha256": "2c2b9a33fa5ff38cf551d275aa8180ea55d8aa3031bdbe99556386df13b8f2e9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/13.json",
+      "sha256": "7584e2966d6a9a1898d0040b5e1caeb75c3fad6e75c78e1ad76b2e3bf75d89e4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/14.json",
+      "sha256": "710398344666e10286cfc0448c936058d26457796ee4bed15cde020acd574a90",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/15.json",
+      "sha256": "005f1f20e6ebf2a0b7fa7e3228a130040f1b882676a509fc1532fd55dd9c6780",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/16.json",
+      "sha256": "a607e862f09743bd9ba40eecb68f0ef1101639a9bad05a9d29521f3624bfbc33",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/17.json",
+      "sha256": "c886a49931035b5b4f9121b9142ef7077050c8e41243b9741f553e3e46b99f71",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/2.json",
+      "sha256": "c84a46141a9e26d5e0ff3b9f8a2e6f51e40b2a40b3936b62645e956e1383cbf5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/3.json",
+      "sha256": "15a72041284d9e5a27db485b5e01cb877e9c1e7cf2b7a103732e9b9010af41f7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/4.json",
+      "sha256": "0603589ee990651e8ff648b683732907b89c1c0ee4718bfb56a4693131fa6b87",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/5.json",
+      "sha256": "16190d4cc0469dfac01161e9d98004270215b43e2a15e3e4db50c70d356687e7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/6.json",
+      "sha256": "c1ac3155dee68e1a735a43ad200844453ba71c67a93095855015dca169e636a3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/7.json",
+      "sha256": "86f97ba10ddababb1b9fbb4488271cbca5a7ad7ffaff6c94bc6fedeae7ea0213",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/8.json",
+      "sha256": "c89cfac368fcd88117c926112ef2bd4e6ab11e588a60c31e9f3392dedf654b78",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/9.json",
+      "sha256": "6166f3882a5fdbac6fe86e6cf3628004ef69322f082fb5749edde03c18281d5a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/audit.json",
+      "sha256": "f866a688906f682692eca6760b06f92029a5e08d5dd3d7a9c4f2b3912b69b60c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-0.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-1.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-10.json",
+      "sha256": "8b01ea42b06c9aef65acb519ceb321e72c3e647ce19b4300635bf4d67bd346e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-11.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-12.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-13.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-14.json",
+      "sha256": "a29acce545aa80b1c9dcf6f9a7a7d027f77a1cb3dadd08fbc01e3037f275c3b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-15.json",
+      "sha256": "9003503f10ca604f8d8e5bda17a0ba4ac2153842cf5e4501e30c4d516e3f0e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-16.json",
+      "sha256": "8b01ea42b06c9aef65acb519ceb321e72c3e647ce19b4300635bf4d67bd346e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-17.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-2.json",
+      "sha256": "a29acce545aa80b1c9dcf6f9a7a7d027f77a1cb3dadd08fbc01e3037f275c3b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-3.json",
+      "sha256": "9003503f10ca604f8d8e5bda17a0ba4ac2153842cf5e4501e30c4d516e3f0e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-4.json",
+      "sha256": "8b01ea42b06c9aef65acb519ceb321e72c3e647ce19b4300635bf4d67bd346e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-5.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-6.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-7.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-8.json",
+      "sha256": "a29acce545aa80b1c9dcf6f9a7a7d027f77a1cb3dadd08fbc01e3037f275c3b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/case-9.json",
+      "sha256": "9003503f10ca604f8d8e5bda17a0ba4ac2153842cf5e4501e30c4d516e3f0e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/freeze.json",
+      "sha256": "71df519d091e1dd342311b2c7b7dc12fa2763ec8a47d704a3d1ce746722eb2b8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/inventory-v1-repeated/summary.json",
+      "sha256": "5f2b772c1e843798d23f011cd4ed61568cd7a0fbbe0dd29c2558ac0f61bad7c9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/0.json",
+      "sha256": "ace66cbb4dedab694b9cdb7a284fbb8310ee75270864277d6118ec9e70b40989",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/1.json",
+      "sha256": "23be14080c6c173e5816fd93662405a86161e4c162689418c046bc1023259cbd",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/10.json",
+      "sha256": "f93e0ebe8822c54780a7c7129f36e4e968f0f12e5ca96b37494997093897238f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/11.json",
+      "sha256": "66cf4f6655d42329e37fdb991bb2aa6edf80fdefa2c1a8ed902d7b20e5b08229",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/12.json",
+      "sha256": "e8b672fb0bd645518f503c57d8f5c3bbbe2daf9f38b116baaf433743ccf2a85d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/13.json",
+      "sha256": "791c61f137c4ed8c8c131a7268dd6f8bda22c8f7d213b52d7ed25504fb38f23e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/14.json",
+      "sha256": "6d1e90120105c1c290b2ecfbb15c3284b9e39730865c1b70420b9da17aaf8c1c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/15.json",
+      "sha256": "184fef3dde401a31c38119692e8a34288687922f3cd7b71747c4286a7b5098ed",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/16.json",
+      "sha256": "381c63f26c4499918f4de4dd0c80276e8204853be4764aff34cda8ada8f6a4d3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/17.json",
+      "sha256": "3c270170e46167dc79b246ab90a2e399a4c17a65993e78e4cc61347ffb340519",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/2.json",
+      "sha256": "0ba6820d0be39bf9e2623c16c4f80e5bc97b37d9d21ead4b340c7f617abf8b52",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/3.json",
+      "sha256": "149dda644fd67d37b750816e40307c6965aa7329025e1b0482cdb10308a6345f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/4.json",
+      "sha256": "27e1deb010f400092c6c3049883f6f1ecc4b87672243d62e724b0f250ad76e0e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/5.json",
+      "sha256": "4632d43ae9bd1b9ee78d731fde1cd85bc7c472677af044805ef92098c44d3d25",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/6.json",
+      "sha256": "efb74af0d33eaab40d820949c6b1c56e165c547de677552d1a74b45bc54b68f0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/7.json",
+      "sha256": "8542a9267e4540e352a5f9966a6ee16e7d688112ec236bbecbd5bbc6de01fe5f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/8.json",
+      "sha256": "aacb6dbd3ef8e61147facf1ef9f6d9d3c41b330799cf5dad3ad579a157a861bc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/9.json",
+      "sha256": "17354dae053e5a52ee413925b06b5f27c6cca73e62a87a235f0709787856333f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-0.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-1.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-10.json",
+      "sha256": "8b01ea42b06c9aef65acb519ceb321e72c3e647ce19b4300635bf4d67bd346e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-11.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-12.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-13.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-14.json",
+      "sha256": "a29acce545aa80b1c9dcf6f9a7a7d027f77a1cb3dadd08fbc01e3037f275c3b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-15.json",
+      "sha256": "9003503f10ca604f8d8e5bda17a0ba4ac2153842cf5e4501e30c4d516e3f0e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-16.json",
+      "sha256": "8b01ea42b06c9aef65acb519ceb321e72c3e647ce19b4300635bf4d67bd346e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-17.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-2.json",
+      "sha256": "a29acce545aa80b1c9dcf6f9a7a7d027f77a1cb3dadd08fbc01e3037f275c3b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-3.json",
+      "sha256": "9003503f10ca604f8d8e5bda17a0ba4ac2153842cf5e4501e30c4d516e3f0e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-4.json",
+      "sha256": "8b01ea42b06c9aef65acb519ceb321e72c3e647ce19b4300635bf4d67bd346e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-5.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-6.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-7.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-8.json",
+      "sha256": "a29acce545aa80b1c9dcf6f9a7a7d027f77a1cb3dadd08fbc01e3037f275c3b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/case-9.json",
+      "sha256": "9003503f10ca604f8d8e5bda17a0ba4ac2153842cf5e4501e30c4d516e3f0e4e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/freeze.json",
+      "sha256": "0082f238f23ba26cc5bda77dc19b937282215ba8fa776e9e85e8faa1f408714c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/split-v1-repeated/summary.json",
+      "sha256": "ae5872cb6eff81c9e06288a9c276ef444869919127787fd1dccefc8ce7736ba7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/0.json",
+      "sha256": "e8ccf45d17288a048108d78ef68a68a40d0c3feae6f4cdd1409b923d2924512f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/1.json",
+      "sha256": "732a05010a79ef7e9d76e1038903f5d876be534c5f65152ac1bbfe04232001a3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/2.json",
+      "sha256": "d4384eadac0f0325dc99efab2ccd1578d077d896b741dd203b65ca86987310cd",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/3.json",
+      "sha256": "ef9a40cb335f3ccfa3ccf3eb4e2343e46de9a80fcb4006b7df5dc4f3750d2e36",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/4.json",
+      "sha256": "b7787ec1ec34c05be3410cb8352346646d719ab1137aead1a0a835ec99d75bbd",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/5.json",
+      "sha256": "bbac8a564144a344cd9c3d1a6a408425630a54ca1ab5b820c68867bc672951b8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/6.json",
+      "sha256": "603e489b4367eac645838092b065926cf258ea89b7944eb816bbcb2b5c4aed0a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-0.json",
+      "sha256": "4c83892d2657a0974774480df1c028f96ebda57ed19ef4133892e1559cb97d12",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-1.json",
+      "sha256": "e4b1668d56c40c9d978870e8bc56804617e1d4715ccba50d3d2285a63856b59b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-2.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-3.json",
+      "sha256": "3eb4fc6fd28490caef4fab278b10a80aa199ebb7009933bb79bd2d62b0ad63f5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-4.json",
+      "sha256": "32c2b5adf86fa80fb527c993739e66dacbf34712f983e411fc641364eb3eb208",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-5.json",
+      "sha256": "7d4b3cd304fe549b6177ba3592f12acdfc2d71f383a4f7e0dd8bce758fcd0405",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/case-6.json",
+      "sha256": "8f510e88318ce3cc6b01e5cc4c5d6670d21a702a7264bbd22fc862b7e799aba7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/freeze.json",
+      "sha256": "967253a2aae0be940aa4d18237a3119f27bb32ccd9f44986d3ad55431c19229b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v1/summary.json",
+      "sha256": "dc3c7f3d35d73025ca0d7f1eb48bf4f59184f476fa1d9d6169b613e1bd817466",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/0.json",
+      "sha256": "ed672b1bad809c1b33fb44640f1beb47504fcc58c5391e1163c5a3e4dce78f60",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/1.json",
+      "sha256": "1e02a2cc7a39fe3165d6281556a6b3e49d074c39a5231b8a6182e1616f93bc6a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/10.json",
+      "sha256": "b0b004df7bd38144688459c9b3a6d2f68bf030b7e252cb7a7ae59cae52346be2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/11.json",
+      "sha256": "d729b07b7e9181e25e71c07b8695b778cc1db4c808fac7b43a10ad1331657c5c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/12.json",
+      "sha256": "ad98c9643a6484fd90f663ca37d0af8af6c1118b9797e24a3b8b504fa5cf4548",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/13.json",
+      "sha256": "f00b98be613700dc9f966a2a6cfe1226b8e63bb27d467556f0ae8b30042bd840",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/14.json",
+      "sha256": "529b535e2b82010cbc2344745df1ab14809d559c6a44f1edcdf01c3eb14355f8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/15.json",
+      "sha256": "30cafee9ebe0a83e4555d103cefa3cae313ba118e9d6cf3c91f1f3e19ef0b042",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/16.json",
+      "sha256": "df4790d412ae797cb6e9e3073872adef78636a1029476202e4c8d2b8241185a3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/17.json",
+      "sha256": "f04d28632b545ebd937ce60a240d7c75d1e91c4a630647ba120457db7b37ffc7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/18.json",
+      "sha256": "5bb250297e93c350dbd09f8fd41125a118a5e064209d2c11e124a12a9cee50a9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/19.json",
+      "sha256": "65d415f562d2cd654d25df7f1cdec10db195a2954add2d5e58968a07b3aae56e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/2.json",
+      "sha256": "611b36f742a61060a74f2ddf80b1a023c3acd6c76c3fd954e1360eed975d8a3b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/3.json",
+      "sha256": "5c0cc16dd5d0f1eb43bddd8c725443d4ce7689ba4859a983dd8b3203506340e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/4.json",
+      "sha256": "e3e1335cda1b1e9780d52de7b9e77c9edd1c2fa6b4cbc1b5c6b43264d5e4e274",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/5.json",
+      "sha256": "29cb096c416d6f101cfc7870fb5da964263388f9824b9202a99a1e5e570c38bf",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/6.json",
+      "sha256": "a971f846fa68adc7333940e85f7e462d9657a21c8b1a813d084b4cf1a94b4603",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/7.json",
+      "sha256": "2701eebb8f2b877b3ceb27e0950d2ee4629d313069abdf7250bd02492838a177",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/8.json",
+      "sha256": "c6bfd78153e15565ad1a618eb2b34db134e68becc1b731a9b28aa728e70eccf0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/9.json",
+      "sha256": "e2676b4e708bd9c3050ca2eeb9b36e8728f62a0b495f6b59f7e4c1f7ea7ca151",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/audit.json",
+      "sha256": "db506e99db45f992d132eb207980b423c7135b2e94bdd84095ec0cfa45c3ff25",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-0.json",
+      "sha256": "dda25301dd43576358a0c5f2882b498c345cc8ea073e1aa9b8ec528fff237003",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-1.json",
+      "sha256": "749a03227abf2bab31226e088eb6def372ed135ba3bf0d3501d87e16956fcb4f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-10.json",
+      "sha256": "9c462fee988a47ed3f2eb41794f06e524f619e8a10d6996a620b7eb2e1c4eec6",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-11.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-12.json",
+      "sha256": "be4865df9e05d8ef33fcc59e46eb8b20028922df0d55cf211c5f626dad7e1538",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-13.json",
+      "sha256": "7afeeac6b05d4ddd3384496ffe6ca1cfb4f4933786282f5c08443ae3e63d461d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-14.json",
+      "sha256": "a75458a0207872b85d8ac0b35df1b06ba8fad97f735d5e88e1ec0f805393dd8a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-15.json",
+      "sha256": "c636949b910e0a8f7a332cc0e5d2aaa1362533042ee1443558881137042b1ce6",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-16.json",
+      "sha256": "3eb4fc6fd28490caef4fab278b10a80aa199ebb7009933bb79bd2d62b0ad63f5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-17.json",
+      "sha256": "a6b8a0709e96302d2411d18386c6bd73e7b1735b71a0c2f9d218442b4cbfadbe",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-18.json",
+      "sha256": "32c2b5adf86fa80fb527c993739e66dacbf34712f983e411fc641364eb3eb208",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-19.json",
+      "sha256": "2c710ba7e3cd1a1d8a2df7ea4b7189e5b5eeca8ce8badaffeb00263d6f46139c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-2.json",
+      "sha256": "4c83892d2657a0974774480df1c028f96ebda57ed19ef4133892e1559cb97d12",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-3.json",
+      "sha256": "70392d18f085f4c082aca07d92895c49b6f16db48b0801eba20280154d18003c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-4.json",
+      "sha256": "72e191cd8a7cbf8d50dda5d9fd4df095f138969d6459c4450def8ef3f076c5e5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-5.json",
+      "sha256": "6061ea922bd203f865fd0472d206fe1757b93e5d15b34dee04355fc930699d5f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-6.json",
+      "sha256": "a0b4414091195ca7ce8d4bde2fd85a187d66ae4c013ae1cc53def3ac279d18ec",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-7.json",
+      "sha256": "10e1cc87c110be226681f0d4d7d10c2d44c1d0c3db96b577fa2f891c4858bdb7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-8.json",
+      "sha256": "e4b1668d56c40c9d978870e8bc56804617e1d4715ccba50d3d2285a63856b59b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/case-9.json",
+      "sha256": "68ff595da6b48304a0efb6240258e475939364f375d094243348109c94efb823",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/freeze.json",
+      "sha256": "f3fb4665b3ee619500c96bfc31f75b2a6b80c98198a561701d9adc6839fd3d9a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-full/summary.json",
+      "sha256": "5aa0bf7966e1d0cb32fd0a50695d77cfe55c2ef735b8953cc649fca6733c52ce",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/0.json",
+      "sha256": "c749e29087dba3ed8f1b614253d03346590a350b33e18611a755f952a5375171",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/1.json",
+      "sha256": "e9f16ebab48ce890cc39c09f0eb028028c19ac206047837f24b9f71b5edcf026",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/2.json",
+      "sha256": "322ada535eea611974f45b0ea6a4b7684e81d99f43ff885c9a5003b4e6df3340",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/3.json",
+      "sha256": "a3b4aa28a57e450f528bf022d402866b4413f7bb9ce913130428b9cd98b592b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/4.json",
+      "sha256": "1732625600af03496974bec81faae0d6de82d07b075dc4007beaeab53557424a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/5.json",
+      "sha256": "bb072974c067bcd562b7b6e682f3016b9a0ed4240faeb484b14d0af6e2157b7a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/6.json",
+      "sha256": "c9207521c13c5e62f1afd31def66a0db129d2a768fc864b06caa310ae9cbbdba",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-0.json",
+      "sha256": "4c83892d2657a0974774480df1c028f96ebda57ed19ef4133892e1559cb97d12",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-1.json",
+      "sha256": "e4b1668d56c40c9d978870e8bc56804617e1d4715ccba50d3d2285a63856b59b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-2.json",
+      "sha256": "c8d38cd4e24c268ee743d5536997d355ed9941aa0d8df2a0e13b2ba4037d3b2b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-3.json",
+      "sha256": "3eb4fc6fd28490caef4fab278b10a80aa199ebb7009933bb79bd2d62b0ad63f5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-4.json",
+      "sha256": "32c2b5adf86fa80fb527c993739e66dacbf34712f983e411fc641364eb3eb208",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-5.json",
+      "sha256": "7d4b3cd304fe549b6177ba3592f12acdfc2d71f383a4f7e0dd8bce758fcd0405",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/case-6.json",
+      "sha256": "8f510e88318ce3cc6b01e5cc4c5d6670d21a702a7264bbd22fc862b7e799aba7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/freeze.json",
+      "sha256": "c93217ff53d3701efcfa89d145a1e34259819dc0f5582884d5ba092b1f032433",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-24/typed-primary-v2-targeted/summary.json",
+      "sha256": "9159bd62f445c1b2e5c3ff381262d0856a57b129bb195dc411901d1b5c971fa5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/0.json",
+      "sha256": "1dee179a75f186091c253dc5d333fa80bbce6803f97a212ba71fa4f264d4a01c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/1.json",
+      "sha256": "2e7336d6aee60a84c1a623e433a527e8ead9239369f53d762e6900c8696fdebc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/10.json",
+      "sha256": "d10531148a6be29386b88f1e4b17c6261ccab2ccf1229ecd13290aabdb8bdcf8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/11.json",
+      "sha256": "b10a0084a8ef7c5c6673fe79d10602805cf4210f7afff0a7016946c677897dd2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/2.json",
+      "sha256": "75f0dfeb22d5c7a9defe70bb4cd88032efeff39bd6cb79a163a0d50d3dd2905e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/3.json",
+      "sha256": "c40c93d50fcbca133073fc604429ed493b5f2d488e7b1a8636ab65c783930a14",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/4.json",
+      "sha256": "a9c0859cf62c93177b4936e9f75b0ee428c00704132bccdbd0a5155b33d223ef",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/5.json",
+      "sha256": "c82a21a7735c3d2a7eb8af17fcfbc9bee657361c5109e52295272b1e8f4f27b1",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/6.json",
+      "sha256": "b52a4119adb32812ef11d0012c5579da39773c815d15417634b6894e639294a0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/7.json",
+      "sha256": "48628434dacb4ef10de75b70ffdd6514352ae602b19ef9e31bab132c98d977ab",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/8.json",
+      "sha256": "170ffcc8dfb2a59ade408ad91b91a2a87987d13a191a8e0e0ba259cfba5978e7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/9.json",
+      "sha256": "e74468b6c721f36036d5824942acfc946502412a74ba14daa2015135d6bb637c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/case-0.json",
+      "sha256": "15c28ef787f5c0768d2556213210a50745fe0bf1b7183a308a40fa5971c91b03",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/case-1.json",
+      "sha256": "aebc2e496f27adf6c6a8dc10841b414b8cd5efd779ffda33c65a4e2fb97e4add",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/case-2.json",
+      "sha256": "cbd97f74322c25b310c5b6d183444d3f937d73ae5e03b81b6286004544565236",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/case-3.json",
+      "sha256": "4dcf3694bf1efd7afd026f1b5683dc07531ce57b9df01a27036cd452963c45df",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/case-4.json",
+      "sha256": "07d6161574cbe340eaafb444be65e2b548c2cb1ea8453f85a7ef366582b6bfa9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/case-5.json",
+      "sha256": "9408de51af9f6ac4f9248b177766de55b4cca26eecab98d616adbe36825bd9ab",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/freeze.json",
+      "sha256": "3c0e5e40af09adb07f34f487f58dffb73fc4f30fafce92c68eaf2db084ce9b89",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/anchored-strict-v1/summary.json",
+      "sha256": "d558da00d774d7763a76b1db11a5a75e62ef2f98ab19da8071082d34632ee807",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/0.json",
+      "sha256": "ce3fd7bb8d740a2654f8132dfa425ad1cb0e26b7d53f71a55e42da68d0ea49ab",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/1.json",
+      "sha256": "b74ac0694c3897def6b1b47fe5e63406291822245f23a214cef130add6a9709b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/10.json",
+      "sha256": "94b5aebbb059837ad1b73bbac6322fba36e2a5ccda8e9922d2bd0ab34ce895b0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/11.json",
+      "sha256": "960282e10d3510dd45b4ed82bdb7f8a5e15977aa9827ca4c4749b676e68d6848",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/12.json",
+      "sha256": "e2adda9d0c43d2ea9158efaba1f0381e7f482ecd19def037020be88aa7f1ea58",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/13.json",
+      "sha256": "f6fe8df7545c291a6cf6c7bdf0dbf5a872a74b84dd15b78d807ff2abb3efd7c9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/14.json",
+      "sha256": "601c80e218bf4ef87b0e97dfe2f764970591b50e2ca97f1e053496f465db9e02",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/15.json",
+      "sha256": "89ba6d12eda456881a0bcbe19b1e65632338d692869cc58cc95f18d530db4e28",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/16.json",
+      "sha256": "020889c23627927661ae27b89727fa815e46bc9509b4d3b6409dc433800e0f0d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/17.json",
+      "sha256": "82ed98e83e3a031476f65e089133a39d66f3c0a38fa8d67367802b6515be1d88",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/18.json",
+      "sha256": "573f0c22ed165ecb18b2df012f66046d4f824813f487d735fda102055c6b37e0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/19.json",
+      "sha256": "dc0bbcb279165b733c9e590d9225d333efad96a571ee39557cf0d931fcdd2a85",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/2.json",
+      "sha256": "3c5bf22d57f7a1459c7b80c881a66956c373e239fd6d317ccff5e11d239a845a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/20.json",
+      "sha256": "8e841e9710e2520d693d8c094e7fa5cab53d7a9b859e441037af0125b00cd160",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/21.json",
+      "sha256": "19762b4fb854f6a124c6f50a0d6ca14774a7467046e8caee3fb0d98b563cb0f0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/22.json",
+      "sha256": "fda45af449aab1cd84a922fdcfef915b7ce4b33730889d60218255a283d7c0e8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/23.json",
+      "sha256": "579b80fe0ff74b462bffaab65cb8a248b210289524f2ef77b9b23e1e6ab05310",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/3.json",
+      "sha256": "9f944ac9866938cc9269bec8675d08fbf9711c19a222b650bfbc511b41944bbc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/4.json",
+      "sha256": "99243886ec33dab538fcd2d5b7171bf87398b60022c5f9370451eb150c196039",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/5.json",
+      "sha256": "f321ee9fd688364262de32e5a173de615bbf396ac3111a28694887033919465c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/6.json",
+      "sha256": "3bea2e36dd34720c179ed6a8e9a8df06f363dc198703b32a2e8264a1ed6b691f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/7.json",
+      "sha256": "1cb49357304cda52ffdbd1a40441338fee8995ec9d48c03b4b91bfa5bb90982b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/8.json",
+      "sha256": "e1a447f10b3132e5040889a7bcb4ff3a07f799aa9cdb3fca7b0817966fe2e436",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/9.json",
+      "sha256": "962627fe41f6528d3d45d91e87f6057d8e341fd8741680b8a1703c2f26572385",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/audit.json",
+      "sha256": "cd721f3ff9343323a98b08ea6140fec0c1d02d326610470f681b63f03b9424a1",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/case-0.json",
+      "sha256": "15c28ef787f5c0768d2556213210a50745fe0bf1b7183a308a40fa5971c91b03",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/case-1.json",
+      "sha256": "aebc2e496f27adf6c6a8dc10841b414b8cd5efd779ffda33c65a4e2fb97e4add",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/case-2.json",
+      "sha256": "cbd97f74322c25b310c5b6d183444d3f937d73ae5e03b81b6286004544565236",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/case-3.json",
+      "sha256": "4dcf3694bf1efd7afd026f1b5683dc07531ce57b9df01a27036cd452963c45df",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/case-4.json",
+      "sha256": "07d6161574cbe340eaafb444be65e2b548c2cb1ea8453f85a7ef366582b6bfa9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/case-5.json",
+      "sha256": "9408de51af9f6ac4f9248b177766de55b4cca26eecab98d616adbe36825bd9ab",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/freeze.json",
+      "sha256": "e760bfe4a8b8fcbfaa8406829c1cfb0e177c101a00a8e5b7a6bbee0d8bb35caa",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/controlled-contract-length-v1/summary.json",
+      "sha256": "b892b0b1ab3062a9ed1874beccd58193a89b464e30ee05766963fa47b0403b1e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/0.json",
+      "sha256": "660cb13a1df6d0800d830e4720d5a858069df0e4915ef9def1666a1aa4711509",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/1.json",
+      "sha256": "633118188d859cfb7a1d7a9f05cbc5a6b41eb6b40f259c39324d47a49986ea55",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/10.json",
+      "sha256": "25fd8e250ef29e07f4eed567bfb5efc5fec95ae40f499e7bac5269f2ab667922",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/11.json",
+      "sha256": "c01c12ea8ccee791c8a5d2e5779f63ed4b186d1053f0c049db5ab47db9977dd8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/2.json",
+      "sha256": "6aee07183baf8f632e003e1d7eeae08b081ffdddc8052386573fb604498c84a9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/3.json",
+      "sha256": "ff575efe06c6811c4e653034dc24b4821990fc81c9288f4c3d3465ab7182a52a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/4.json",
+      "sha256": "b4cea218cc34468343795cd56b3931791b806545f63cd715eed0ae3dad62dc9c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/5.json",
+      "sha256": "4554cf1ab0cfe0a9ea515081c5a3d460dd109b2f069f3ca93a4c7f7e3250e8bb",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/6.json",
+      "sha256": "3be131eed90ca1febba61a999ead1b30feba16b3f69648d6f245c714c9763bdb",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/7.json",
+      "sha256": "a83a876c1cb85c9f96de2493b2e8cff538052ba8f7049190dcc37d4bb38470f4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/8.json",
+      "sha256": "7178dd4f9d4a4f32993d8e673313ec6b8d27321c8e45c40ed82d0e9c590e1f8d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/9.json",
+      "sha256": "0bda5ccfc52a4ff564e77d1569b92c5c1f0f201c89f8666e9dd283f0d6950353",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/audit.json",
+      "sha256": "449d2a82e33e2065a723d2e89c96836f97433c1d35d217a19355775ae7f8d855",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/case-0.json",
+      "sha256": "15c28ef787f5c0768d2556213210a50745fe0bf1b7183a308a40fa5971c91b03",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/case-1.json",
+      "sha256": "aebc2e496f27adf6c6a8dc10841b414b8cd5efd779ffda33c65a4e2fb97e4add",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/case-2.json",
+      "sha256": "cbd97f74322c25b310c5b6d183444d3f937d73ae5e03b81b6286004544565236",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/case-3.json",
+      "sha256": "4dcf3694bf1efd7afd026f1b5683dc07531ce57b9df01a27036cd452963c45df",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/case-4.json",
+      "sha256": "07d6161574cbe340eaafb444be65e2b548c2cb1ea8453f85a7ef366582b6bfa9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/case-5.json",
+      "sha256": "9408de51af9f6ac4f9248b177766de55b4cca26eecab98d616adbe36825bd9ab",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/freeze.json",
+      "sha256": "428e4bcf77951b31b2f608edb34127429b0f40399c66a2a3e663878ab1833ed4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-26/deepseek-typed-v1/summary.json",
+      "sha256": "352aa2c98f5dde4a0d5d7f47cacd43dfb3897f0220b5161c303ec2dc72749a51",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-official-weather-v1/extra-field-request.json",
+      "sha256": "3c8cadf76d399ecc0a3a45f16e2add2840c37d70f0d0c72fffe3dc7b2211ba9d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-official-weather-v1/freeze.json",
+      "sha256": "b9467859d8b65ff78afa5f5f0b5b8ad71f983117d702b8c197b0a5d234b85314",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-official-weather-v1/official-normal.json",
+      "sha256": "69cb9989ba327b9f851e1574e319d4fcd774362d1d9c990f0d26d9606ad2605f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-official-weather-v1/summary.json",
+      "sha256": "a192b0a7367a42ed47669267f775c5a10e8416323f9765e688a3f4a20a16e896",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/0.json",
+      "sha256": "3e513338c51701c7b8508c8c62c27a88a722d6cfdcd153c49d3081de6efb63a4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/1.json",
+      "sha256": "95c4978c8148818b966b6affabca14059030a04654271539b9b82e3f2833c0df",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/10.json",
+      "sha256": "a6751ed9554278e7f5dc63c65f23e7cf34351a34b4fda6a15a947df822bc7fbf",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/11.json",
+      "sha256": "6eb135ec3e951e10a8b0e441967f68d67d843e549bb6ec0b49ec7c5f69c79d80",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/2.json",
+      "sha256": "979e23225754265ef7177611efa955289b4f55a008caa355cdaddc85fe16d79c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/3.json",
+      "sha256": "863d56cb829e9ca90d14fae960383906fb4d72a90e1ff4b7c39257594f0ffa1c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/4.json",
+      "sha256": "5cf06b2af43d940bc62bdfa397145ce7e2d657533c3b12ae394643c7eee5f78f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/5.json",
+      "sha256": "41959ec83ec37c4f65db65ef2ee01df67a293a51b7e4bb7f0aa9f66435d775e6",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/6.json",
+      "sha256": "b702d44e795295dd0971de0b3c3e9190489da88505b2542d415a139962a933e8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/7.json",
+      "sha256": "32f1b03dfab1e646d5309b109e0b28df6773b671d15387a1c9c5eea91401bbe7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/8.json",
+      "sha256": "69e25affa6b290b0c9dfdbe69f70ee83ce631b2eceac74d20810615020da75fd",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/9.json",
+      "sha256": "eeb1ee1eb2d2a0f0eca364ed426ef07822b2917791b9472ad7a02527a909cc1b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/freeze.json",
+      "sha256": "1743b095a52758edf228103837bee4eeff6592051ec59c13cc280cba07c6fe49",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-strict-probe-v1/summary.json",
+      "sha256": "fd8eebbe47e9241cf5d381d71fa136bf729dfa4325fa763b60811a141cf84f8f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/0.json",
+      "sha256": "b6476cb6952bc56e4593c15ce4af6d99270663ae3146c147cd5adcee14d9aef5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/1.json",
+      "sha256": "1fc57d20ffb73500756120250e3f5b3a0c399d33d93c0a0b941c44669dae2755",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/10.json",
+      "sha256": "a6a5eaa6369745ae0632ab393cf9ec20c1bab9eace7afe2d30a93c6ea53fb423",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/11.json",
+      "sha256": "4a846ef03811ac503f6dc1411ba66c97a2d70a7517f93a475465705ae1a47665",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/12.json",
+      "sha256": "e226cc7b17bb0973e1a191e6c84a79b5177e3f41d948941728b7027a14432945",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/13.json",
+      "sha256": "99d31f31de4738a8c6b7720cadae6edd276c4025a76cb1e142f4ca8fc3a0e036",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/14.json",
+      "sha256": "0577ba73d37bc5981e56af76516ccb7128391bc3dc34a7f643a90f4a91f72fc4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/15.json",
+      "sha256": "b0f7eeedad2433d496cfe5bed7230e6175650587af646343ed43b62b578c9ef0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/16.json",
+      "sha256": "a20e9cfde803012cc725ee8c0238187456278926d087f54bc65e1299f4b007d7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/17.json",
+      "sha256": "06c488e586ad25b9b7ff8865529fe69587e5636f4320632e38ba6970b3a453d3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/18.json",
+      "sha256": "9f17dd6b7c8d71ea40826d53a882d649b928ab4e3839d5f3d241eab58c5055a0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/19.json",
+      "sha256": "854cac21987633b0d1d82ae5555a77567d10d817976bca2abddc45aa5e1b26ff",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/2.json",
+      "sha256": "50c095738339ab7957ce278a534ed7cf6dc9c872d78242d6dcd8a71f77bce92e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/20.json",
+      "sha256": "6fcda89c57ff73cdf175ebe91d9514a8b4fd50d12cf9cbd403e9582380b15024",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/21.json",
+      "sha256": "e1fc3e20e95b4273a835bcf46c0457202c52ea2b569343341af9791eb9c4ba95",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/22.json",
+      "sha256": "5dfefc033663a6d4ed7625a985c1f39f690018b5650f073acb37b612cfd160bf",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/23.json",
+      "sha256": "74e0f7bbc4b22f57c6d6256851f3d2f8aa4e3c7c9492f28c44b44264bb08bba2",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/3.json",
+      "sha256": "efe06b2e7c6ef7730b3f88e823ea55ff96425502701c7a611c867c3a08413c50",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/4.json",
+      "sha256": "9796a0dc3200a28ea0a99857d5e222ba5f45bf42241f0793c8a3423ac89901d5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/5.json",
+      "sha256": "2da284a5da2d1c680b30f75a2ce7cf959d802231cc4f19a6aa67677f5e6e47d0",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/6.json",
+      "sha256": "9aa7e4e9b9724e68b3254214e34f82437e4e75e7f3883027cdc2e5922e087e0b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/7.json",
+      "sha256": "23a5b75e794e35283ad19684007030f91fa8f065e7698537804c847aa8aad748",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/8.json",
+      "sha256": "e528fb52ad3faea4d5a0785a38b63015fb7e079c0a97fbdfed31613f98cfcb8c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/9.json",
+      "sha256": "981291f5814fa32487259803f3db6a24dacb258f4db3470ce4cdae98307c5589",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/freeze.json",
+      "sha256": "f256ef105792b4b07a6598717a200e5f5f04d580d932fce47a7e9b96dc6b545c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/deepseek-verdict-only-v1/summary.json",
+      "sha256": "95c9192f57b56157fa0bbbe7832ded0340e3243df9a68c2d14e24f44e83be32c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-boundary-four-v1/0.json",
+      "sha256": "92c93bc79d464eee570149982d8394876a71457219bcd51951b9c871f85e23ed",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-boundary-four-v1/1.json",
+      "sha256": "2b0625f0ae8de9af1914c6a7e127e1625f47a70f250b7c4e8296b50f37fc3a1d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-boundary-four-v1/2.json",
+      "sha256": "0c7b27f231db18e584834ed9c8d5037f2b3416aaa6872c43f91052cd0871495f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-boundary-four-v1/3.json",
+      "sha256": "4538f5b8230f9beff311b50e861dbdeabd9a6c1ab8821891e6aad6d2a453da50",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-boundary-four-v1/freeze.json",
+      "sha256": "bb772c17ae10f25e8a18afaa4ed717bd61afc8beae31777e35b7e2e37f84539a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-boundary-four-v1/summary.json",
+      "sha256": "e1caaebb4244873668e66fda72c045b638955a635ad07c6154495d09e84dbb5c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/0.json",
+      "sha256": "fd3465c838a29e670df9fdf98369b333e84956dafe00d3dcbef1177d803daf49",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/1.json",
+      "sha256": "09e855806f78de54e1b5b4f4d52b4f2551e34ae750bfc32d1e9679c06c9dbcd9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/10.json",
+      "sha256": "c0ff1ba49e2f1113c7393d32ce8fc142e99fe1c97603ffa2f0230c4937ba4377",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/11.json",
+      "sha256": "8b7b451c82e9d1a316b34fc8a95995a443ccffbbcfb9cd8b2f88f0b49b15fb12",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/12.json",
+      "sha256": "215d22ef6e9ba18704537b4a1481a1e34c6043867ebbc4865bbd5de4a5ad7065",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/13.json",
+      "sha256": "1425b60e8e82f4edc84d8712ed40ffafed91199ebf632c2168eecfcd9738aa16",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/14.json",
+      "sha256": "5c3c35c270a6bedf301cf976fac19929dcf7b8bc03fa59d396a9f4fa83f7c0de",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/15.json",
+      "sha256": "6e3ed32fd70765d972b8d995be9b304ed3b0261a7d4431a09ba7aa9454df8271",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/16.json",
+      "sha256": "94541668d9af6ddd50a3ae5961086a9be8295e1c940f44e506d042efc04f37d4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/17.json",
+      "sha256": "1b9f11c61bc88911dcf06f0d70974bd685c22ff1fd4cdcd6641fe113a1ea8b37",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/18.json",
+      "sha256": "6b3dc06a2e26338dadeb395ca1546c620d7e8c5fa4efa673653f0f19596f0cb5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/19.json",
+      "sha256": "b4cf70ce03ce2d35c84ac536ba16a1a6d57a7a207dca0a18f3d22431b3155378",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/2.json",
+      "sha256": "4017f1898efc35e314415186da58e2d46d9aa9cd8a2124a9ce72fecefd735ed4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/20.json",
+      "sha256": "079e13874a492a5598424ec737bedb569b3606abbd55a12a41eab32afbccbf58",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/21.json",
+      "sha256": "f928aa597d180e3f07bfe9f52d3a3db549c3b2ccdf3b8b94da49aa4345782c8f",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/22.json",
+      "sha256": "46e6eb99581be19eae43d8c5413e46174c18b03e75c3a00e8f418dd55cc5207b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/23.json",
+      "sha256": "5123a6bdbcfa8984b75b91c3a7aa2b97269f5c1eb07fd9895a7f286b51cb10b5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/3.json",
+      "sha256": "1d0528d89eb8e3317b98a0f17f2f7ef2afc11a088f6c2b15e1d44c43aa0a0313",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/4.json",
+      "sha256": "7e9e674a3cbe3fb17fd8a849e683c4ec2f74c87926794b5c44568a251fae2f08",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/5.json",
+      "sha256": "a7bad21012ee5bd01610adf8c5ec51d1ad28272402c54846a7f41e2a5b510090",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/6.json",
+      "sha256": "ae33c2dda09ef9d9ab79af3aab7b4b51ca7f58167c4b74b6292625ba3867d4d9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/7.json",
+      "sha256": "4550701a96edb3b2b4905d1623413767c81be6f316b2b85bd5012fc9239633f1",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/8.json",
+      "sha256": "ae55bc69081075c42a10c8528325c4f9458cc03a05f7cf287dd38c709a2b398c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/9.json",
+      "sha256": "8dfc3c38ffd6c916a3777124ee6243d06fa8b1ebdad23e1b0af6b36bc1970965",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/freeze.json",
+      "sha256": "8d293c1b285e28968d16c337450754aba2b369af886d82062f26b46133a058dc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-low-v2/summary.json",
+      "sha256": "861a7cf28c40fe8df2d18949f01948f30c98965b79948a352c18b9cf5a055df4",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-v1/0.json",
+      "sha256": "f6a809350376985ccf271e9183c5056fe14951727afed2df586ca80ba4e2a9af",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-v1/freeze.json",
+      "sha256": "9b0a2895bd3a31700db184be97a28a991952ff250a7b2a791496635d5be48c43",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-27/glm-verdict-only-v1/summary.json",
+      "sha256": "9893f6cd424d6e33281b876c2c5e26a14fde0989de365f30b9b5fc6c38a1847b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/booking-steps.json",
+      "sha256": "6683640e747f94b276656ba8bec911169537991978d738be08805ce7ffefa511",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/faq.json",
+      "sha256": "fc0d3dd9d082ca2197265dccb29b011ebaf6d3a207555e279693d2709991f565",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/freeze.json",
+      "sha256": "d0c68653f2a7afcfe7792517858013c004fcc9528ef445e85159368cf35b24b3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/no-knowledge.json",
+      "sha256": "e07b59760bc0a9941948b74e2ab5d07a2a1f92b59f4bbfe452f2baa1f60a7674",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/pickup-hours.json",
+      "sha256": "5cc1c7019561ee520b7786f228464ce413b7d2cf0c3cdd976ef6fcae681b92e5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/pickup-missing.json",
+      "sha256": "a6dc76a5c3a3e2439d4e9dffa1c44f9cf73c0865ba7f5bca2a9b209e984b73e8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/refund-action.json",
+      "sha256": "0f05afa208f3507b7fd9a306e3e7c7843bfd96d214127966f9ab7dbcb16af159",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/return-fee.json",
+      "sha256": "3f6632ecfb6e091c8962859476c6b9a1d4d187f200768976be688985a846334e",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/summary.json",
+      "sha256": "acd635cdd973bdb1c6c0a27799656e4340a0a1c8f0e0f682c070346f8b069522",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-auth-blocked-v1/faq.json",
+      "sha256": "5b68999d7dcb31bc35188888fa41492ba954046a9c71fa457c25b4a74ebe9300",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-auth-blocked-v1/freeze.json",
+      "sha256": "9f9a0a1dc2352326c4560c323d0670066b5f708c63bcf84ce90156fe5b8e0d36",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-auth-blocked-v1/summary.json",
+      "sha256": "dcadbc90e4a4d3f7ec7a6b59a387a4433f3660d0c52de823310893ea7b68a0e3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/course-action.json",
+      "sha256": "c002f3f2c491a7c45165f26bcab24167a8172fc640a567c7b283c1dc4b68c0d7",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/faq.json",
+      "sha256": "5b68999d7dcb31bc35188888fa41492ba954046a9c71fa457c25b4a74ebe9300",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/freeze.json",
+      "sha256": "b577fde7e0274f19eb44cf005c9c7f28f512a5f4806e5dcd559ba300bca8554c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/library-action.json",
+      "sha256": "b149ca6ed275f6837e6b83a5e391ac18378f2c60d561b1c24564c77847b06fd6",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/library-supported.json",
+      "sha256": "7ac5455f7af11c0ab004b9fdbffa80a95be7fc3ce0c4f7762c5bfa1fcfb1cd94",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/no-hit.json",
+      "sha256": "3db5466e975f8331ff7d2023ce52805255940e65d82db36fab8ac1fe7543c57b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/summary.json",
+      "sha256": "da6e086c314bb314017c732a652804f1072a85208cc9e04abc8e258368bef0c3",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/venue-missing.json",
+      "sha256": "12fc9cdeffaf042a3dacf6703ef997e2962d70da3ea5ff5008e0ee5463f23430",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-fix-v3/venue-supported.json",
+      "sha256": "dca1a5f7ef5fb165ef4ed87e1f0cf44f8c02098675fa4c15b59835abc5bcfa74",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/course-action.json",
+      "sha256": "b189b7e1a7bb04fd19204eca9ecdb024dba5eea5f7e7ed621e92fbad5ec4efa9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/faq.json",
+      "sha256": "5b68999d7dcb31bc35188888fa41492ba954046a9c71fa457c25b4a74ebe9300",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/freeze.json",
+      "sha256": "d3efd90174eea1879d3c23d684eedb8a39ac92d6dbcff73f8490a336ca9e6511",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/library-action.json",
+      "sha256": "f1958b1f076b3da201152c9ead8d63dfcc55a83b3550be3617974961c21d3df5",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/library-supported.json",
+      "sha256": "11f44fee43f17cb58ec6a762b1c9364103a6df5884a2fc30d2202d376384e04c",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/no-hit.json",
+      "sha256": "f42be554fbd17a2c7765deb6c81a2459be534bc879abea3943688819c98063b8",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/summary.json",
+      "sha256": "ff55935ad882cd6e7fb617f5b73c5cc50d4634e0eec5ba5a1d387c7f1ee4b53b",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/venue-missing.json",
+      "sha256": "b9c8822106375f7dedbe19f510866604bb5a9db5f8f031b21188c5a81ebd0ddc",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-retry-v2/venue-supported.json",
+      "sha256": "8eee54328117021485e94e06b0f237afd067b82e5618b9fdaefbbfbf1d4a8256",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/civic-action.json",
+      "sha256": "ac8b6476cf06d7b42a7093a09c99f5e5c25a2da0c83856a1bd9a90269dda2217",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/civic-supported.json",
+      "sha256": "ef12903424972396150ac8924ce1b06e3af42ef6b9e34c51fda208cdd1071c20",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/faq.json",
+      "sha256": "03a3f16b91cc44e5b27a63225e2c8126a6fa755595e31b061e65b4d460b513e9",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/freeze.json",
+      "sha256": "824aa45147b3387767bb06dada75787e3d9e6dcab3bb5d3e4912764559557afe",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/hotel-missing.json",
+      "sha256": "074741e6bae3f5753a8c1b2acda5474436413e93cb0e23300dcc4fccd8646e10",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/hotel-supported.json",
+      "sha256": "e76bdd20ddda9523dc79645f886fa9f6054c2e1d92eea4080e1535f540e2fbcf",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/repair-no-hit.json",
+      "sha256": "d0b39176650691e5d2864add8645bd0ded550bd7a3ccf97a29fa53806002505d",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/repair-supported.json",
+      "sha256": "f2a57b62236f6d450c9375a3258a2630ce0ce1fc4fcbc631bd321352fcb16459",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-28/mainflow-transfer-v1/summary.json",
+      "sha256": "3087a23842b387bab5b3c0e354f8c571c432d4167c3bb28d179f9b84a0bbc98a",
+      "decision": "hold-pending-content-review"
+    },
+    {
+      "path": "examples/archive/knowledge/webchat/eval_runs/2026-09-29/crmeb-sync-reload-v1/report.json",
+      "sha256": "f18393c536aa4a7e7e4f4cc0e711929e76f366d27b36680840b52806015e4174",
+      "decision": "hold-pending-content-review"
+    }
+  ],
+  "archiveFileCount": 544
+}
