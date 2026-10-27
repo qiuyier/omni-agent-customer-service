@@ -1,5 +1,7 @@
 # omni-agent-customer-service
 
+本项目自有代码采用 [MIT License](LICENSE)，第三方组件保留各自许可；授权范围与锁定依赖状态见 [许可说明](docs/licensing.md)。许可证选择不等于 1.0.0 已发布或所有分发审查已完成。
+
 面向企业系统的渠道无关智能客服服务，使用 Go、Eino、Hertz 和 Thrift 构建；
 模型层可在 OpenAI、DeepSeek、GLM、Kimi、Qwen、OpenRouter、硅基流动及
 其他 OpenAI-compatible 端点之间切换。
