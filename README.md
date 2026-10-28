@@ -1,6 +1,6 @@
 # omni-agent-customer-service
 
-本项目自有代码采用 [MIT License](LICENSE)，第三方组件保留各自许可；授权范围与锁定依赖状态见 [许可说明](docs/licensing.md)。许可证选择不等于 1.0.0 已发布或所有分发审查已完成。
+本项目自有代码采用 [MIT License](LICENSE)，第三方组件保留各自许可；授权范围与锁定依赖状态见 [许可说明](docs/licensing.md)。正式版本范围与分发边界见 [v1.0.0 发布说明](docs/release-v1.0.0.md)。
 
 面向企业系统的渠道无关智能客服服务，使用 Go、Eino、Hertz 和 Thrift 构建；
 模型层可在 OpenAI、DeepSeek、GLM、Kimi、Qwen、OpenRouter、硅基流动及
@@ -8,7 +8,7 @@
 
 ## 通用接入
 
-首次使用先读[最小使用指南](docs/minimal-use.md)：固定部署、真实业务接入、模型/资料配置、人工接待和停止恢复。1.0.0 尚未发布，交付以[范围基线](docs/v1-scope.md)为准，剩余交付与上线条件见[发布前清单](docs/release-readiness.md)。
+首次使用先读[最小使用指南](docs/minimal-use.md)：固定部署、真实业务接入、模型/资料配置、人工接待和停止恢复。v1.0.0 为源码交付版本，交付以[范围基线](docs/v1-scope.md)为准，剩余交付与上线条件见[发布前清单](docs/release-readiness.md)。
 
 要直接运行带持久化和人工接待的整套本机参考系统，见[固定参考部署](deploy/reference/README.md)：稳定配置、专用 PostgreSQL 卷、网关及业务/页面入口，停止后重启可恢复历史；默认固定回复，可显式启用已完成小样本联合验收的 AI。仍为演示认证，不是公网生产安装包。
 
@@ -25,7 +25,11 @@
 回复恢复、人工接管与身份隔离的一键回归入口：`node scripts/recovery_check.mjs`。
 可选一次性 PostgreSQL 验收及报告说明见[恢复与身份隔离回归](docs/recovery-regression.md)。
 
-## 当前进度
+## v1.0.0
+
+版本功能、安装入口及已知限制见 [发布说明](docs/release-v1.0.0.md) 与 [CHANGELOG](CHANGELOG.md)。以下为按时间保留的研发记录，不代表当前版本所有能力均为实验，也不将历史校验器实验纳入默认客服路径。
+
+## 历史研发进度
 
 当前优先级（2026-10-24）：先跑通通用客服系统的核心端到端流程。非阻断完善统一记录在[1.0.0 发布后优化录](docs/post-1.0.0-improvements.md)，正式发布后再安排；GitHub 云端 CI 首跑已转入该清单。核心功能与安全阻断问题仍须发布前解决。
 
