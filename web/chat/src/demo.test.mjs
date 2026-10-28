@@ -57,3 +57,21 @@ test('401 renewal uses the new mode waiting budget and the same event', async (t
   assert.deepEqual(timers,[45000,45000,45000,150000]);
   assert.equal(bodies[1],bodies[3]);
 });
+
+test('business identity copy is independent of storage, reply mode and authentication method', () => {
+  for (const storage of ['memory','postgres',undefined]) {
+    for (const mode of ['fake','ai',undefined]) {
+      const view=demoPresentation(storage,mode,false,true);
+      assert.match(view.description,/登录身份由接入方验证/);
+      assert.doesNotMatch(view.description,/模拟登录|演示账号|密码登录/);
+      assert.match(view.description,/不代表已连接业务数据库/);
+      assert.equal(view.label,demoPresentation(storage,mode).label);
+      assert.equal(view.capabilities,demoPresentation(storage,mode).capabilities);
+    }
+  }
+  assert.match(demoPresentation('postgres','fake',false,true).description,/同一业务身份登录/);
+  assert.match(demoPresentation('memory','ai',false,true).description,/重启后清空/);
+  assert.match(demoPresentation(undefined,'ai',false,true).description,/尚未确认/);
+  assert.match(demoPresentation('postgres','ai',false,'true').description,/模拟登录不是真实认证/);
+  assert.match(demoPresentation('postgres','fake',true,true).capabilities,/可申请人工处理/);
+});
