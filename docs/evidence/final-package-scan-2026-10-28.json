@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-28",
+  "archive": {
+    "name": "omni-agent-customer-service-source-candidate-2026-10-27.tar.gz",
+    "sha256": "cc7b39e0e728ef980dedaf299c91e2c058b322b18edf9c0e82693082a8104018"
+  },
+  "files": 706,
+  "knownSecretValuesChecked": 8,
+  "findings": [
+    {
+      "path": "internal/bootstrap/logging_test.go",
+      "rule": "provider_token"
+    }
+  ],
+  "drift": [],
+  "sourceFixtureAlignment": "all six files byte-identical",
+  "scope": "Bounded known-secret, token/private-key pattern and forbidden-path scan of all manifest files; not a guarantee of absence of all sensitive data or a Git history audit.",
+  "reviewedFindings": [
+    {
+      "path": "internal/bootstrap/logging_test.go",
+      "rule": "provider_token",
+      "disposition": "false_positive_explicit_synthetic_logging_test_marker",
+      "review": "TestResolveLoggingConfigRejectsInvalidValuesWithoutEchoingThem; not a deployed provider credential"
+    }
+  ],
+  "unresolvedFindings": 0
+}

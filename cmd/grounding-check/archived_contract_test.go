@@ -21,7 +21,7 @@ func TestArchivedInventoryContracts(t *testing.T) {
 		{"9.json", "review", ""},
 	} {
 		t.Run(tc.file+"/"+tc.stage, func(t *testing.T) {
-			path := filepath.Join("..", "..", "examples", "archive", "knowledge", "webchat", "eval_runs", "2026-09-24", "inventory-v1-repeated", tc.file)
+			path := filepath.Join("testdata", "inventory-contracts", tc.file)
 			data, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)

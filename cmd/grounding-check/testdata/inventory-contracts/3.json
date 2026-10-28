@@ -1,0 +1,13 @@
+{
+  "samples": [
+    {
+      "reference": "维修站提供设备检修服务。自助平台支持用户下载自己的检修记录。",
+      "answer": "您可以通过自助平台下载自己的检修记录，但具体入口我无法确认，建议先查看官方说明。"
+    }
+  ],
+  "results": [
+    {
+      "typed_primary_raw": "{\"segments\":[{\"quote\":\"您可以通过自助平台下载自己的检修记录\",\"scope\":\"system_fact\",\"reason\":\"声明自助平台支持下载个人检修记录\",\"assessment\":{\"status\":\"supported\",\"evidence\":\"自助平台支持用户下载自己的检修记录。\",\"checks\":[{\"detail\":\"自助平台支持下载检修记录\",\"relation\":\"entailed\",\"evidence\":\"自助平台支持用户下载自己的检修记录。\"},{\"detail\":\"下载对象为用户自己的检修记录\",\"relation\":\"entailed\",\"evidence\":\"自助平台支持用户下载自己的检修记录。\"}]}},{\"quote\":\"但具体入口我无法确认\",\"scope\":\"knowledge_limit\",\"reason\":\"说明资料未给出具体入口，未否定平台能力\",\"assessment\":null},{\"quote\":\"建议先查看官方说明。\",\"scope\":\"inquiry\",\"reason\":\"建议查阅官方说明以确认入口，属一般咨询\"}]}"
+    }
+  ]
+}
