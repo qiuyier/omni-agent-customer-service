@@ -4,7 +4,7 @@
 
 ## 设计与配置
 
-直接复用 [DeepSeek 冻结输入](eval_runs/2026-09-27/deepseek-verdict-only-v1/freeze.json)
+直接复用 DeepSeek 冻结输入（内部历史资料；已从公开历史移除，私密备份保留）
 中的提示、12 个案例、预期标签和两轮执行顺序，并核验哈希。输出仅允许“有”“无”“无法判断”，
 去除首尾空白后严格解析；不使用 JSON、工具、strict、独立复核、重试或输出修补。
 标签、案例 ID 和分组不发送给模型。
@@ -60,8 +60,8 @@ GLM 24 次均 HTTP 200、finish_reason=stop，返回模型 glm-5.3-flash；原�
 
 ## 材料与核验
 
-- [本轮冻结配置与输入](eval_runs/2026-09-27/glm-verdict-only-low-v2/freeze.json)
-- [本轮逐题输出与统计](eval_runs/2026-09-27/glm-verdict-only-low-v2/summary.json)
+- 本轮冻结配置与输入（内部历史资料；已从公开历史移除，私密备份保留）
+- 本轮逐题输出与统计（内部历史资料；已从公开历史移除，私密备份保留）
 - [执行脚本与离线断言](eval_runs/2026-09-27/glm-verdict-only-low-v2/runner.cjs)
 - [DeepSeek 原报告](grounding-verdict-only-v1.md)
 

@@ -50,8 +50,8 @@
 
 ## 材料与核验
 
-- [冻结输入、标准与代码哈希](eval_runs/2026-09-28/mainflow-transfer-v1/freeze.json)
-- [原始问答与技术检查](eval_runs/2026-09-28/mainflow-transfer-v1/summary.json)
+- 冻结输入、标准与代码哈希（内部历史资料；已从公开历史移除，私密备份保留）
+- 原始问答与技术检查（内部历史资料；已从公开历史移除，私密备份保留）
 - [执行脚本](eval_runs/2026-09-28/mainflow-transfer-v1/runner.cjs)
 - [上一轮修正与回归](mainflow-acceptance-v3.md)
 

@@ -5,7 +5,7 @@
 ## 2026-09-10 能力边界修正后回归
 
 运行时间：`2026-09-10T04:24:50Z`（北京时间 12:24:50）。
-[本轮原始 JSON](eval_runs/2026-09-10/reply-check-glm-capability-boundary.json)
+本轮原始 JSON（内部历史资料；已从公开历史移除，私密备份保留）
 退出码 0，`complete=true`、`mechanical_passed=true`；保留此前输出，不覆盖失败或旧回答。
 
 ### 规则变化与兼容性
@@ -80,7 +80,7 @@ go vet ./internal/bootstrap ./internal/ai/eino ./cmd/reply-check
 ## 2026-09-10 GLM 实测完成
 
 用户切换回复服务并填写密钥后，使用 `glm-5.3-flash` / Chat Completions 完成真实验收。
-[GLM 原始 JSON](eval_runs/2026-09-10/reply-check-glm.json)记录时间为
+GLM 原始 JSON（内部历史资料；已从公开历史移除，私密备份保留）记录时间为
 `2026-09-10T03:00:20Z`（北京时间 11:00:20），退出码 0，
 `complete=true`、`mechanical_passed=true`。此前的 OpenAI 失败记录保留，不覆盖。
 
@@ -129,7 +129,7 @@ HTTP 总计不含接收客户消息和索引初始化；首个 delta 包含检�
 ## 2026-09-10 单次重试
 
 用户确认后，按原配置重跑一次，仍未通过；未继续自动重试。
-[本次原始 JSON](eval_runs/2026-09-10/reply-check.json)记录时间为
+本次原始 JSON（内部历史资料；已从公开历史移除，私密备份保留）记录时间为
 `2026-09-10T02:41:54Z`（北京时间 10:41:54），退出码为 1。
 回复仍为 OpenAI / `gpt-6-astra`，Embedding 仍为 `qwen3.7-text-embedding`；
 模型、阈值、维度及输入快照与前次一致。
@@ -158,7 +158,7 @@ HTTP 总计不含接收客户消息和索引初始化；首个 delta 包含检�
 
 ## 2026-09-09 历史实测
 
-[原始 JSON](eval_runs/2026-09-09/reply-check.json)记录时间为
+原始 JSON（内部历史资料；已从公开历史移除，私密备份保留）记录时间为
 `2026-09-09T15:20:24Z`（北京时间 23:20:24）；退出码为 1，
 `complete=false`、`mechanical_passed=false`。
 

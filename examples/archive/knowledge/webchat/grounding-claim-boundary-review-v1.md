@@ -62,7 +62,7 @@
 
 ## 来源与核验
 
-- [原始提示、资料、回答与标签](eval_runs/2026-09-27/deepseek-verdict-only-v1/freeze.json)
+- 原始提示、资料、回答与标签（内部历史资料；已从公开历史移除，私密备份保留）
 - [两款配置逐题对照](grounding-glm-verdict-comparison-v1.md)
 
 已复核全部十二条冻结案例及提示。仅新增此报告与文档索引，未修改实验归档或应用代码；不需要模型 API 或 Go 回归。

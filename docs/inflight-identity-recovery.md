@@ -38,7 +38,7 @@ SQL：该问题 customer=1、关联 bot=1，B 的会话消息=0。
 2. integrations/standalone-host/inflight-identity.test.mjs。
 3. integrations/host-kit/adapter.mjs 中发送完成后的 current(login)/cap 检查。
 4. integrations/standalone-host/browser-lab.mjs 的 expireLogin、expire-next-model 和模型时序记录。
-5. [跨账号及首次未命中记录](../examples/archive/integration/standalone-host/2026-10-23T13-22-27-075Z-9bf2cf09/report.json)、[定序到期复测记录](../examples/archive/integration/standalone-host/2026-10-23T18-21-52-115Z-88f9ab29/report.json)。目录名为UTC时间，后者对应北京时间10月24日。
+5. 跨账号及首次未命中记录（内部历史资料；已从公开历史移除，私密备份保留）、定序到期复测记录（内部历史资料；已从公开历史移除，私密备份保留）。目录名为UTC时间，后者对应北京时间10月24日。
 
 截图：/tmp/omni-inflight-switch-b-20261023.png、/tmp/omni-inflight-expiry-recovered-20261024.png。原始报告passed仍为null：工具不自动认证人工验收，以本文的限定结论为准。
 

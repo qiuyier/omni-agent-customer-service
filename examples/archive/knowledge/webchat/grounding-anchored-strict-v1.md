@@ -89,7 +89,7 @@ DeepSeek 的普通 response_format 仅列 text/json_object；严格 Schema 在 B
 将 anyOf 等契约结构因素分开验证；不执行业务工具，不同时修改语义提示。
 严格能力确认后，才值得对修正版编号器做固定正负案例重复验证。
 
-材料：[冻结计划](eval_runs/2026-09-26/anchored-strict-v1/freeze.json)、
-[逐次结果](eval_runs/2026-09-26/anchored-strict-v1/summary.json)、
+材料：冻结计划（内部历史资料；已从公开历史移除，私密备份保留）、
+逐次结果（内部历史资料；已从公开历史移除，私密备份保留）、
 [归档运行脚本](eval_runs/2026-09-26/anchored-strict-v1/runner.cjs)。
 脚本是初版冻结运行记录，当前源码已修正；再次实验必须使用新目录和新冻结记录。

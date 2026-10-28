@@ -27,6 +27,6 @@
 
 本文 → integrations/host-kit/adapter.mjs 的 loginSession 与 /host/chat-session → integrations/standalone-host/host.test.mjs 最后一个测试 → host-worker.mjs → browser-lab.mjs。
 
-[本轮原始网络记录](../examples/archive/integration/standalone-host/2026-10-23T13-01-00-947Z-06b8feca/report.json)。工具报告 passed=null 不等于失败；启动器不自动认证人工验收，本文记录人工核对结果。
+本轮原始网络记录（内部历史资料；已从公开历史移除，私密备份保留）。工具报告 passed=null 不等于失败；启动器不自动认证人工验收，本文记录人工核对结果。
 
 截图：/tmp/omni-expiry-account-b-20261023.png（B 隔离）、/tmp/omni-login-recovery-20261023.png（A 手动恢复成功）。实验服务停止，持久数据库与虚构记录保留，没有修改 CRMEB 或共享 PHP74，没有发布。

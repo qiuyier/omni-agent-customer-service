@@ -43,10 +43,10 @@
 
 ## 材料
 
-- [两次完整请求体](eval_runs/2026-09-27/deepseek-official-weather-v1/freeze.json)
-- [正常返回](eval_runs/2026-09-27/deepseek-official-weather-v1/official-normal.json)
-- [额外字段反例](eval_runs/2026-09-27/deepseek-official-weather-v1/extra-field-request.json)
-- [汇总](eval_runs/2026-09-27/deepseek-official-weather-v1/summary.json)
+- 两次完整请求体（内部历史资料；已从公开历史移除，私密备份保留）
+- 正常返回（内部历史资料；已从公开历史移除，私密备份保留）
+- 额外字段反例（内部历史资料；已从公开历史移除，私密备份保留）
+- 汇总（内部历史资料；已从公开历史移除，私密备份保留）
 - [脚本和离线断言](eval_runs/2026-09-27/deepseek-official-weather-v1/runner.cjs)
 
 请求与归档不含 API Key。脚本默认离线，显式 --allow-model-api 才读取本地指定密钥；

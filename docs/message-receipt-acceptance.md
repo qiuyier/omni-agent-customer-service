@@ -28,11 +28,11 @@ host-kit adapter/proxy、business-login 和 standalone 链路已允许新路由�
 2. 第二条在等待人工状态发送并丢失成功回执；坐席接管并关闭后重载客户页，显示已确认送达、closed，待确认和重试项消失。
 3. 再次重载仍关闭，无待确认；报告总计两次消息发送、两次只读回执，没有恢复触发的重发，外部模型调用 0。
 
-[最终原始报告](../examples/archive/integration/standalone-host/2026-10-19T07-40-21-715Z-a2fd90d6/report.json)的 passed=null/review_status 保留工具原值；上述结论来自人工浏览器检查和请求核对，不伪装成自动验收标记。
+最终原始报告（内部历史资料；已从公开历史移除，私密备份保留）的 passed=null/review_status 保留工具原值；上述结论来自人工浏览器检查和请求核对，不伪装成自动验收标记。
 
-[首次探索报告](../examples/archive/integration/standalone-host/2026-10-19T07-38-46-184Z-f67422bf/report.json)使用断连接注入，触发浏览器底层同事件重试，服务端去重成功，但没有留下待确认状态，因此不计为恢复验收。
+首次探索报告（内部历史资料；已从公开历史移除，私密备份保留）使用断连接注入，触发浏览器底层同事件重试，服务端去重成功，但没有留下待确认状态，因此不计为恢复验收。
 
-![关闭会话后恢复并确认送达](../examples/archive/integration/standalone-host/2026-10-19T07-40-21-715Z-a2fd90d6/receipt-recovered.png)
+关闭会话后恢复并确认送达（内部历史资料；已从公开历史移除，私密备份保留）
 
 临时页面、测试进程和本轮数据库容器已停止；数据库及报告保留。
 

@@ -75,9 +75,9 @@ schema 7 记录提示交付模式和归档哈希，两组都可保留归档分�
 1. 本报告。
 2. [固定五题](../../../regression/knowledge/webchat/grounding_hint_comparison_cases.json)与[原样归档分类](../../../regression/knowledge/webchat/grounding_hint_comparison_hints.json)。
 3. `cmd/grounding-check/replay.go` 和 `replay_test.go`。
-4. [冻结计划](eval_runs/2026-09-23/hint-comparison-v1/freeze.json)、
-   [十次结果摘要](eval_runs/2026-09-23/hint-comparison-v1/summary.json)、
-   [条件核对与覆盖差异](eval_runs/2026-09-23/hint-comparison-v1/audit.json)。
+4. 冻结计划（内部历史资料；已从公开历史移除，私密备份保留）、
+   十次结果摘要（内部历史资料；已从公开历史移除，私密备份保留）、
+   条件核对与覆盖差异（内部历史资料；已从公开历史移除，私密备份保留）。
 5. 同目录 `0-recorded.json` 至 `4-omitted.json` 是各题原始报告，含完整输入及模型原文。
 
 ## 下一步建议

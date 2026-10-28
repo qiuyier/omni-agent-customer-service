@@ -56,8 +56,8 @@
 
 ## 阅读与原始材料
 
-- [冻结案例、资料和源文件哈希](eval_runs/2026-09-28/mainflow-retry-v2/freeze.json)
-- [完整问答、模型输入和机械核验](eval_runs/2026-09-28/mainflow-retry-v2/summary.json)
+- 冻结案例、资料和源文件哈希（内部历史资料；已从公开历史移除，私密备份保留）
+- 完整问答、模型输入和机械核验（内部历史资料；已从公开历史移除，私密备份保留）
 - [实际执行脚本](eval_runs/2026-09-28/mainflow-retry-v2/runner.cjs)
 - [首次认证失败记录](mainflow-acceptance-v1.md)
 

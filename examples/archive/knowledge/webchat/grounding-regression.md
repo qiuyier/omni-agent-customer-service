@@ -36,7 +36,7 @@ git diff --check
 
 使用原配置 `glm-5.3-flash`，六次 Chat Completions 请求均为 HTTP 200；
 每题一次、无重试、无 Embedding。原始回答、完整提示及 SHA-256、耗时和 usage
-保存在[回归 JSON](eval_runs/2026-09-22/grounding-regression.json)。
+保存在回归 JSON（内部历史资料；已从公开历史移除，私密备份保留）。
 
 这是直接供应商提示回放：从两个 Go 源文件读取提示原文，按当前资料封装拼接虚构历史，
 不经过网页、检索器、Go provider 或持久化链路。多轮历史是预置样例，不是本轮先生成的回复。

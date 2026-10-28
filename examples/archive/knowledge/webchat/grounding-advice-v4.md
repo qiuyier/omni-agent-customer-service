@@ -36,10 +36,10 @@ schema v4 要求 `general` 项明确填写 `advice_kind`。若模型标记 `capa
 - 本轮没有最终 `unsafe_clear` 或 `false_alarms`，但两条错误绝不计为成功。
 - 两批输入哈希均未变；全部进程已结束，无后台模型任务。
 
-可追溯材料：[冻结清单](eval_runs/2026-09-23/advice-v4/freeze.json)、
-[第一批原始结果](eval_runs/2026-09-23/advice-v4/results-part1.json)、
-[第二批原始结果](eval_runs/2026-09-23/advice-v4/results-part2.json)、
-[合并汇总](eval_runs/2026-09-23/advice-v4/summary.json)。第一批 `complete=false` 保持原样，
+可追溯材料：冻结清单（内部历史资料；已从公开历史移除，私密备份保留）、
+第一批原始结果（内部历史资料；已从公开历史移除，私密备份保留）、
+第二批原始结果（内部历史资料；已从公开历史移除，私密备份保留）、
+合并汇总（内部历史资料；已从公开历史移除，私密备份保留）。第一批 `complete=false` 保持原样，
 不伪装成一次顺利完成的十二题运行。
 
 ## 主要结果与两个未通过项

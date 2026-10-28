@@ -75,9 +75,9 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 
 本轮只改变本地验收工具与测试，不修改生产会话或页面逻辑。Node参数测试3项通过；业务后端与参数合计9项通过。报告保留自动pending_manual_browser_review，本节是人工审阅结论，不将其改写成无条件全通过。
 
-证据：[report.json](../examples/archive/integration/standalone-host/2026-10-18T05-42-05-595Z-c1d7a2a7/report.json)。测试网关、后端、标签页和专用数据库容器已停止，保留数据卷与证据。
+证据：report.json（内部历史资料；已从公开历史移除，私密备份保留）。测试网关、后端、标签页和专用数据库容器已停止，保留数据卷与证据。
 
-![释放迟到模型并关闭后的客户页](../examples/archive/integration/standalone-host/2026-10-18T05-42-05-595Z-c1d7a2a7/browser-overlap-closed.png)
+释放迟到模型并关闭后的客户页（内部历史资料；已从公开历史移除，私密备份保留）
 
 ## 及时显示修复与复验（2026-10-18）
 
@@ -90,7 +90,7 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 
 最终浏览器复验使用本地慢模型：在模型未完成、原发送无回执时，客户页已显示人工回复；约55.6秒后手动release-model，原请求HTTP200/superseded、没有bot消息或待确认残留；关闭后刷新状态和两条历史消息一致。
 
-证据：[最终报告](../examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/report.json)，[发现超时边界的首轮报告](../examples/archive/integration/standalone-host/2026-10-18T05-50-15-006Z-27b21b70/report.json)。两轮共2次本地模拟调用，真实外部调用0次。最终成功迟到回执做了浏览器验证；迟到失败修复用确定性自动测试覆盖，未再次在浏览器等待75秒超时。
+证据：最终报告（内部历史资料；已从公开历史移除，私密备份保留），发现超时边界的首轮报告（内部历史资料；已从公开历史移除，私密备份保留）。两轮共2次本地模拟调用，真实外部调用0次。最终成功迟到回执做了浏览器验证；迟到失败修复用确定性自动测试覆盖，未再次在浏览器等待75秒超时。
 
 验证：前端61项通过；完整webchat竞态检测通过；3个成功迟到场景及2个失败迟到场景各20轮通过；相关Go回归通过；独立PostgreSQL完整仓储竞态套件通过（新增生成中HTTP历史读取及二次发送拒绝断言）。浏览器资源已重新构建。所有本轮服务、标签页与测试数据库容器已停止，证据与测试卷保留。
 
@@ -98,7 +98,7 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 
 阅读顺序：web/chat/src/handoff-read.mjs → web/chat/src/app.jsx → internal/webchat/sessions.go → internal/webchat/messages.go → internal/webchat/human_overlap_test.go → internal/persistence/postgres/human_overlap_test.go。
 
-![AI仍在等待时客户已看到人工回复](../examples/archive/integration/standalone-host/2026-10-18T09-53-12-561Z-3b6c7bd3/live-human-reply.png)
+AI仍在等待时客户已看到人工回复（内部历史资料；已从公开历史移除，私密备份保留）
 
 ## 账号切换、刷新和关闭边界验收（2026-10-18）
 
@@ -116,8 +116,8 @@ node integrations/standalone-host/browser-lab.mjs --allow-local-postgres --mock-
 
 2026-10-19 后续已为支持新路由的通用接入链路实现事件级只读回执，见[回执恢复验收](message-receipt-acceptance.md)。上面的记录保留为当时结果，不代表当前限制。
 
-证据：[报告](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/report.json)。真实密码登录、企业IAM、多浏览器进程以及刷新瞬间所有网络时序不在此轮浏览器覆盖范围。自动报告仍保留pending_manual_browser_review，本节为人工审阅记录。所有本轮进程、标签页及测试数据库容器已停止，测试卷保留。
+证据：报告（内部历史资料；已从公开历史移除，私密备份保留）。真实密码登录、企业IAM、多浏览器进程以及刷新瞬间所有网络时序不在此轮浏览器覆盖范围。自动报告仍保留pending_manual_browser_review，本节为人工审阅记录。所有本轮进程、标签页及测试数据库容器已停止，测试卷保留。
 
-![B刷新后没有A的数据](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-b-empty.png)
+B刷新后没有A的数据（内部历史资料；已从公开历史移除，私密备份保留）
 
-![A刷新后仍关闭，原待确认缓存保留](../examples/archive/integration/standalone-host/2026-10-18T10-03-52-832Z-06141610/account-a-closed.png)
+A刷新后仍关闭，原待确认缓存保留（内部历史资料；已从公开历史移除，私密备份保留）

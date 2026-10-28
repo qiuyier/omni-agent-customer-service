@@ -42,7 +42,7 @@ bot_active → waiting_human → human_active → closed。状态变更、权限
 
 ## 2026-10-09 验收
 
-[网络与进程记录](../examples/archive/integration/standalone-host/2026-10-09T09-52-44-271Z-797b94e8/report.json)。实际浏览器：客户申请并留言→乔杉看到队列与历史→接管回复→客户刷新看到人工内容→客户继续留言且无机器人回复→强制重启网关→队列和人工历史保留→温宁登录看不到乔杉会话→乔杉重登关闭→客户刷新后禁发。
+网络与进程记录（内部历史资料；已从公开历史移除，私密备份保留）。实际浏览器：客户申请并留言→乔杉看到队列与历史→接管回复→客户刷新看到人工内容→客户继续留言且无机器人回复→强制重启网关→队列和人工历史保留→温宁登录看不到乔杉会话→乔杉重登关闭→客户刷新后禁发。
 
 SQL只读核对本轮会话：closed、revision=4；2条customer、1条human_agent，各自不同ID数等于行数；0条bot。外部模型调用0。验收结束后本轮进程、临时标签页与专用数据库容器已关闭，数据卷和证据保留。
 
@@ -50,8 +50,8 @@ SQL只读核对本轮会话：closed、revision=4；2条customer、1条human_age
 
 竞态使用可控本地模型桩，非真实供应商调用；浏览器用PostgreSQL和固定回复。不能据此承诺所有多副本/网络故障场景已覆盖或生产认证已完成。
 
-![人工工作台完成接管回复并关闭](../examples/archive/integration/standalone-host/2026-10-09T09-52-44-271Z-797b94e8/desk-finished.jpg)
+人工工作台完成接管回复并关闭（内部历史资料；已从公开历史移除，私密备份保留）
 
-![客户收到人工回复且关闭后禁发](../examples/archive/integration/standalone-host/2026-10-09T09-52-44-271Z-797b94e8/customer-finished.jpg)
+客户收到人工回复且关闭后禁发（内部历史资料；已从公开历史移除，私密备份保留）
 
 阅读顺序：internal/webchat/human.go（权限及事务）→human_test.go（关键竞态）→internal/conversation/queue.go与internal/persistence/postgres/queue.go（队列）→integrations/standalone-host/host.mjs（身份与代理）→web/chat/src/desk.jsx及app.jsx（工作台与客户入口）。

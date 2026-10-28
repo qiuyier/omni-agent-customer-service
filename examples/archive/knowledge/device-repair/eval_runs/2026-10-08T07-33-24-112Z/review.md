@@ -2,7 +2,7 @@
 
 日期：2026-10-08。模型：GLM glm-5.3-flash；通过本地有界转发调用配置中的 chat_completions 端点，使用通用默认 Prompt、关键词检索，不改 CRMEB。6 个场景、7 轮回复，实际 7 次供应商请求，无重试；供应商返回的 total_tokens 合计 12,796，不推算费用。
 
-[原始报告](report.json)的 complete=true 仅表示采集完整，不表示回答质量通过。原报告 quality_review=pending manual review 是采集时状态，本文件为采集后的逐题审阅。输入与源码哈希在采集结束时核对未变；未为提高结果修改知识、题目或 Prompt。
+原始报告（内部历史资料；已从公开历史移除，私密备份保留）的 complete=true 仅表示采集完整，不表示回答质量通过。原报告 quality_review=pending manual review 是采集时状态，本文件为采集后的逐题审阅。输入与源码哈希在采集结束时核对未变；未为提高结果修改知识、题目或 Prompt。
 
 ## 分项审阅
 

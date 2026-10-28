@@ -64,7 +64,7 @@ git diff --check
 建议先读本报告，再看 `internal/bootstrap/ai.go`、`internal/ai/eino/reply_prompt.go`，
 最后看对应的 `ai_test.go`、`reply_prompt_test.go`。
 
-- [冻结输入及代码哈希](eval_runs/2026-09-28/mainflow-fix-v3/freeze.json)
-- [完整原始问答及技术检查](eval_runs/2026-09-28/mainflow-fix-v3/summary.json)
+- 冻结输入及代码哈希（内部历史资料；已从公开历史移除，私密备份保留）
+- 完整原始问答及技术检查（内部历史资料；已从公开历史移除，私密备份保留）
 - [执行脚本](eval_runs/2026-09-28/mainflow-fix-v3/runner.cjs)
 - [修改前结果，保留失败样本](mainflow-acceptance-v2.md)

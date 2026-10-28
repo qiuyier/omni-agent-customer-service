@@ -56,7 +56,7 @@ SDK HTTP尝试数或账单；没有收集Token用量或实际费用。
 
 ## GLM回复验收：部分结果
 
-[原始回复报告](eval_runs/2026-09-10/reply-check-glm.json)记录时间为
+原始回复报告（内部历史资料；已从公开历史移除，私密备份保留）记录时间为
 `2026-09-10T07:52:47Z`（北京时间15:52:47），退出码1，
 `complete=false`、`mechanical_passed=false`。
 
@@ -92,9 +92,9 @@ SDK HTTP尝试数或账单；没有收集Token用量或实际费用。
 
 ## 原始结果与输入摘要
 
-- [开发题语义结果](eval_runs/2026-09-10/semantic-dev.json)
-- [保留题语义结果](eval_runs/2026-09-10/semantic-holdout.json)
-- [GLM部分回复结果](eval_runs/2026-09-10/reply-check-glm.json)
+- 开发题语义结果（内部历史资料；已从公开历史移除，私密备份保留）
+- 保留题语义结果（内部历史资料；已从公开历史移除，私密备份保留）
+- GLM部分回复结果（内部历史资料；已从公开历史移除，私密备份保留）
 
 加载后的规范JSON SHA-256：
 

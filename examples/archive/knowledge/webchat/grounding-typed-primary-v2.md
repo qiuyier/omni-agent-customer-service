@@ -69,9 +69,9 @@
 模型 GLM glm-5.3-flash，reasoning_effort=low。两阶段分别在调用前冻结；
 核对二进制、源码、首审和复核提示哈希一致。
 
-- [定向冻结](eval_runs/2026-09-24/typed-primary-v2-targeted/freeze.json)、[七题摘要](eval_runs/2026-09-24/typed-primary-v2-targeted/summary.json)
-- [完整冻结](eval_runs/2026-09-24/typed-primary-v2-full/freeze.json)、[二十题摘要](eval_runs/2026-09-24/typed-primary-v2-full/summary.json)
-- [同版本验证及分组统计](eval_runs/2026-09-24/typed-primary-v2-full/audit.json)
+- 定向冻结（内部历史资料；已从公开历史移除，私密备份保留）、七题摘要（内部历史资料；已从公开历史移除，私密备份保留）
+- 完整冻结（内部历史资料；已从公开历史移除，私密备份保留）、二十题摘要（内部历史资料；已从公开历史移除，私密备份保留）
+- 同版本验证及分组统计（内部历史资料；已从公开历史移除，私密备份保留）
 - 完整结果目录中 0.json–11.json 是原开发集，12.json–19.json 是既有保留集。
   每题均保存 typed_primary_raw、可用的兼容结果/复核、进度与退出记录。
 

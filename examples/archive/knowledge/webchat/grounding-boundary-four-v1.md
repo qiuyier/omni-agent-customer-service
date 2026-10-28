@@ -49,8 +49,8 @@
 
 ## 材料与核验
 
-- [冻结提示、四条案例与配置](eval_runs/2026-09-27/glm-boundary-four-v1/freeze.json)
-- [原始输出与统计](eval_runs/2026-09-27/glm-boundary-four-v1/summary.json)
+- 冻结提示、四条案例与配置（内部历史资料；已从公开历史移除，私密备份保留）
+- 原始输出与统计（内部历史资料；已从公开历史移除，私密备份保留）
 - [运行脚本与离线断言](eval_runs/2026-09-27/glm-boundary-four-v1/runner.cjs)
 - [标注边界复核](grounding-claim-boundary-review-v1.md)
 

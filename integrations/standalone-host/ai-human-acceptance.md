@@ -24,9 +24,9 @@ AI与人工开关现在可以显式组合；默认仍不调用模型、不启用
 
 ## 证据与边界
 
-原始报告：[report.json](../../examples/archive/integration/standalone-host/2026-10-17T16-26-53-802Z-62ba37dc/report.json)。报告保留自动生成的pending_manual_browser_review，本页记录人工审阅结论，不把启动成功误当验收通过。
+原始报告：report.json（内部历史资料；已从公开历史移除，私密备份保留）。报告保留自动生成的pending_manual_browser_review，本页记录人工审阅结论，不把启动成功误当验收通过。
 
-![人工回复后关闭](../../examples/archive/integration/standalone-host/2026-10-17T16-26-53-802Z-62ba37dc/ai-human-closed.png)
+人工回复后关闭（内部历史资料；已从公开历史移除，私密备份保留）
 
 这是单业务、模拟账号、PostgreSQL下的有限验收，不是生产认证、多租户AI隔离或全面模型质量认证。故障为本地503，不是供应商真实故障或超时测试；未覆盖AI生成过程中同时接管的竞态。本次未验证模型口头转人工建议，实际转接由页面按钮触发。通用核心未新增电商逻辑、业务查询或执行能力。
 

@@ -69,8 +69,8 @@ scope=information_seeking，而新结构只允许 inquiry 等六种标签，所�
   非法类型/字段拒绝、全文覆盖保留、复核否决错误分类、原始输出保留、首审失败不复核、离线与模式互斥。
 
 证据：[固定七题](../../../regression/knowledge/webchat/grounding_typed_cases.json)、
-[冻结记录](eval_runs/2026-09-24/typed-primary-v1/freeze.json)、
-[完整摘要](eval_runs/2026-09-24/typed-primary-v1/summary.json)。
+冻结记录（内部历史资料；已从公开历史移除，私密备份保留）、
+完整摘要（内部历史资料；已从公开历史移除，私密备份保留）。
 同目录 0.json 至 6.json 为逐题原始报告，各自附带进度和退出记录。
 
 ## 下一步

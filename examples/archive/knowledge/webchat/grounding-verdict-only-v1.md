@@ -60,8 +60,8 @@
 ## 材料与核验
 
 - [新案例](../../../regression/knowledge/webchat/grounding-verdict-holdout-v1.json)
-- [冻结提示、全部案例、执行顺序](eval_runs/2026-09-27/deepseek-verdict-only-v1/freeze.json)
-- [逐次输出与统计](eval_runs/2026-09-27/deepseek-verdict-only-v1/summary.json)
+- 冻结提示、全部案例、执行顺序（内部历史资料；已从公开历史移除，私密备份保留）
+- 逐次输出与统计（内部历史资料；已从公开历史移除，私密备份保留）
 - [独立运行脚本与离线断言](eval_runs/2026-09-27/deepseek-verdict-only-v1/runner.cjs)
 
 离线断言覆盖精确标签解析、非法输出拒绝、新正负配对回答和历史相同。

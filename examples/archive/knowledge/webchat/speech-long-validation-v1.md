@@ -48,10 +48,10 @@
 ## 证据与验证
 
 - [固定语料](../../../regression/knowledge/webchat/speech_long_holdout_cases.json)
-- [冻结记录](eval_runs/2026-09-23/speech-long-v1/freeze.json)
-- [原始分类结果与完整标注](eval_runs/2026-09-23/speech-long-v1/results.json)
-- [事后逐字差异审计](eval_runs/2026-09-23/speech-long-v1/audit.json)
-- [进度](eval_runs/2026-09-23/speech-long-v1/progress.txt)、[退出记录](eval_runs/2026-09-23/speech-long-v1/exit.json)
+- 冻结记录（内部历史资料；已从公开历史移除，私密备份保留）
+- 原始分类结果与完整标注（内部历史资料；已从公开历史移除，私密备份保留）
+- 事后逐字差异审计（内部历史资料；已从公开历史移除，私密备份保留）
+- 进度（内部历史资料；已从公开历史移除，私密备份保留）、退出记录（内部历史资料；已从公开历史移除，私密备份保留）
 
 audit 是事后诊断附表，不是新验收规则，不覆盖原来的严格评分。
 索引使用 UTF-16；当前样例差异仅为中文文字。

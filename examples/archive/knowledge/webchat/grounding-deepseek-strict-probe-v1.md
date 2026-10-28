@@ -52,9 +52,9 @@ strict=true 的实际参数却为 `{"status":"forbidden","extra":true}`。
 
 ## 可复现材料
 
-- [冻结请求体及顺序](eval_runs/2026-09-27/deepseek-strict-probe-v1/freeze.json)
-- [全部结果与分组统计](eval_runs/2026-09-27/deepseek-strict-probe-v1/summary.json)
-- [最小 strict 反例](eval_runs/2026-09-27/deepseek-strict-probe-v1/1.json)
+- 冻结请求体及顺序（内部历史资料；已从公开历史移除，私密备份保留）
+- 全部结果与分组统计（内部历史资料；已从公开历史移除，私密备份保留）
+- 最小 strict 反例（内部历史资料；已从公开历史移除，私密备份保留）
 - [运行脚本及离线校验器](eval_runs/2026-09-27/deepseek-strict-probe-v1/runner.cjs)
 
 脚本默认只运行离线自测；--allow-model-api 才读取本地 DEEPSEEK_API_KEY 并联网。

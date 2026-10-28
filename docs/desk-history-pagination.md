@@ -36,7 +36,7 @@ POST /internal/chat/desk/action 的 history 可选且互斥：
 
 ## 2026-10-12 验收
 
-[网络和进程记录](../examples/archive/integration/standalone-host/2026-10-12T05-07-11-651Z-91062fae/report.json)。
+网络和进程记录（内部历史资料；已从公开历史移除，私密备份保留）。
 
 独立本地宿主、专用 PostgreSQL、模拟回复，未调用真实模型，未修改 CRMEB。通过UI创建本轮会话，再仅向该会话插入237条同时间戳的虚构记录用于压力较小的长会话功能验收；这不是性能压测。
 
@@ -51,7 +51,7 @@ POST /internal/chat/desk/action 的 history 可选且互斥：
 
 临时标签页、测试服务及数据库容器已关闭，保留专用数据卷和证据。使用前端设计技能沿用现有样式与提示，无新增依赖。未提交/推送Git。
 
-![最终构建中的历史定位和回复草稿](../examples/archive/integration/standalone-host/2026-10-12T05-07-11-651Z-91062fae/pagination-final.png)
+最终构建中的历史定位和回复草稿（内部历史资料；已从公开历史移除，私密备份保留）
 
 ## 阅读顺序
 

@@ -6,7 +6,7 @@
 
 使用 deploy/standalone-host/compose.yaml 的专用测试PostgreSQL及既有schema。不运行迁移，不写入消息；测试结束后将本轮启动的容器恢复为停止状态，数据卷保留。模型和embedding配置均指向本机计数桩，仅使用虚构凭据。
 
-[机器输出记录](../examples/archive/integration/standalone-host/preflight-2026-10-09.json)：7项全部符合预期，provider计数0。
+机器输出记录（内部历史资料；已从公开历史移除，私密备份保留）：7项全部符合预期，provider计数0。
 
 | 项目 | 预期与实际 |
 | --- | --- |

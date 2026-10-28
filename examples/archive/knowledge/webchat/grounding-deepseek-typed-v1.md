@@ -63,9 +63,9 @@ DeepSeek 四次负例执行中两次正确检出、两次错误，八次正例�
 
 调用前 `go test ./cmd/grounding-check` 通过，采样后源码哈希一致；本轮只新增报告与归档。
 
-- [冻结计划](eval_runs/2026-09-26/deepseek-typed-v1/freeze.json)
-- [逐次结果](eval_runs/2026-09-26/deepseek-typed-v1/summary.json)
-- [比较与失败原文](eval_runs/2026-09-26/deepseek-typed-v1/audit.json)
+- 冻结计划（内部历史资料；已从公开历史移除，私密备份保留）
+- 逐次结果（内部历史资料；已从公开历史移除，私密备份保留）
+- 比较与失败原文（内部历史资料；已从公开历史移除，私密备份保留）
 - [归档运行脚本](eval_runs/2026-09-26/deepseek-typed-v1/runner.cjs)
 
 归档脚本默认离线；显式 --allow-model-api 才联网。为防止重复付费，已有目标目录会拒绝再次执行。

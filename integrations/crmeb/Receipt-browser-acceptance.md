@@ -20,7 +20,7 @@
 
 ## 请求证据与计数
 
-原始 [report.json](../../examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/report.json) 保留工具的 passed=null/review_status；本文件记录人工浏览器审核结论，不将原报告伪装成自动浏览器测试。
+原始 report.json（内部历史资料；已从公开历史移除，私密备份保留） 保留工具的 passed=null/review_status；本文件记录人工浏览器审核结论，不将原报告伪装成自动浏览器测试。
 
 - 3 个不同事件最终成功，3 条客户消息 + 2 条固定模拟回复；第三条处于等待人工，没有生成机器人回复。
 - 实际消息 POST 为 **4 次**：第二条先收到 401，前端续签后沿用同一事件编号重试成功。不能声称“只有 3 次 HTTP 发送”。收到注入的 503 之后，刷新、切号恢复和重载没有再次发送原消息。
@@ -34,15 +34,15 @@
 
 ## 证据截图
 
-![503 后保留待确认](../../examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/pending.png)
+503 后保留待确认（内部历史资料；已从公开历史移除，私密备份保留）
 
-![刷新核实成功](../../examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/refreshed.png)
+刷新核实成功（内部历史资料；已从公开历史移除，私密备份保留）
 
-![客户二仅显示自己的原记录](../../examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/account-b.png)
+客户二仅显示自己的原记录（内部历史资料；已从公开历史移除，私密备份保留）
 
-![切回客户一恢复原回执](../../examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/account-a-restored.png)
+切回客户一恢复原回执（内部历史资料；已从公开历史移除，私密备份保留）
 
-![关闭后重载核实送达](../../examples/archive/integration/crmeb/2026-10-19T16-16-08-180Z/closed-recovered.png)
+关闭后重载核实送达（内部历史资料；已从公开历史移除，私密备份保留）
 
 ## 收尾与重跑边界
 

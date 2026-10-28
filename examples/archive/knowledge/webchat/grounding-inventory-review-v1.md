@@ -18,9 +18,9 @@
 不根据结果追加重试、不修改预期标签。错误、不确定均不计通过。
 
 采样期间源码、提示和题目冻结；结束时源码哈希核对通过。
-[冻结记录](eval_runs/2026-09-24/inventory-v1-repeated/freeze.json)、
-[逐次结果汇总](eval_runs/2026-09-24/inventory-v1-repeated/summary.json)、
-[审计记录](eval_runs/2026-09-24/inventory-v1-repeated/audit.json)保留。
+冻结记录（内部历史资料；已从公开历史移除，私密备份保留）、
+逐次结果汇总（内部历史资料；已从公开历史移除，私密备份保留）、
+审计记录（内部历史资料；已从公开历史移除，私密备份保留）保留。
 
 当时冻结版本用 `-typed-primary` 选择候选。失败后仅增加显式入口隔离和对应离线测试，
 现在须用 `-typed-primary -inventory-review` 才选择相同候选，报告为 schema 9、`typed_inventory_experiment`。
@@ -59,7 +59,7 @@
 - 第三轮设备正例（`13.json`）：non_facts 项含非法 `claim` 字段，复核结构错误。
 - 第三轮安全正例（`17.json`）：助手不能代修改预约被列为 entailed，但证据为空，复核证据校验拒绝。
 
-上述文件均位于 [本轮归档目录](eval_runs/2026-09-24/inventory-v1-repeated)。
+上述文件均位于 本轮归档目录（内部历史资料；已从公开历史移除，私密备份保留）。
 输出证明了分类、覆盖和契约遵循问题，但不证明模型内部成因，也不能证明仅改提示即可解决。
 
 ## 工程验证与后续边界

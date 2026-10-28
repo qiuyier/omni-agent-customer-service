@@ -27,8 +27,8 @@ web/chat/src/app.jsx 的 send 不再在每次重试时无条件清空 pendingAcc
 
 1. 本文。
 2. web/chat/src/app.jsx 的 send；web/chat/src/pending-receipt.test.mjs。
-3. [首次浏览器实验原始记录](../examples/archive/integration/standalone-host/2026-10-23T02-22-55-595Z-186df59c/report.json)。包含人工生命周期及慢模型超时。
-4. [修复后实验原始记录](../examples/archive/integration/standalone-host/2026-10-23T07-24-28-887Z-c935dff2/report.json)。原事件 d187fcf6-d4a8-48e4-9b36-af809ce0ac69：首次 503、手动恢复 200；中断期间尝试未产生消息 POST；外部模型调用 0。
+3. 首次浏览器实验原始记录（内部历史资料；已从公开历史移除，私密备份保留）。包含人工生命周期及慢模型超时。
+4. 修复后实验原始记录（内部历史资料；已从公开历史移除，私密备份保留）。原事件 d187fcf6-d4a8-48e4-9b36-af809ce0ac69：首次 503、手动恢复 200；中断期间尝试未产生消息 POST；外部模型调用 0。
 
 原始工具报告的 passed 保持 null：启动器只采集事实，不自动认证人工观察。本文给出审阅结论和未覆盖项。截图保存在 /tmp/omni-browser-offline-fixed-20261023.png 与 /tmp/omni-browser-recovery-fixed-20261023.png。
 

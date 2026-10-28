@@ -67,8 +67,8 @@ custom provider 转发不验证供应商专用初始化路径。未修改原有�
 - snapshot.json：验收后只读回查的数据库内容和导出时间。
 - faq.json：客服实际使用的知识格式。
 - seed-export.cjs：本次实际准备/导出程序，不含凭据；含本机绝对路径，运行前需审查并调整。
-- [六场景冻结标准](../../archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/freeze.json)
-- [完整问答与技术检查](../../archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/summary.json)
+- 六场景冻结标准（内部历史资料；已从公开历史移除，私密备份保留）
+- 完整问答与技术检查（内部历史资料；已从公开历史移除，私密备份保留）
 - [验收脚本](../../archive/knowledge/webchat/eval_runs/2026-09-28/crmeb-knowledge-v1/runner.cjs)
 
 脚本是本地验收材料，不是产品化连接器；不自动运行。未修改 Go 源码，本轮构建、模拟验收、

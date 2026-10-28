@@ -71,10 +71,10 @@ split 在短片段上的本次表现更好，但不能据此上线分段审核�
 
 ## 复核与复现材料
 
-- [冻结计划与完整案例](eval_runs/2026-09-26/controlled-contract-length-v1/freeze.json)：
+- 冻结计划与完整案例（内部历史资料；已从公开历史移除，私密备份保留）：
   二进制、全部 grounding-check Go 文件、两个首审提示及同一复核提示哈希，预定执行顺序。
-- [逐次汇总](eval_runs/2026-09-26/controlled-contract-length-v1/summary.json)。
-- [分类审计](eval_runs/2026-09-26/controlled-contract-length-v1/audit.json)。
+- 逐次汇总（内部历史资料；已从公开历史移除，私密备份保留）。
+- 分类审计（内部历史资料；已从公开历史移除，私密备份保留）。
 - [归档运行脚本](eval_runs/2026-09-26/controlled-contract-length-v1/runner.cjs)：仅显式 --allow-model-api 才读取允许的模型环境变量并联网；已有归档目录拒绝再次执行。
 
 调用前 grounding-check 全部测试通过，源码在整个采样期间保持冻结，结束后哈希核对通过。

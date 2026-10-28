@@ -2,7 +2,7 @@
 
 日期：2026-10-08；GLM glm-5.3-flash。6 个场景、8 轮回复，实际 8 次真实供应商请求，无重试。供应商 total_tokens 合计16,897，不估算费用。
 
-[原始报告](report.json)记录冻结题目、源码/知识哈希、每次模型请求实际引用和已保存回答。报告中的 complete=true 表示采集完整；quality_review=pending manual review 是采集时状态，本文件为采集后的助手逐题审阅，不是独立运营盲审。
+原始报告（内部历史资料；已从公开历史移除，私密备份保留）记录冻结题目、源码/知识哈希、每次模型请求实际引用和已保存回答。报告中的 complete=true 表示采集完整；quality_review=pending manual review 是采集时状态，本文件为采集后的助手逐题审阅，不是独立运营盲审。
 
 ## 不变项与隔离
 

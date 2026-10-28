@@ -20,7 +20,7 @@
 
 从 v4 样例中预选六条旧题，预先固定规则和样例；不是新增盲测，也不是全量验收。
 模型 `glm-5.3-flash`，`reasoning_effort=low`；预算最多十二次请求，实际八次，无重试。
-源码、二进制、语料和两个提示词的哈希见 [freeze.json](eval_runs/2026-09-23/structure-v5/freeze.json)。
+源码、二进制、语料和两个提示词的哈希见 freeze.json（内部历史资料；已从公开历史移除，私密备份保留）。
 实验期间未修改实现或提示词。新增的首审诊断测试不参与模型判断。
 
 | 样例 | 预期 | 实际 | 人工核对 |
@@ -37,10 +37,10 @@
 这次图书馆误判也不是之前的“通用咨询被当能力”，而是把否定/未知说明当成肯定事实缺失。
 不把它们通过改标签、删除错误细节、允许空证据或增补样例重跑改成通过。
 
-原始证据：[cases.json](eval_runs/2026-09-23/structure-v5/cases.json)、
-[results.json](eval_runs/2026-09-23/structure-v5/results.json)、
-[progress.txt](eval_runs/2026-09-23/structure-v5/progress.txt)、
-[exit.json](eval_runs/2026-09-23/structure-v5/exit.json)、
+原始证据：cases.json（内部历史资料；已从公开历史移除，私密备份保留）、
+results.json（内部历史资料；已从公开历史移除，私密备份保留）、
+progress.txt（内部历史资料；已从公开历史移除，私密备份保留）、
+exit.json（内部历史资料；已从公开历史移除，私密备份保留）、
 [实现差异](eval_runs/2026-09-23/structure-v5/implementation.patch)。
 程序完整遍历六题并退出 0，只表示批次完成，不表示全部通过。
 
