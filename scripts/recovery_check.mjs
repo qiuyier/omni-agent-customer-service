@@ -53,6 +53,7 @@ try{
  await suite('gateway-recovery','go',['test','-json','-race','-count=1','-timeout=120s','./internal/webchat','-run','^(TestReceiptReplyRecoveryEligibility|TestRetrySnapshotDoesNotAuthorizeAfterHandoff|TestTwoSessionsRetrySameFailedEvent|TestRetryAcrossHumanLifecycle)$'],'go');
  await suite('knowledge-core','go',['test','-json','-race','-count=1','-timeout=120s','./internal/knowledge/manage','./internal/knowledge/managehttp','./internal/knowledge/faq'],'go');
  await suite('knowledge-entry','go',['test','-json','-race','-count=1','-timeout=120s','./cmd/webchat-server','-run','^TestManaged'],'go');
+ await suite('knowledge-admin','go',['test','-json','-race','-count=1','-timeout=120s','./internal/knowledge/adminauth','./cmd/knowledge-admin'],'go');
  if(options.postgres){
   // Mark ownership before starting: even an interrupted docker run may create it.
   created=true;

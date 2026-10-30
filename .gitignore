@@ -6,6 +6,7 @@ coverage.out
 .env
 .env.local
 .local/reference/
+.local/knowledge-admin/
 deploy/crmeb/.ai.env
 
 # Instance-local enterprise knowledge; keep curated demo fixtures tracked.
