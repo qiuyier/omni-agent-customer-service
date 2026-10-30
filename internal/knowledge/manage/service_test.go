@@ -14,6 +14,31 @@ import (
 
 type pinKey struct{}
 
+type afterLoad struct {
+	Repository
+	revoke func()
+}
+
+func (r afterLoad) Load(ctx context.Context) (State, error) {
+	s, e := r.Repository.Load(ctx)
+	r.revoke()
+	return s, e
+}
+func TestRevocationBeforeCommitCannotMutate(t *testing.T) {
+	for _, next := range []string{"", "different-admin"} {
+		s, r := fixture(t)
+		id := "admin-1"
+		s.authorize = func(context.Context, Permission) (string, error) { return id, nil }
+		s.repo = afterLoad{Repository: r, revoke: func() { id = next }}
+		if _, e := s.SaveDraft(context.Background(), 0, data("not saved")); e != ErrDenied {
+			t.Fatal(e)
+		}
+		if r.state.Revision != 0 {
+			t.Fatal("revoked or changed actor committed")
+		}
+	}
+}
+
 type lostAcknowledgement struct{ Repository }
 
 func (r lostAcknowledgement) CompareAndSwap(ctx context.Context, expected uint64, state State) error {

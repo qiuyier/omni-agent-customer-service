@@ -19,6 +19,14 @@ import (
 // migrates on read, owns no login, and supports one managed source per database.
 type KnowledgeRepository struct{ pool *pgxpool.Pool }
 
+// KnowledgeStore shares the conversation repository's connection lifecycle.
+func (r *Repository) KnowledgeStore() (manage.Repository, error) {
+	if r == nil {
+		return nil, manage.ErrUnavailable
+	}
+	return NewKnowledgeRepository(r.pool)
+}
+
 var _ manage.Repository = (*KnowledgeRepository)(nil)
 
 func NewKnowledgeRepository(pool *pgxpool.Pool) (*KnowledgeRepository, error) {

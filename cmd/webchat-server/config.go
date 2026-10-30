@@ -18,14 +18,15 @@ import (
 const defaultServerAddress = "127.0.0.1:8093"
 
 type serverConfig struct {
-	Hosts       []webchat.Host
-	Agents      []webchat.Agent
-	Address     string
-	HostID      string
-	HostSecret  string
-	DatabaseURL string
-	ReplyMode   string
-	Reply       bootstrap.WebchatReplyConfig
+	KnowledgeSource string
+	Hosts           []webchat.Host
+	Agents          []webchat.Agent
+	Address         string
+	HostID          string
+	HostSecret      string
+	DatabaseURL     string
+	ReplyMode       string
+	Reply           bootstrap.WebchatReplyConfig
 }
 
 // AI and knowledge settings are read only when explicitly enabled. This entry
@@ -36,7 +37,8 @@ func resolveConfig(lookup func(string) (string, bool), addressOverride string) (
 	}
 	value := func(name string) string { result, _ := lookup(name); return result }
 	config := serverConfig{
-		Address: value("WEBCHAT_ADDRESS"), HostID: value("WEBCHAT_HOST_ID"),
+		KnowledgeSource: value("WEBCHAT_KNOWLEDGE_SOURCE"),
+		Address:         value("WEBCHAT_ADDRESS"), HostID: value("WEBCHAT_HOST_ID"),
 		HostSecret: value("WEBCHAT_HOST_SECRET"), DatabaseURL: value("DATABASE_URL"),
 		ReplyMode: value("WEBCHAT_REPLY_MODE"),
 	}
@@ -138,6 +140,17 @@ func (c serverConfig) validate() error {
 	}
 	if err := c.Reply.Validate(); err != nil {
 		return err
+	}
+	if c.KnowledgeSource != "" && c.KnowledgeSource != "file" && c.KnowledgeSource != "managed" {
+		return errors.New("WEBCHAT_KNOWLEDGE_SOURCE must be file or managed")
+	}
+	if c.KnowledgeSource == "managed" {
+		if len(hosts) != 1 {
+			return errors.New("managed knowledge requires exactly one host")
+		}
+		if err := bootstrap.ValidateManagedKnowledge(c.Reply); err != nil {
+			return err
+		}
 	}
 	{
 		if err := webchat.ValidateAgentConfiguration(c.Agents, hosts); err != nil {

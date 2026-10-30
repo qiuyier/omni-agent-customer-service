@@ -51,7 +51,8 @@ try{
  const web=(await fs.readdir(join(root,'web/chat/src'))).filter(x=>x.endsWith('.test.mjs')).sort().map(x=>'web/chat/src/'+x);
  await suite('web-and-host',process.execPath,['--test','--test-reporter=tap',...web,'integrations/standalone-host/host.test.mjs','integrations/standalone-host/inflight-identity.test.mjs','integrations/standalone-host/lab-options.test.mjs'],'tap');
  await suite('gateway-recovery','go',['test','-json','-race','-count=1','-timeout=120s','./internal/webchat','-run','^(TestReceiptReplyRecoveryEligibility|TestRetrySnapshotDoesNotAuthorizeAfterHandoff|TestTwoSessionsRetrySameFailedEvent|TestRetryAcrossHumanLifecycle)$'],'go');
- await suite('knowledge-core','go',['test','-json','-race','-count=1','-timeout=120s','./internal/knowledge/manage','./internal/knowledge/faq'],'go');
+ await suite('knowledge-core','go',['test','-json','-race','-count=1','-timeout=120s','./internal/knowledge/manage','./internal/knowledge/managehttp','./internal/knowledge/faq'],'go');
+ await suite('knowledge-entry','go',['test','-json','-race','-count=1','-timeout=120s','./cmd/webchat-server','-run','^TestManaged'],'go');
  if(options.postgres){
   // Mark ownership before starting: even an interrupted docker run may create it.
   created=true;

@@ -2,6 +2,8 @@
 
 日期：2026-10-30。范围：单业务独立实例、关键词 FAQ 的 PostgreSQL 存储适配；尚未接入生产聊天入口、管理 HTTP、管理员登录或页面。未提交、未发布。
 
+后续进展：显式 managed 检索来源与可组合管理员 HTTP 处理器已实现，见 [接线说明](faq-management-wiring.md)；该处理器未默认挂载，管理员登录和页面仍未实现。下文为本阶段验收记录。
+
 ## 实现
 
 `postgres.NewKnowledgeRepository(pool)` 借用调用方连接池，满足 `manage.Repository`：

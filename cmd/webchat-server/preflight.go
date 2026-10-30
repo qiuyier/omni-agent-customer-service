@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
 	"io"
 	"strings"
 
@@ -45,6 +46,16 @@ func checkResources(ctx context.Context, config serverConfig, output io.Writer, 
 	defer repository.close()
 	if err := repository.check(probeContext); err != nil || probeContext.Err() != nil {
 		return errors.New("PostgreSQL readiness check failed; verify connectivity and schema migrations (cmd/migrate)")
+	}
+	if config.KnowledgeSource == "managed" {
+		store, e := managedStore(repository.repository)
+		if e != nil {
+			return e
+		}
+		if _, e = bootstrap.ManagedKnowledgeRetriever(probeContext, store); e != nil {
+			return e
+		}
+		knowledge = "valid published managed FAQ (keyword)"
 	}
 	if _, err := fmt.Fprintf(output, "Resource checks passed. Reply mode: %s. PostgreSQL connectivity/schema: passed. Knowledge: %s.\nNo model or embedding requests, migrations, messages or listener were created. Model credentials/availability, semantic indexing, port availability and host authentication/proxy integration remain unverified.\n", config.ReplyMode, knowledge); err != nil {
 		return errors.New("cannot display resource check status")

@@ -197,6 +197,17 @@ func (s *Service) activate(ctx context.Context, expected uint64, target string, 
 	return s.commit(ctx, expected, state, Event{Action: action, Actor: actor, Version: id, Previous: previous})
 }
 func (s *Service) commit(ctx context.Context, expected uint64, state State, event Event) (uint64, error) {
+	permission := Publish
+	if event.Action == "save_draft" {
+		permission = Edit
+	}
+	actor, err := s.actor(ctx, permission)
+	if err != nil {
+		return 0, err
+	}
+	if actor != event.Actor {
+		return 0, ErrDenied
+	}
 	if len(state.Events) >= 1000 || expected == ^uint64(0) {
 		return 0, ErrLimit
 	}

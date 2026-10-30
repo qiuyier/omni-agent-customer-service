@@ -108,7 +108,17 @@ func newGateway(repository conversation.Repository, config serverConfig) (http.H
 }
 
 func newGatewayContext(ctx context.Context, repository conversation.Repository, config serverConfig) (http.Handler, error) {
-	options, err := bootstrap.NewWebchatReplyOptions(ctx, config.Reply, customerservice.ReplyGeneratorFunc(fakeReply))
+	var options []customerservice.Option
+	var err error
+	if config.KnowledgeSource == "managed" {
+		store, e := managedStore(repository)
+		if e != nil {
+			return nil, e
+		}
+		options, err = bootstrap.NewManagedWebchatReplyOptions(ctx, config.Reply, store)
+	} else {
+		options, err = bootstrap.NewWebchatReplyOptions(ctx, config.Reply, customerservice.ReplyGeneratorFunc(fakeReply))
+	}
 	if err != nil {
 		return nil, err
 	}
