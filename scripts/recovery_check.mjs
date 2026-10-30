@@ -51,6 +51,7 @@ try{
  const web=(await fs.readdir(join(root,'web/chat/src'))).filter(x=>x.endsWith('.test.mjs')).sort().map(x=>'web/chat/src/'+x);
  await suite('web-and-host',process.execPath,['--test','--test-reporter=tap',...web,'integrations/standalone-host/host.test.mjs','integrations/standalone-host/inflight-identity.test.mjs','integrations/standalone-host/lab-options.test.mjs'],'tap');
  await suite('gateway-recovery','go',['test','-json','-race','-count=1','-timeout=120s','./internal/webchat','-run','^(TestReceiptReplyRecoveryEligibility|TestRetrySnapshotDoesNotAuthorizeAfterHandoff|TestTwoSessionsRetrySameFailedEvent|TestRetryAcrossHumanLifecycle)$'],'go');
+ await suite('knowledge-core','go',['test','-json','-race','-count=1','-timeout=120s','./internal/knowledge/manage','./internal/knowledge/faq'],'go');
  if(options.postgres){
   // Mark ownership before starting: even an interrupted docker run may create it.
   created=true;
@@ -65,7 +66,7 @@ try{
   }
   if(!ready)throw Error('postgres_not_ready');
   const dsn=`postgres://recovery_test:local_recovery_only@127.0.0.1:${match[1]}/recovery_check_test?sslmode=disable`;
-  await suite('postgres-recovery','go',['test','-json','-race','-count=3','-timeout=120s','./internal/persistence/postgres','-run','^TestDatabaseRetryAcrossHumanLifecycle$'],'go',{TEST_DATABASE_URL:dsn});
+  await suite('postgres-recovery','go',['test','-json','-race','-count=3','-timeout=120s','./internal/persistence/postgres','-run','^(TestDatabaseRetryAcrossHumanLifecycle|TestKnowledgeDatabaseLifecycle)$'],'go',{TEST_DATABASE_URL:dsn});
   report.postgres='executed';
  }
 }catch(e){report.error=e.message;}

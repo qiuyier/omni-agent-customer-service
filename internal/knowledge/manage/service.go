@@ -23,13 +23,14 @@ const (
 )
 
 var (
-	ErrDenied      = errors.New("knowledge management access denied")
-	ErrConflict    = errors.New("knowledge management revision conflict")
-	ErrInvalid     = errors.New("invalid knowledge management request")
-	ErrUnavailable = errors.New("knowledge management storage unavailable")
-	ErrEmpty       = errors.New("empty knowledge publication requires confirmation")
-	ErrNotFound    = errors.New("knowledge version not found")
-	ErrLimit       = errors.New("knowledge management history limit reached")
+	ErrDenied         = errors.New("knowledge management access denied")
+	ErrConflict       = errors.New("knowledge management revision conflict")
+	ErrInvalid        = errors.New("invalid knowledge management request")
+	ErrUnavailable    = errors.New("knowledge management storage unavailable")
+	ErrOutcomeUnknown = errors.New("knowledge management write outcome unknown; reload state before retry")
+	ErrEmpty          = errors.New("empty knowledge publication requires confirmation")
+	ErrNotFound       = errors.New("knowledge version not found")
+	ErrLimit          = errors.New("knowledge management history limit reached")
 )
 
 // Authorizer verifies a trusted session on EVERY call, including revocation and
@@ -60,7 +61,9 @@ type State struct {
 
 // Repository must return owned snapshots and atomically persist draft, active
 // version, history AND audit under a compare-and-swap revision check. On failure
-// nothing may change. A production adapter must provide durable transactions;
+// nothing may change for a confirmed failure. An ambiguous connection/commit
+// outcome must return ErrOutcomeUnknown: reload before retrying. A production
+// adapter must provide durable transactions;
 // a file write followed by an independent reload/audit append does NOT satisfy
 // this contract. An absent repository starts with zero State.
 type Repository interface {
@@ -207,6 +210,9 @@ func (s *Service) commit(ctx context.Context, expected uint64, state State, even
 	if err := s.repo.CompareAndSwap(ctx, expected, state); err != nil {
 		if errors.Is(err, ErrConflict) {
 			return 0, ErrConflict
+		}
+		if errors.Is(err, ErrOutcomeUnknown) {
+			return 0, ErrOutcomeUnknown
 		}
 		return 0, ErrUnavailable
 	}

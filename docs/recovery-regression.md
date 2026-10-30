@@ -11,6 +11,7 @@ node scripts/recovery_check.mjs
 ```
 
 默认运行网页逻辑、宿主接入与身份隔离、网关恢复并发测试，不启动 PostgreSQL。
+2026-10-30 起也运行 `knowledge-core`（FAQ 管理与导入校验）；显式数据库模式追加 `TestKnowledgeDatabaseLifecycle`，覆盖草稿/发布/回退、并发 CAS 及数据库拒绝写入后的原子性。数据库实际容器重启验收仍须独立执行，不由此入口冒充。
 要验证真实持久化，显式确认临时测试写入：
 
 ```sh

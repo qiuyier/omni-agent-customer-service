@@ -13,6 +13,34 @@ import (
 )
 
 type pinKey struct{}
+
+type lostAcknowledgement struct{ Repository }
+
+func (r lostAcknowledgement) CompareAndSwap(ctx context.Context, expected uint64, state State) error {
+	if err := r.Repository.CompareAndSwap(ctx, expected, state); err != nil {
+		return err
+	}
+	return ErrOutcomeUnknown
+}
+func TestUnknownWriteOutcomeMustBeReconciled(t *testing.T) {
+	s, r := fixture(t)
+	s.repo = lostAcknowledgement{r}
+	ctx := context.Background()
+	if _, err := s.SaveDraft(ctx, 0, data("saved")); err != ErrOutcomeUnknown {
+		t.Fatal(err)
+	}
+	// A lost acknowledgement is not proof that nothing was saved.
+	if read(t, s).Revision != 1 {
+		t.Fatal("committed revision missing")
+	}
+	if _, err := s.SaveDraft(ctx, 0, data("saved")); err != ErrConflict {
+		t.Fatal(err)
+	}
+	if len(read(t, s).Events) != 1 {
+		t.Fatal("uncertain request was duplicated")
+	}
+}
+
 type pinnedRepository struct {
 	Repository
 	entered, release chan struct{}
