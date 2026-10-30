@@ -33,6 +33,20 @@ func loadVersion(path string, allowEmpty bool) (*Retriever, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+	return parseVersion(data, allowEmpty)
+}
+
+// ParseVersion validates an in-memory import using the same rules and byte hash
+// as LoadVersion. Explicit [] is allowed; malformed or oversized input is not.
+// No files, models or embedding providers are accessed.
+func ParseVersion(data []byte) (*Retriever, string, error) {
+	return parseVersion(data, true)
+}
+
+func parseVersion(data []byte, allowEmpty bool) (*Retriever, string, error) {
+	if len(data) > maxFileBytes {
+		return nil, "", fmt.Errorf("%w: file exceeds 1 MiB", ErrInvalidData)
+	}
 	sum := sha256.Sum256(data)
 	version := hex.EncodeToString(sum[:])
 	data = bytes.TrimSpace(data)
