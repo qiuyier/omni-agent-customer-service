@@ -1,4 +1,4 @@
-// Command knowledge-admin is an explicitly configured, loopback-only admin API.
+// Command knowledge-admin is an explicitly configured, loopback-only admin UI/API.
 // It does not migrate, enable AI, or serve the customer/staff login.
 package main
 
@@ -64,7 +64,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, input i
 	check := flags.Bool("check-config", false, "check configuration without connecting")
 	if e := flags.Parse(args); e != nil {
 		if errors.Is(e, flag.ErrHelp) {
-			_, e = fmt.Fprintln(out, "knowledge-admin [-check-config | -hash-password]\nRequires DATABASE_URL and private KNOWLEDGE_ADMIN_ACCOUNTS_FILE. Optional KNOWLEDGE_ADMIN_ADDRESS (default 127.0.0.1:8094), KNOWLEDGE_ADMIN_ORIGIN (default http://127.0.0.1:8094). API only; no UI, automatic migrations or models. -hash-password reads 16..512 bytes from stdin, removing one final newline; never pass passwords as arguments.")
+			_, e = fmt.Fprintln(out, "knowledge-admin [-check-config | -hash-password]\nRequires DATABASE_URL and private KNOWLEDGE_ADMIN_ACCOUNTS_FILE. Optional KNOWLEDGE_ADMIN_ADDRESS (default 127.0.0.1:8094), KNOWLEDGE_ADMIN_ORIGIN (default http://127.0.0.1:8094). UI at /; no automatic migrations or models. -hash-password reads 16..512 bytes from stdin, removing one final newline; never pass passwords as arguments.")
 			return e
 		}
 		return errors.New("invalid flags")
@@ -159,7 +159,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, input i
 		case <-done:
 		}
 	}()
-	if _, e = fmt.Fprintln(out, "Knowledge administrator API started on configured loopback listener. No UI or model enabled."); e != nil {
+	if _, e = fmt.Fprintln(out, "Knowledge administrator UI/API started on configured loopback listener. No model enabled."); e != nil {
 		return errors.New("cannot write startup status")
 	}
 	if e = server.Serve(listener); e != nil && !errors.Is(e, http.ErrServerClosed) {

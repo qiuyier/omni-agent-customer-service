@@ -1,0 +1,11 @@
+@import "tailwindcss" source(none);
+@source "./admin.jsx";
+@layer base {
+ body { @apply m-0 bg-zinc-50 text-zinc-900 antialiased; font-family: "Geist", "PingFang SC", "Microsoft YaHei", sans-serif; }
+ button { @apply cursor-pointer rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]; }
+ input,textarea,select { @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm; }
+ input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible { @apply outline-2 outline-offset-2 outline-emerald-700; }
+ label { @apply grid gap-2 text-sm font-medium; }
+ h1,h2,h3,p { @apply m-0; }
+}
+@layer components { .primary { @apply border-emerald-800 bg-emerald-800 text-white hover:bg-emerald-900; } .muted { @apply text-sm leading-relaxed text-zinc-500; } }

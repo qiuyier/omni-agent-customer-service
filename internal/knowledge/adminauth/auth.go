@@ -21,6 +21,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/adminui"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/manage"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/managehttp"
 	"golang.org/x/crypto/scrypt"
@@ -173,10 +174,17 @@ func (d *Directory) Authorize(ctx context.Context, r *http.Request, p manage.Per
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	_, s, ok := d.presented(r)
-	if !ok || !d.accounts[s.account].permissions[p] {
+	if !ok || !matchesVersion(r, s) || !d.accounts[s.account].permissions[p] {
 		return "", manage.ErrDenied
 	}
 	return s.account, nil
+}
+
+// Optional for existing API clients; the browser always binds requests to its
+// observed session so another tab cannot silently change the acting account.
+func matchesVersion(r *http.Request, s session) bool {
+	values := r.Header.Values("X-Knowledge-Session")
+	return len(values) == 0 || len(values) == 1 && values[0] == s.version
 }
 
 // Revoke disables one configured account and every outstanding session.
@@ -251,7 +259,7 @@ func (d *Directory) Handler(repo manage.Repository) (http.Handler, error) {
 			return
 		case "/auth/login", "/auth/logout":
 		default:
-			denied(w, 404)
+			adminui.ServeHTTP(w, r)
 			return
 		}
 		if r.Method != "POST" {
@@ -285,7 +293,12 @@ func (d *Directory) Handler(repo manage.Repository) (http.Handler, error) {
 				return
 			}
 			d.mu.Lock()
-			key, _, ok := d.presented(r)
+			key, current, ok := d.presented(r)
+			if ok && !matchesVersion(r, current) {
+				d.mu.Unlock()
+				denied(w, 403)
+				return
+			}
 			if ok {
 				delete(d.tickets, key)
 			}
