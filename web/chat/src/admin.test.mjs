@@ -2,6 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {AdminController,APIError,request} from './admin.mjs';
 const user={id:'reviewer',version:'session-a',permissions:['knowledge.read','knowledge.edit','knowledge.publish']};
+test('committed write with dropped acknowledgement is reconciled without replay',async()=>{
+ let revision=0,writes=0,entries=[];
+ const model=new AdminController(async(path,body)=>{
+  if(path==='/auth/me')return user;
+  if(path.endsWith('/state'))return {revision,active:'',draft:revision?{version:'saved',entries}:null,versions:[],events:[]};
+  writes++;revision++;entries=structuredClone(body.entries);throw new TypeError('connection closed after commit');
+ });
+ await model.open();model.edit([{id:'fixture',title:'local'}]);await model.mutate('draft');
+ assert.equal(model.state.blocked,true);assert.equal(model.state.data.revision,0);assert.equal(revision,1);
+ await model.mutate('draft');assert.equal(writes,1);
+ await model.inspect();assert.equal(model.state.review.revision,1);assert.equal(model.state.blocked,true);
+ model.adopt();assert.equal(model.state.data.revision,1);assert.deepEqual(model.state.entries,entries);assert.equal(writes,1);
+});
 const initial={revision:2,active:'published',draft:{version:'draft',entries:[{id:'faq',title:'original',content:'answer',source:'manual',keywords:['help']}]},versions:['published'],events:[]};
 function rig(){let state=structuredClone(initial),identity={...user},fault=null;const calls=[];const api=async(path,body,version)=>{calls.push({path,body,version});if(path==='/auth/me')return identity;if(path==='/auth/login')return {authenticated:true};if(path==='/auth/logout')return null;if(path.endsWith('/state'))return structuredClone(state);if(fault)throw fault;state.revision++;if(body.entries)state.draft.entries=structuredClone(body.entries);return {revision:state.revision};};const model=new AdminController(api);return {model,calls,setUser:v=>identity=v,setFault:v=>fault=v,setState:v=>state=v};}
 test('save binds session and revision; does not publish',async()=>{const r=rig();await r.model.open();r.model.edit([{...initial.draft.entries[0],title:'edited'}]);await r.model.mutate('draft');const writes=r.calls.filter(c=>c.body);assert.equal(writes.length,1);assert.equal(writes[0].path,'/internal/knowledge/draft');assert.equal(writes[0].body.revision,2);assert.equal(writes[0].version,user.version);assert.equal(r.model.state.data.active,'published');assert.equal(r.model.state.dirty,false);});
