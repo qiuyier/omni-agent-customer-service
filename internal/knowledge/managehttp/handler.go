@@ -108,6 +108,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for _, v := range s.Versions {
 			ids = append(ids, v.ID)
 		}
+		type versionDTO struct {
+			Version string          `json:"version"`
+			Entries json.RawMessage `json:"entries"`
+		}
+		var published *versionDTO
+		for _, v := range s.Versions {
+			if v.ID == s.Active {
+				published = &versionDTO{v.ID, v.Data}
+				break
+			}
+		}
+		if s.Active != "" && published == nil {
+			respondError(w, manage.ErrUnavailable)
+			return
+		}
 		var draft any
 		if s.Draft != nil {
 			draft = struct {
@@ -115,7 +130,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Entries json.RawMessage `json:"entries"`
 			}{s.Draft.ID, s.Draft.Data}
 		}
-		send(w, 200, map[string]any{"revision": s.Revision, "active": s.Active, "draft": draft, "versions": ids, "events": s.Events})
+		send(w, 200, map[string]any{"revision": s.Revision, "active": s.Active, "draft": draft, "published": published, "versions": ids, "events": s.Events})
 		return
 	}
 	media, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
