@@ -1,4 +1,5 @@
 const messages = {
+ invalid_query:'试问必须为 1–512 个字符，且不能含非法控制字符。',
  revision_conflict:'其他管理员已更新。你的编辑仍保留；核对最新状态后再决定是否放弃本地编辑。',
  outcome_unknown_reload_required:'结果未知：请求可能已经生效。请先核对服务器状态，不要重复提交。',
  history_limit:'历史记录已达上限，请联系维护者，不要重复提交。',
@@ -23,7 +24,7 @@ export async function request(path, body, version, fetcher=fetch) {
   return data;
  } finally { clearTimeout(timer); }
 }
-const fresh=()=>({user:null,data:null,entries:[],busy:false,checking:false,blocked:false,review:null,notice:'',dirty:false});
+const fresh=()=>({user:null,data:null,entries:[],busy:false,checking:false,blocked:false,review:null,notice:'',dirty:false,trial:null});
 export class AdminController {
  constructor(api=request){this.api=api;this.state=fresh();this.epoch=0;this.listeners=new Set();}
  subscribe=(fn)=>{this.listeners.add(fn);return()=>this.listeners.delete(fn);};
@@ -65,12 +66,12 @@ export class AdminController {
   try{await this.api('/auth/logout',{},version);if(epoch===this.epoch)this.set({busy:false,notice:'已退出。'});}
   catch{if(epoch===this.epoch)this.set({busy:false,notice:'内容已隐藏，但服务器退出未确认；请重新登录或关闭页面，等待会话到期。'});}
  }
- edit(entries){if(!this.state.busy && !this.state.checking && this.can('edit'))this.set({entries,dirty:true});}
+ edit(entries){if(!this.state.busy && !this.state.checking && this.can('edit'))this.set({entries,dirty:true,trial:null});}
  async mutate(action,extra={}){
   const s=this.state;
   if(s.busy||s.checking||s.blocked||!s.data||!this.can(action==='draft'?'edit':'publish'))return;
   if(action!=='draft'&&s.dirty){this.set({notice:'请先保存或放弃本地编辑，再发布或回退。'});return;}
-  const epoch=this.epoch;let sent=false;this.set({busy:true,notice:'',review:null});
+  const epoch=this.epoch;let sent=false;this.set({busy:true,notice:'',review:null,trial:null});
   try{
    await this.identity(epoch,s.user.version);
    sent=true;
@@ -87,9 +88,22 @@ export class AdminController {
    if(!sent)this.clear();
   }
  }
+ async tryQuery(query){
+  const s=this.state;if(s.busy||s.checking||s.blocked||s.dirty||!s.data||!this.can('read'))return;
+  const epoch=this.epoch;this.set({busy:true,trial:null,notice:''});
+  try{
+   await this.identity(epoch,s.user.version);
+   const result=await this.api('/internal/knowledge/trial',{revision:s.data.revision,query},s.user.version);
+   await this.identity(epoch,s.user.version);
+   if(result?.revision!==s.data.revision||!Object.hasOwn(result,'draft')||!Object.hasOwn(result,'published'))throw Error('invalid response');
+   for(const key of ['draft','published'])if(result[key]!==null&&(!result[key]?.version||!Array.isArray(result[key].matches)))throw Error('invalid response');
+   for(const key of ['draft','published'])for(const match of result[key]?.matches||[])if(!['id','title','content','source'].every(field=>typeof match[field]==='string')||!Array.isArray(match.keywords)||!match.keywords.every(word=>typeof word==='string'))throw Error('invalid match');
+   this.set({busy:false,trial:{...result,query}});
+  }catch(e){if(epoch!==this.epoch)return;if(e.status===401||e.status===403){this.clear();return;}this.set({busy:false,trial:null,blocked:e.code==='revision_conflict',notice:e.code==='revision_conflict'?messages.revision_conflict:e.code==='invalid_query'?messages.invalid_query:'试检索未完成，请手动重试；没有保存或发布任何内容。'});}
+ }
  async inspect(){
   if(this.state.busy||!this.state.user)return;
-  const epoch=this.epoch,version=this.state.user.version;this.set({busy:true});
+  const epoch=this.epoch,version=this.state.user.version;this.set({busy:true,trial:null});
   try{await this.identity(epoch,version);const review=await this.api('/internal/knowledge/state',undefined,version);await this.identity(epoch,version);this.set({review,busy:false,blocked:true,notice:'已读取服务器状态；不会自动重发。核对记录后，可明确采用服务器草稿。'});}
   catch(e){if(epoch!==this.epoch)return;if(e.status===401||e.status===403)this.clear();else this.set({busy:false,notice:'核对失败，本地编辑仍保留，提交保持暂停。',blocked:true});}
  }

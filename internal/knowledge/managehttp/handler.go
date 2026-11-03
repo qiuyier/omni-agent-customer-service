@@ -66,6 +66,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, 405, "method_not_allowed")
 			return
 		}
+	case "/internal/knowledge/trial":
+		permission = manage.Read
+		if r.Method != "POST" || r.Header.Get("Origin") != h.origin {
+			failure(w, 403, "request_not_allowed")
+			return
+		}
 	case "/internal/knowledge/draft":
 		permission = manage.Edit
 	case "/internal/knowledge/publish", "/internal/knowledge/rollback":
@@ -93,6 +99,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return id, nil
 	})
+	if r.URL.Path == "/internal/knowledge/trial" {
+		h.trial(w, r, ctx, service, actor)
+		return
+	}
 	if permission == manage.Read {
 		s, e := service.View(ctx)
 		if e != nil {
