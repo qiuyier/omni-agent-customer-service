@@ -10,6 +10,10 @@ import {fileURLToPath} from 'node:url';
 import {randomUUID,randomBytes} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {cleanEnvironment} from './recovery_check_support.mjs';
+import {parseDraftJSON,exportSavedDraft} from '../web/chat/src/admin-transfer.mjs';
+import {matchingFAQIndices} from '../web/chat/src/admin-search.mjs';
+import {publicationDiff} from '../web/chat/src/admin-diff.mjs';
+import {parseCases,validateBatch,batchSummary} from '../web/chat/src/admin-batch.mjs';
 const args=process.argv.slice(2);
 if(args.includes('--help')){console.log('node scripts/managed_knowledge_e2e.mjs --allow-test-writes [--browser]\nCreates a dedicated PG16 container/volume; migrates only that new DB; uses localhost mock only. --browser waits for UI draft/publish/rollback; cleans everything on exit.');process.exit(0);}
 if(!args.includes('--allow-test-writes')||args.some(a=>!['--allow-test-writes','--browser'].includes(a))||new Set(args).size!==args.length){console.error('Explicit --allow-test-writes required; unknown/duplicate option refused.');process.exit(2);}
@@ -56,7 +60,7 @@ try{
  const readyDB=()=>waitFor(async()=>{await docker('exec',container,'pg_isready','-h','127.0.0.1','-U','managed_test','-d','managed_e2e_test');return true;});await readyDB();
  await run(join(output,'migrate'),[],{DATABASE_URL:dsn});
  const hash=await run(join(output,'knowledge-admin'),['-hash-password'],{},password+'\n');
- const accountFile=join(output,'accounts.json');await fs.writeFile(accountFile,JSON.stringify([{id:account,password_hash:hash,permissions:['knowledge.read','knowledge.edit','knowledge.publish']}]),{mode:0o600});
+ const accountFile=join(output,'accounts.json');await fs.writeFile(accountFile,JSON.stringify([{id:account,password_hash:hash,permissions:['knowledge.read','knowledge.edit','knowledge.publish']},{id:'fixture-reviewer',password_hash:hash,permissions:['knowledge.read','knowledge.edit','knowledge.publish']}]),{mode:0o600});
  const adminPort=await freePort(),adminOrigin='http://127.0.0.1:'+adminPort;
  const adminEnv={DATABASE_URL:dsn,KNOWLEDGE_ADMIN_ACCOUNTS_FILE:accountFile,KNOWLEDGE_ADMIN_ADDRESS:'127.0.0.1:'+adminPort,KNOWLEDGE_ADMIN_ORIGIN:adminOrigin};
  const startAdmin=async()=>{admin=await launch('knowledge-admin',adminEnv);await waitFor(async()=> (await http(adminOrigin+'/')).status===200);};
@@ -66,6 +70,20 @@ try{
  const draft=(revision,content)=>call('/internal/knowledge/draft',{revision,entries:[{id:'service-hours',title:'服务时间',source:'虚构测试手册',content,keywords:['服务时间']}]});
  await startAdmin();await login();await draft(0,oldText);await call('/internal/knowledge/publish',{revision:1});const seeded=await state(),oldVersion=seeded.active;
  await check('initial_publication',{revision:seeded.revision,active:oldVersion});
+ const imported=parseDraftJSON(JSON.stringify([{id:'service-hours',title:'服务时间',source:'虚构测试手册',content:newText,keywords:['服务时间']}]));
+ const cases=parseCases(JSON.stringify([{id:'hours',query:'请问服务时间？',expected_id:'service-hours'},{id:'miss',query:'虚构无关问题',expected_id:null}]));
+ await fs.writeFile(join(output,'draft-import.json'),JSON.stringify(imported,null,2));
+ await fs.writeFile(join(output,'regression-cases.json'),JSON.stringify(cases,null,2));
+ const verifyTools=async(snapshot,name)=>{
+  const before=await state();assert.deepEqual(before,snapshot);
+  const exported=exportSavedDraft({user:{permissions:['knowledge.read']},data:snapshot});assert.deepEqual(parseDraftJSON(exported),snapshot.draft.entries);
+  assert.deepEqual(matchingFAQIndices(snapshot.draft.entries,'服务时间'),[0]);
+  const diff=publicationDiff(snapshot);assert.ok(diff);assert.equal(diff.modified,snapshot.draft.version===snapshot.active?0:1);assert.equal(diff.added,0);assert.equal(diff.removed,0);
+  const trial=await call('/internal/knowledge/trial',{revision:snapshot.revision,query:'服务时间'});assert.equal(trial.revision,snapshot.revision);assert.equal(trial.draft.matches[0].content,snapshot.draft.entries[0].content);assert.equal(trial.published.matches[0].content,snapshot.published.entries[0].content);
+  const batch=await call('/internal/knowledge/batch',{revision:snapshot.revision,cases});validateBatch(batch,snapshot.revision,cases);assert.deepEqual(batchSummary(batch),{passed:2,failed:0,unavailable:0,regressions:0});
+  const reportPath=join(output,name+'-batch.json');await fs.writeFile(reportPath,JSON.stringify({...batch,cases},null,2));assert.deepEqual(JSON.parse(await fs.readFile(reportPath,'utf8')).rows,batch.rows);
+  assert.deepEqual(await state(),before);await check(name,{revision:snapshot.revision,export_round_trip:true,search:true,diff:true,trial:true,batch:true,read_only:true});
+ };
  mock=createServer(async(req,res)=>{try{
   assert.equal(req.url,'/v1/chat/completions');assert.equal(req.method,'POST');assert.equal(req.headers.authorization,'Bearer local-mock-only');
   let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>2**20)throw Error('oversized');}
@@ -88,11 +106,19 @@ try{
   await check(name,{reference:want,reply_persisted:true,mock_requests:records.length});
  };
  await ask('initial_uses_old',oldText);
- if(browser){console.log('BROWSER '+adminOrigin+' account '+account+' password '+password);console.log('UI STEP: edit answer exactly to '+newText+' ; save draft, then publish, then rollback to '+oldVersion);}
+ if(browser){console.log('BROWSER '+adminOrigin+' account '+account+' password '+password);console.log('UI STEP: import draft-import.json from report directory, save draft (answer must be exactly '+newText+') ; inspect/search/trial/batch using regression-cases.json, then publish, then rollback to '+oldVersion);}
  const awaitRevision=async n=>{const s=await waitFor(async()=>{const v=await state();return v.revision>=n?v:null},600000);assert.equal(s.revision,n);return s;};
- if(!browser)await draft(2,newText);const draftState=await awaitRevision(3);assert.equal(draftState.active,oldVersion);assert.equal(draftState.draft.entries[0].content,newText);await ask('draft_still_uses_old',oldText);
- if(!browser)await call('/internal/knowledge/publish',{revision:3});const published=await awaitRevision(4);assert.notEqual(published.active,oldVersion);await ask('publication_uses_new',newText);
+ if(!browser)await call('/internal/knowledge/draft',{revision:2,entries:imported});const draftState=await awaitRevision(3);assert.equal(draftState.active,oldVersion);assert.equal(draftState.draft.entries[0].content,newText);await ask('draft_still_uses_old',oldText);await verifyTools(draftState,'saved_draft_management_tools');
+ if(!browser)await call('/internal/knowledge/publish',{revision:3});const published=await awaitRevision(4);assert.notEqual(published.active,oldVersion);await ask('publication_uses_new',newText);await verifyTools(published,'published_management_tools');
  if(!browser)await call('/internal/knowledge/rollback',{revision:4,version:oldVersion});const rolled=await awaitRevision(5);assert.equal(rolled.active,oldVersion);assert.equal(rolled.draft.version,published.draft.version);await ask('rollback_uses_old',oldText);
+ // A second independently authenticated administrator updates the saved draft.
+ const secondLogin=await http(adminOrigin+'/auth/login',{account:'fixture-reviewer',password},{Origin:adminOrigin});assert.equal(secondLogin.status,200);
+ const secondCookie=secondLogin.headers.get('set-cookie').split(';')[0];const secondIdentity=await json(adminOrigin+'/auth/me',undefined,{Cookie:secondCookie});assert.equal(secondIdentity.id,'fixture-reviewer');assert.notEqual(secondIdentity.version,version);
+ const secondHeaders={Origin:adminOrigin,Cookie:secondCookie,'X-Knowledge-Session':secondIdentity.version};
+ const secondWrite=await json(adminOrigin+'/internal/knowledge/draft',{revision:rolled.revision,entries:rolled.draft.entries},secondHeaders);assert.equal(secondWrite.revision,6);
+ const afterConcurrent=await state();assert.equal(afterConcurrent.active,oldVersion);assert.equal(afterConcurrent.events.at(-1).actor,'fixture-reviewer');
+ for(const [endpoint,body] of [['draft',{revision:5,entries:imported}],['publish',{revision:5}],['trial',{revision:5,query:'服务时间'}],['batch',{revision:5,cases}]]){const response=await http(adminOrigin+'/internal/knowledge/'+endpoint,body,{Origin:adminOrigin,Cookie:cookie,'X-Knowledge-Session':version});assert.equal(response.status,409);assert.equal((await response.json()).code,'revision_conflict');}
+ assert.deepEqual(await state(),afterConcurrent);await check('second_admin_update_blocks_stale_save_publish_trial_batch',{revision:6,stale_status:409});
  await stop(gateway);await stop(admin);await docker('restart',container);await readyDB();
  // Docker may assign a new ephemeral host port after restart. Re-resolve it
  // instead of mistaking a stale DSN for lost persisted knowledge.
@@ -101,7 +127,7 @@ try{
  dsn='postgres://managed_test:'+dbPassword+'@'+restartedMapping+'/managed_e2e_test?sslmode=disable';
  adminEnv.DATABASE_URL=dsn;gatewayEnv.DATABASE_URL=dsn;
  await waitFor(async()=>{await run(join(output,'webchat-server'),['-check-resources'],gatewayEnv);return true;});
- await startAdmin();assert.equal((await http(adminOrigin+'/auth/me',undefined,{Cookie:cookie})).status,401);await login();assert.deepEqual(await state(),rolled);
+ await startAdmin();assert.equal((await http(adminOrigin+'/auth/me',undefined,{Cookie:cookie})).status,401);await login();assert.deepEqual(await state(),afterConcurrent);await verifyTools(afterConcurrent,'after_restart_management_tools');
  await startGateway();await ask('after_process_and_database_restart_uses_old',oldText);await check('restart_preserves_exact_state_and_revokes_admin_session');
  report.status='passed';
 }catch(e){report.status='failed';report.failure=e.code||e.message?.replace(/postgres:\/\/[^\s]+/g,'[redacted]')||'unknown_failure';console.error('FAIL; see private report');process.exitCode=1;}
