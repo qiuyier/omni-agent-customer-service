@@ -3,6 +3,7 @@
 @source "./admin-preview.jsx";
 @source "./admin-transfer.jsx";
 @source "./admin-trial.jsx";
+@source "./admin-batch.jsx";
 @layer base {
  body { @apply m-0 bg-zinc-50 text-zinc-900 antialiased; font-family: "Geist", "PingFang SC", "Microsoft YaHei", sans-serif; }
  button { @apply cursor-pointer rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]; }

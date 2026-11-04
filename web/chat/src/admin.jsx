@@ -6,6 +6,7 @@ import {PublicationPreview} from './admin-preview.jsx';
 import {publicationDiff} from './admin-diff.mjs';
 import {DraftTransfer} from './admin-transfer.jsx';
 import {TrialSearch} from './admin-trial.jsx';
+import {BatchCheck} from './admin-batch.jsx';
 const model=new AdminController();
 const short=v=>v?v.slice(0,12):'尚未发布';
 const actionName={save_draft:'保存草稿',publish:'发布',rollback:'回退'};
@@ -42,6 +43,7 @@ function Workspace({s}){
  <section className="flex flex-wrap items-center justify-between gap-5 py-7"><div><h2 className="text-lg font-semibold">草稿工作区 <span className="ml-2 font-mono text-sm text-zinc-500">r{s.data.revision}</span></h2><p className="muted mt-1">{s.entries.length} 条 FAQ · {s.dirty?'有未保存编辑':'与已读取草稿一致'} · 保存草稿不会影响线上回答</p></div><div className="flex flex-wrap gap-3"><button disabled={s.busy} onClick={()=>model.inspect()}>核对服务器状态</button>{model.can('edit')&&<button className="primary" disabled={locked||!s.dirty} onClick={()=>model.mutate('draft')}>{s.busy?'处理中…':'保存草稿'}</button>}</div></section>
  {s.review&&<section className="mb-6 rounded-xl border border-emerald-800 bg-white p-5"><h3 className="font-semibold">服务器状态核对</h3><p className="muted mt-2">服务器 r{s.review.revision}；当前发布 {short(s.review.active)}；服务器草稿 {s.review.draft?.entries.length||0} 条。本地编辑暂未覆盖。</p><Events events={(s.review.events||[]).slice(-3)}/><details className="mb-4 text-sm"><summary className="cursor-pointer">查看服务器草稿内容</summary><pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(s.review.draft?.entries||[],null,2)}</pre></details><ConfirmAction key={'adopt:'+s.review.revision} disabled={s.busy} label="放弃本地编辑，采用服务器草稿" message="放弃当前本地编辑，采用刚刚读取的服务器草稿？不会自动重发任何操作。" onConfirm={()=>{model.adopt();setSelected(0);}}/></section>}
  <DraftTransfer key={'transfer:'+s.user.version+':'+s.data.revision+':'+s.dirty+':'+s.blocked} s={s} model={model} onImported={()=>{setSelected(0);setQuery('');}}/>
+ <BatchCheck key={'batch:'+s.user.version+':'+s.data.revision+':'+s.dirty+':'+s.blocked} s={s} model={model}/>
  <TrialSearch key={'trial:'+s.user.version+':'+s.data.revision+':'+s.dirty+':'+s.blocked} s={s} model={model}/>
  <PublicationPreview key={s.data.revision+':'+s.dirty+':'+s.blocked} s={s}/>
  <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]"><section className="min-w-0 rounded-2xl border border-zinc-200 bg-white"><div className="flex items-center justify-between border-b border-zinc-200 p-5"><h3 className="font-medium">编辑 FAQ</h3>{model.can('edit')&&<button disabled={!editable||s.entries.length>=1000} onClick={()=>{model.edit([...s.entries,{id:'',title:'',source:'',content:'',keywords:[]}]);setSelected(s.entries.length);setQuery('');}}>新增条目</button>}</div>

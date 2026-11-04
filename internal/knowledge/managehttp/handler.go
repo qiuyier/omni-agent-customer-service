@@ -66,7 +66,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, 405, "method_not_allowed")
 			return
 		}
-	case "/internal/knowledge/trial":
+	case "/internal/knowledge/trial", "/internal/knowledge/batch":
 		permission = manage.Read
 		if r.Method != "POST" || r.Header.Get("Origin") != h.origin {
 			failure(w, 403, "request_not_allowed")
@@ -99,6 +99,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return id, nil
 	})
+	if r.URL.Path == "/internal/knowledge/batch" {
+		h.batch(w, r, ctx, service, actor)
+		return
+	}
 	if r.URL.Path == "/internal/knowledge/trial" {
 		h.trial(w, r, ctx, service, actor)
 		return

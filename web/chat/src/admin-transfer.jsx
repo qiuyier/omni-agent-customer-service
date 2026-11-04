@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {applyDraftImport,canImport,exportSavedDraft,importDifference,importStillCurrent,readDraftFile,templateEntries} from './admin-transfer.mjs';
-function Download({text,name,children}){
+export function Download({text,name,children}){
  const [url,setURL]=useState('');
  useEffect(()=>{if(text===null){setURL('');return;}const next=URL.createObjectURL(new Blob([text],{type:'application/json;charset=utf-8'}));setURL(next);return()=>URL.revokeObjectURL(next);},[text]);
  return text!==null&&url?<a className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-emerald-700" href={url} download={name}>{children}</a>:<span className="px-4 py-2 text-sm text-zinc-500">{children}（暂不可用）</span>;
