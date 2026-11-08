@@ -1,5 +1,7 @@
 # 固定参考部署：显式 AI 与业务资料
 
+本文说明原 FAQ 文件模式。若希望客服使用管理页面发布的知识，请使用 [管理知识部署指南](KNOWLEDGE.md) 的独立 `ai-managed.json` 和 `check-ai-managed` / `start-ai-managed`；原 `start-ai` 不会自动切换知识来源。
+
 2026-10-26。默认 `start` / `check` 仍使用 fake，不读取 ai.json 或根 .env。仅 `check-ai` / `start-ai` 读取私密 AI 文件，不改来源、账号、数据库密码或会话映射。与固定回复共用原 PostgreSQL 历史。
 
 ## 配置（不自动导入现有密钥）

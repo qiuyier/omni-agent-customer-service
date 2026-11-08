@@ -23,14 +23,27 @@ async function shutdown(){
  if(child&&child.exitCode===null&&child.signalCode===null){child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),8000);await child.done;clearTimeout(timer);}
 }
 try{
- const command=process.argv[2];if(process.argv.length!==3||!['init','check','migrate','start','check-ai','start-ai'].includes(command))throw Error('invalid command');
- const ai=command.endsWith('-ai'),starting=command==='start'||command==='start-ai';
+ const command=process.argv[2];if(process.argv.length!==3||!['init','check','migrate','start','check-ai','start-ai','check-ai-managed','start-ai-managed','check-knowledge','start-knowledge'].includes(command))throw Error('invalid command');
+ const managed=command.endsWith('-ai-managed'),ai=command.endsWith('-ai')||managed,knowledge=command.endsWith('-knowledge'),starting=command.startsWith('start');
  if(command==='init'){
   await mkdir(root+'.local',{recursive:true,mode:0o700});await initialize(directory);
   console.log('Initialized .local/reference once. Private test passwords are in config.json; do not publish this file.');
  }else{
-  const c=await load(directory),env={...environment(c),...(ai?await loadAI(directory):{})};
-  if(!starting){
+  const c=await load(directory),env={...environment(c),...(ai?await loadAI(directory,{managed}):{})};
+  if(knowledge){
+   // Independent admin process: no model credentials, host secrets or auto migration.
+   const adminEnv={PATH:env.PATH,DATABASE_URL:env.DATABASE_URL,KNOWLEDGE_ADMIN_ACCOUNTS_FILE:directory+'/knowledge-accounts.json',KNOWLEDGE_ADMIN_ADDRESS:'127.0.0.1:8094',KNOWLEDGE_ADMIN_ORIGIN:'http://127.0.0.1:8094'};
+   if(await run('knowledge-admin',['-check-config'],adminEnv).done!==0)throw Error('admin configuration invalid');
+   if(starting){
+    await assertAvailable(8094);
+    const abort=new AbortController();
+    for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>{stopping=true;abort.abort();});
+    child=run('knowledge-admin',[],adminEnv);child.done.then(()=>abort.abort());
+    console.log('Starting independent knowledge admin at http://127.0.0.1:8094/; database/schema validation follows. No model calls.');
+    if(!abort.signal.aborted)await new Promise(resolve=>abort.signal.addEventListener('abort',resolve,{once:true}));
+    if(!stopping)throw Error('knowledge admin exited unexpectedly');
+   }
+  }else if(!starting){
    for(const [name,args] of command==='migrate'?[['migrate',[]]]:[['webchat-server',['-check-config']],['webchat-server',['-check-resources']]]){
     const code=await run(name,args,env).done;if(code!==0)throw Error('reference command failed');
    }
