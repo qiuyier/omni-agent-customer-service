@@ -1,12 +1,12 @@
 # Changelog
 
-## [Unreleased] — 独立知识管理
+## [1.1.0] — 2026-11-09
 
 - 新增独立知识管理员登录、FAQ 草稿编辑/导入导出、差异预览、试检索、批量检查报告、发布与回退。
 - 新增 PostgreSQL 管理知识存储、操作记录和 revision 冲突保护；聊天网关通过显式 managed 来源读取已发布知识，默认固定回复与原文件模式不变。
 - 参考部署新增 check-knowledge/start-knowledge、check-ai-managed/start-ai-managed 和首次使用指南。
 - **升级注意：数据库从 schema 2 升至 3。迁移后不能直接换回 v1.0.1 二进制；逆向迁移会删除知识数据。** 先备份并在隔离恢复副本验收，详见 [升级与回退说明](docs/knowledge-release-upgrade.md)。
-- 版本号、正式发布日期及发布目标待确认；以上不代表已经发布。门禁见 [发布前检查](docs/knowledge-release-readiness-2026-11-08.md)。
+- 详见 [v1.1.0 发布说明](docs/release-v1.1.0.md)。公开状态以 GitHub v1.1.0 标签及 Release 为准；门禁见 [发布检查表](docs/release-v1.1.0-checklist.md)。
 
 ## [1.0.1] — 2026-10-29
 
