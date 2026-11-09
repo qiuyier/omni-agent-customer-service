@@ -13,6 +13,7 @@ import (
 
 func (h *Handler) feedback(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	write := r.URL.Path == "/internal/knowledge/feedback/status"
+	check := r.URL.Path == "/internal/knowledge/feedback/check"
 	permission := manage.Read
 	if write {
 		permission = manage.Edit
@@ -21,7 +22,7 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request, ctx context.C
 		failure(w, 400, "invalid_request")
 		return
 	}
-	if write && (r.Method != "POST" || r.Header.Get("Origin") != h.origin) || !write && r.Method != "GET" {
+	if (write || check) && (r.Method != "POST" || r.Header.Get("Origin") != h.origin) || !write && !check && r.Method != "GET" {
 		failure(w, 403, "request_not_allowed")
 		return
 	}
@@ -33,6 +34,10 @@ func (h *Handler) feedback(w http.ResponseWriter, r *http.Request, ctx context.C
 	repo, ok := h.repo.(feedback.Repository)
 	if !ok {
 		failure(w, 503, "storage_unavailable")
+		return
+	}
+	if check {
+		h.checkFeedback(w, r, ctx, repo, actor)
 		return
 	}
 	if !write {

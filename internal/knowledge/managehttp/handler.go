@@ -58,7 +58,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	if r.URL.Path == "/internal/knowledge/feedback" || r.URL.Path == "/internal/knowledge/feedback/status" {
+	if r.URL.Path == "/internal/knowledge/feedback" || r.URL.Path == "/internal/knowledge/feedback/status" || r.URL.Path == "/internal/knowledge/feedback/check" {
 		h.feedback(w, r, ctx)
 		return
 	}

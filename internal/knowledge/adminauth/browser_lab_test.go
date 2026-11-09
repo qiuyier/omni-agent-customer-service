@@ -3,6 +3,7 @@
 package adminauth
 
 import (
+	"context"
 	"fmt"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/manage"
 	"io"
@@ -39,7 +40,17 @@ func TestBrowserLab(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	h, e := d.Handler(newFeedbackLab())
+	store := newFeedbackLab()
+	if os.Getenv("OMNI_FEEDBACK_CHECK_LAB") == "1" {
+		service, _ := manage.New(store, func(context.Context, manage.Permission) (string, error) { return "fixture", nil })
+		if _, err := service.SaveDraft(context.Background(), 0, []byte(`[{"id":"notification","title":"通知方式","source":"虚构验收资料","content":"请在测试系统的通知设置中选择通知方式。","keywords":["通知"]},{"id":"hours","title":"服务时间","source":"虚构验收资料","content":"此条仅用于检索对照。","keywords":["时间"]}]`)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := service.PublishDraft(context.Background(), 1, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h, e := d.Handler(store)
 	if e != nil {
 		t.Fatal(e)
 	}

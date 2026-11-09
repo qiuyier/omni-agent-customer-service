@@ -30,7 +30,7 @@ export class AdminController {
  constructor(api=request){this.api=api;this.state=fresh();this.epoch=0;this.listeners=new Set();}
  subscribe=(fn)=>{this.listeners.add(fn);return()=>this.listeners.delete(fn);};
  snapshot=()=>this.state;
- set(patch){this.state={...this.state,...patch};for(const fn of this.listeners)fn();}
+ set(patch){if(Object.hasOwn(patch,'feedback')||Object.hasOwn(patch,'data')||patch.checking||patch.blocked)patch={...patch,feedbackCheck:null};this.state={...this.state,...patch};for(const fn of this.listeners)fn();}
  clear(notice='登录已失效或账号发生变化，请重新登录。'){this.epoch++;this.state={...fresh(),notice};for(const fn of this.listeners)fn();}
  can(permission){return this.state.user?.permissions.includes(`knowledge.${permission}`);}
  async identity(epoch, expected){
@@ -81,13 +81,30 @@ export class AdminController {
   }catch(e){if(epoch!==this.epoch)return;if(e.status===401||e.status===403){this.clear();return;}this.set({busy:false,feedback:null,notice:change?'状态更新未确认，请重新读取问题列表核对；不要直接重复提交。':'问题列表读取失败，请手动重试。'});}
  }
  feedbackToDraft(item){
+
   const s=this.state;if(s.busy||s.checking||s.blocked||!this.can('edit')||s.entries.length>=1000||!s.feedback?.includes(item)||Date.parse(item.expires_at)<=Date.now())return false;
   const id='feedback-'+item.id;
   if(s.entries.some(e=>e.id===id)){this.set({notice:'本地草稿已有该问题，请在编辑区检查。'});return false;}
   this.edit([...s.entries,{id,title:Array.from(item.question).slice(0,128).join(''),content:'',source:'未命中问题（待核实）',keywords:[]}]);
   this.set({notice:'已加入本地草稿。请检查隐私、补齐答案与关键词，再保存、审核和发布。原问题尚未解决。'});return true;
  }
+ async checkFeedback(item,expected){
+  const s=this.state;if(s.busy||s.checking||s.blocked||!this.can('read')||!s.data?.published||!s.feedback?.includes(item)||Date.parse(item.expires_at)<=Date.now()||!s.data.published.entries.some(e=>e.id===expected))return;
+  const epoch=this.epoch;this.set({busy:true,feedbackCheck:null,notice:''});
+  try{
+   await this.identity(epoch,s.user.version);
+   const result=await this.api('/internal/knowledge/feedback/check',{id:item.id,item_revision:item.revision,revision:s.data.revision,expected_id:expected},s.user.version);
+   await this.identity(epoch,s.user.version);
+   if(result?.id!==item.id||result.item_revision!==item.revision||result.revision!==s.data.revision||result.expected_id!==expected||result.published?.version!==s.data.published.version||!Array.isArray(result.published.matches)||result.published.matches.length>3)throw Error('invalid result');
+   const matches=result.published.matches;
+   if(!matches.every(m=>['id','title','content','source'].every(k=>typeof m[k]==='string')&&Array.isArray(m.keywords)&&m.keywords.every(k=>typeof k==='string')))throw Error('invalid matches');
+   const outcome=matches.some(m=>m.id===expected)?'matched':matches.length?'other':'miss';
+   if(result.outcome!==outcome||Date.parse(item.expires_at)<=Date.now())throw Error('stale result');
+   this.set({busy:false,feedbackCheck:result});
+  }catch(e){if(epoch!==this.epoch)return;if(e.status===401||e.status===403){this.clear();return;}this.set({busy:false,feedbackCheck:null,notice:e.code==='revision_conflict'?'问题或知识版本已变化，请重新读取问题并核对服务器状态后再验证。':'验证未完成：请确认问题尚未过期、对应 FAQ 仍已发布，再手动重试。没有更改问题状态。'});}
+ }
  async mutate(action,extra={}){
+
   const s=this.state;
   if(s.busy||s.checking||s.blocked||!s.data||!this.can(action==='draft'?'edit':'publish'))return;
   if(action!=='draft'&&s.dirty){this.set({notice:'请先保存或放弃本地编辑，再发布或回退。'});return;}

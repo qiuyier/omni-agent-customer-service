@@ -1,4 +1,5 @@
 import React,{useState} from 'react';
+import {FeedbackCheck} from './admin-feedback-check.jsx';
 const names={pending:'待处理',ignored:'已忽略',resolved:'已解决'};
 export function Feedback({s,model,onImported}){
  const [filter,setFilter]=useState('pending'),[selected,setSelected]=useState(''),[faq,setFAQ]=useState('');
@@ -16,7 +17,9 @@ export function Feedback({s,model,onImported}){
  <div>{!current?<p className="muted">选择问题后补充 FAQ 或更新状态。</p>:<div className="grid gap-4"><p className="break-words text-sm leading-7">{current.question}</p><p className="muted">已关联 FAQ：{current.faq_id||'无'}。转为草稿不保存、不发布，也不会自动标记解决。</p>
  <button disabled={!edit||s.blocked||s.entries.length>=1000} onClick={()=>{if(model.feedbackToDraft(current))onImported();}}>转为本地 FAQ 草稿</button>
  <div className="flex flex-wrap gap-2">{current.status!=='ignored'&&<button disabled={!edit} onClick={()=>change('ignored')}>标记忽略</button>}{current.status!=='pending'&&<button disabled={!edit} onClick={()=>change('pending')}>重新待处理</button>}</div>
- <label>已发布的对应 FAQ<select value={faq} disabled={!edit} onChange={e=>setFAQ(e.target.value)}><option value="">选择已核实的 FAQ</option>{(s.data.published?.entries||[]).map(e=><option key={e.id} value={e.id}>{e.title}</option>)}</select></label><button disabled={!edit||!faq} onClick={()=>change('resolved',faq)}>关联并标记解决</button><p className="muted">请先人工确认 FAQ 能回答该问题；服务器会核对 FAQ 仍在当前发布版本中。</p></div>}</div></div>}
+ <label>已发布的对应 FAQ<select value={faq} disabled={locked} onChange={e=>{setFAQ(e.target.value);model.set({feedbackCheck:null});}}><option value="">选择预期对应的 FAQ</option>{(s.data.published?.entries||[]).map(e=><option key={e.id} value={e.id}>{e.title}</option>)}</select></label>
+ <FeedbackCheck s={s} model={model} item={current} expected={faq}/>
+ <button disabled={!edit||!faq} onClick={()=>change('resolved',faq)}>关联并标记解决</button><p className="muted">请先人工确认 FAQ 能回答该问题；服务器会核对 FAQ 仍在当前发布版本中。</p></div>}</div></div>}
  </>}
  </section>;
 }
