@@ -68,9 +68,9 @@ try{
  assert.equal(states[0].history.status,'bot_active');assert.equal(states[1].history.status,'waiting_human');assert.equal(states[2].history.status,'human_active');
  const before=await snapshot();assert.equal(before.conversations.length,3);assert.ok(before.messages.length>=5);assert.equal(before.desk_read_receipts.length,2);
  await fs.writeFile(join(output,'before.json'),JSON.stringify(before,null,2));await mark('v1_0_1_created_three_states_messages_and_receipts');
- await stop(gateway);await run(join(output,'new-migrate'),[],root,{DATABASE_URL:database});assert.equal(await sql('SELECT version FROM public.customer_service_schema_version'),'3');assert.deepEqual(await snapshot(),before);await mark('schema_2_to_3_preserves_all_old_rows_and_sequence');
+ await stop(gateway);await run(join(output,'new-migrate'),[],root,{DATABASE_URL:database});assert.equal(await sql('SELECT version FROM public.customer_service_schema_version'),'4');assert.deepEqual(await snapshot(),before);await mark('schema_2_to_4_preserves_all_old_rows_and_sequence');
  await run(join(output,'new-migrate'),[],root,{DATABASE_URL:database});assert.deepEqual(await snapshot(),before);await mark('repeat_migration_preserves_old_data');
- const oldCheck=child(join(output,'old-webchat-server'),['-check-resources'],root,gatewayEnv());assert.notEqual((await oldCheck.done).code,0);await mark('old_application_rejects_schema_3');
+ const oldCheck=child(join(output,'old-webchat-server'),['-check-resources'],root,gatewayEnv());assert.notEqual((await oldCheck.done).code,0);await mark('old_application_rejects_schema_4');
  await startGateway('new');
  for(const item of states){const s=await mint('fictional-'+item.kind);assert.equal(s.conversation_id,item.s.conversation_id);item.s=s;assert.deepEqual(await history(s),item.history);assert.deepEqual(await receipt(s,'old-'+item.kind,'fictional '+item.kind+' question'),item.receipt);}
  assert.deepEqual(await snapshot(),before);await mark('new_gateway_reads_same_history_and_message_receipts');

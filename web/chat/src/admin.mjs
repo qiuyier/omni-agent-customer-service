@@ -25,7 +25,7 @@ export async function request(path, body, version, fetcher=fetch) {
   return data;
  } finally { clearTimeout(timer); }
 }
-const fresh=()=>({user:null,data:null,entries:[],busy:false,checking:false,blocked:false,review:null,notice:'',dirty:false,trial:null,batch:null,batchCases:null});
+const fresh=()=>({user:null,data:null,entries:[],busy:false,checking:false,blocked:false,review:null,notice:'',dirty:false,trial:null,batch:null,batchCases:null,feedback:null});
 export class AdminController {
  constructor(api=request){this.api=api;this.state=fresh();this.epoch=0;this.listeners=new Set();}
  subscribe=(fn)=>{this.listeners.add(fn);return()=>this.listeners.delete(fn);};
@@ -41,7 +41,7 @@ export class AdminController {
  }
  async open(){
   if(this.state.busy)return;
-  const epoch=++this.epoch;this.set({checking:true,notice:''});
+  const epoch=++this.epoch;this.set({checking:true,notice:'',feedback:null});
   try {
    const user=await this.identity(epoch,this.state.user?.version);
    if(!user.permissions.includes('knowledge.read')){this.set({user,checking:false,notice:'此账号没有知识读取权限，请联系管理员。'});return;}
@@ -68,6 +68,25 @@ export class AdminController {
   catch{if(epoch===this.epoch)this.set({busy:false,notice:'内容已隐藏，但服务器退出未确认；请重新登录或关闭页面，等待会话到期。'});}
  }
  edit(entries){if(!this.state.busy && !this.state.checking && this.can('edit'))this.set({entries,dirty:true,trial:null,batch:null,batchCases:null});}
+ async loadFeedback(change){
+  const s=this.state;if(s.busy||s.checking||!s.user||!this.can(change?'edit':'read'))return;
+  const epoch=this.epoch;this.set({busy:true,notice:'',feedback:null});
+  try {
+   await this.identity(epoch,s.user.version);
+   if(change)await this.api('/internal/knowledge/feedback/status',change,s.user.version);
+   const result=await this.api('/internal/knowledge/feedback',undefined,s.user.version);
+   await this.identity(epoch,s.user.version);
+   if(!Array.isArray(result?.items)||result.items.length>500||!result.items.every(i=>typeof i.id==='string'&&typeof i.question==='string'&&i.question.length<=1024&&Number.isSafeInteger(i.revision)&&i.revision>0&&['pending','ignored','resolved'].includes(i.status)&&typeof i.faq_id==='string'&&Number.isSafeInteger(i.count)&&Number.isFinite(Date.parse(i.expires_at))))throw Error('invalid feedback');
+   this.set({busy:false,feedback:result.items,notice:change?'问题状态已更新。':''});
+  }catch(e){if(epoch!==this.epoch)return;if(e.status===401||e.status===403){this.clear();return;}this.set({busy:false,feedback:null,notice:change?'状态更新未确认，请重新读取问题列表核对；不要直接重复提交。':'问题列表读取失败，请手动重试。'});}
+ }
+ feedbackToDraft(item){
+  const s=this.state;if(s.busy||s.checking||s.blocked||!this.can('edit')||s.entries.length>=1000||!s.feedback?.includes(item)||Date.parse(item.expires_at)<=Date.now())return false;
+  const id='feedback-'+item.id;
+  if(s.entries.some(e=>e.id===id)){this.set({notice:'本地草稿已有该问题，请在编辑区检查。'});return false;}
+  this.edit([...s.entries,{id,title:Array.from(item.question).slice(0,128).join(''),content:'',source:'未命中问题（待核实）',keywords:[]}]);
+  this.set({notice:'已加入本地草稿。请检查隐私、补齐答案与关键词，再保存、审核和发布。原问题尚未解决。'});return true;
+ }
  async mutate(action,extra={}){
   const s=this.state;
   if(s.busy||s.checking||s.blocked||!s.data||!this.can(action==='draft'?'edit':'publish'))return;

@@ -58,6 +58,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
+	if r.URL.Path == "/internal/knowledge/feedback" || r.URL.Path == "/internal/knowledge/feedback/status" {
+		h.feedback(w, r, ctx)
+		return
+	}
 	permission := manage.Publish
 	switch r.URL.Path {
 	case "/internal/knowledge/state":

@@ -6,6 +6,13 @@ import {join} from 'node:path';
 import {aiEnvironment,loadAI} from './ai.mjs';
 import {environment,newConfig} from './config.mjs';
 const config={provider:'custom',protocol:'chat_completions',model:'offline',baseURL:'https://model.invalid/v1',apiKey:'fictional-only'};
+test('question capture defaults off and requires managed explicit boolean',()=>{
+ assert.equal(aiEnvironment(config,{managed:true}).WEBCHAT_KNOWLEDGE_FEEDBACK,undefined);
+ assert.equal(aiEnvironment({...config,captureUnmatched:true},{managed:true}).WEBCHAT_KNOWLEDGE_FEEDBACK,'true');
+ assert.equal(aiEnvironment({...config,captureUnmatched:false},{managed:true}).WEBCHAT_KNOWLEDGE_FEEDBACK,undefined);
+ assert.throws(()=>aiEnvironment({...config,captureUnmatched:'true'},{managed:true}));
+ assert.throws(()=>aiEnvironment({...config,faqPath:'/tmp/faq.json',captureUnmatched:true}));
+});
 test('managed knowledge is explicit and excludes file source; default remains fake',()=>{
  const env=aiEnvironment(config,{managed:true});assert.equal(env.WEBCHAT_KNOWLEDGE_SOURCE,'managed');assert.equal(env.KNOWLEDGE_FAQ_PATH,undefined);assert.equal(env.WEBCHAT_REPLY_MODE,'ai');assert.equal(env.AI_ALLOW_INSECURE_HTTP,'false');
  assert.equal(environment(newConfig()).WEBCHAT_KNOWLEDGE_SOURCE,undefined);

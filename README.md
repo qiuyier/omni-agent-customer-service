@@ -25,6 +25,10 @@
 回复恢复、人工接管与身份隔离的一键回归入口：`node scripts/recovery_check.mjs`。
 可选一次性 PostgreSQL 验收及报告说明见[恢复与身份隔离回归](docs/recovery-regression.md)。
 
+## 开发中
+
+开发中新增：[未命中问题收集](docs/knowledge-feedback.md)。默认关闭，部署方显式开启后记录规则脱敏文本；管理员人工转 FAQ 草稿。本功能尚未发布，升级需要 schema 4。
+
 ## v1.0.0
 
 版本功能、安装入口及已知限制见 [发布说明](docs/release-v1.0.0.md) 与 [CHANGELOG](CHANGELOG.md)。以下为按时间保留的研发记录，不代表当前版本所有能力均为实验，也不将历史校验器实验纳入默认客服路径。

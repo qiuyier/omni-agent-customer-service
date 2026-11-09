@@ -115,7 +115,7 @@ func newGatewayContext(ctx context.Context, repository conversation.Repository, 
 		if e != nil {
 			return nil, e
 		}
-		options, err = bootstrap.NewManagedWebchatReplyOptions(ctx, config.Reply, store)
+		options, err = bootstrap.ManagedWebchatReplyOptionsWithFeedback(ctx, config.Reply, store, config.KnowledgeFeedback)
 	} else {
 		options, err = bootstrap.NewWebchatReplyOptions(ctx, config.Reply, customerservice.ReplyGeneratorFunc(fakeReply))
 	}

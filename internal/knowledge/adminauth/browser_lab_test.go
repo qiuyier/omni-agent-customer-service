@@ -39,7 +39,7 @@ func TestBrowserLab(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	h, e := d.Handler(&memory{})
+	h, e := d.Handler(newFeedbackLab())
 	if e != nil {
 		t.Fatal(e)
 	}

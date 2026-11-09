@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/customerservice"
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/feedback"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/manage"
 )
 
@@ -30,6 +31,9 @@ func ManagedKnowledgeRetriever(ctx context.Context, repo manage.Repository) (cus
 	return s, nil
 }
 func NewManagedWebchatReplyOptions(ctx context.Context, c WebchatReplyConfig, repo manage.Repository) ([]customerservice.Option, error) {
+	return ManagedWebchatReplyOptionsWithFeedback(ctx, c, repo, false)
+}
+func ManagedWebchatReplyOptionsWithFeedback(ctx context.Context, c WebchatReplyConfig, repo manage.Repository, capture bool) ([]customerservice.Option, error) {
 	if e := ValidateManagedKnowledge(c); e != nil {
 		return nil, e
 	}
@@ -45,6 +49,13 @@ func NewManagedWebchatReplyOptions(ctx context.Context, c WebchatReplyConfig, re
 	options, e := NewWebchatReplyOptions(ctx, c, nil)
 	if e != nil {
 		return nil, e
+	}
+	if capture {
+		sink, ok := repo.(feedback.Sink)
+		if !ok {
+			return nil, errors.New("managed feedback storage unavailable")
+		}
+		retriever = feedback.Wrap(retriever, sink)
 	}
 	return append(options, customerservice.WithKnowledgeRetriever(retriever), customerservice.WithKnowledgeRetrievalTimeout(c.Knowledge.RetrievalTimeout)), nil
 }

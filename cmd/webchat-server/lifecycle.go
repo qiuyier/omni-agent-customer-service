@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/bootstrap"
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/feedback"
 )
 
 const (
@@ -60,6 +61,11 @@ func runServer(stopContext context.Context, config serverConfig, output io.Write
 		return errors.New("PostgreSQL readiness failed during startup; verify connectivity and schema migrations (cmd/migrate)")
 	}
 	cancelStartup()
+	if store, e := managedStore(repository.repository); e == nil {
+		if repo, ok := store.(feedback.Repository); ok {
+			defer feedback.StartJanitor(stopContext, repo)()
+		}
+	}
 	// Knowledge indexing owns a separate startup budget and remains cancelable
 	// by the signal context; the PostgreSQL startup context is already canceled.
 	gateway, err := newGatewayContext(stopContext, repository.repository, config)

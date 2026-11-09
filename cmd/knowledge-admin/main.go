@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/adminauth"
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/feedback"
 	pg "github.com/qiuyier/omni-agent-customer-service/internal/persistence/postgres"
 )
 
@@ -137,6 +138,9 @@ func run(ctx context.Context, args []string, getenv func(string) string, input i
 		return errors.New("administrator store unavailable")
 	}
 	handler, e := directory.Handler(store)
+	if repo, ok := store.(feedback.Repository); ok {
+		defer feedback.StartJanitor(ctx, repo)()
+	}
 	if e != nil {
 		return e
 	}

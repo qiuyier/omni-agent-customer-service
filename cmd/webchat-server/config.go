@@ -18,15 +18,16 @@ import (
 const defaultServerAddress = "127.0.0.1:8093"
 
 type serverConfig struct {
-	KnowledgeSource string
-	Hosts           []webchat.Host
-	Agents          []webchat.Agent
-	Address         string
-	HostID          string
-	HostSecret      string
-	DatabaseURL     string
-	ReplyMode       string
-	Reply           bootstrap.WebchatReplyConfig
+	KnowledgeFeedback bool
+	KnowledgeSource   string
+	Hosts             []webchat.Host
+	Agents            []webchat.Agent
+	Address           string
+	HostID            string
+	HostSecret        string
+	DatabaseURL       string
+	ReplyMode         string
+	Reply             bootstrap.WebchatReplyConfig
 }
 
 // AI and knowledge settings are read only when explicitly enabled. This entry
@@ -44,6 +45,12 @@ func resolveConfig(lookup func(string) (string, bool), addressOverride string) (
 	}
 	if config.Address == "" {
 		config.Address = defaultServerAddress
+	}
+	if raw := value("WEBCHAT_KNOWLEDGE_FEEDBACK"); raw != "" {
+		if raw != "true" && raw != "false" {
+			return serverConfig{}, errors.New("WEBCHAT_KNOWLEDGE_FEEDBACK must be true or false")
+		}
+		config.KnowledgeFeedback = raw == "true"
 	}
 	if addressOverride != "" {
 		config.Address = addressOverride
@@ -116,6 +123,9 @@ func (c serverConfig) trustedHosts() []webchat.Host {
 }
 
 func (c serverConfig) validate() error {
+	if c.KnowledgeFeedback && c.KnowledgeSource != "managed" {
+		return errors.New("feedback capture requires managed knowledge")
+	}
 	if len(c.Hosts) > 0 && (c.HostID != "" || c.HostSecret != "") {
 		return errors.New("host configuration modes are mutually exclusive")
 	}
