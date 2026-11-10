@@ -63,6 +63,15 @@ func runServer(stopContext context.Context, config serverConfig, output io.Write
 	cancelStartup()
 	if store, e := managedStore(repository.repository); e == nil {
 		if repo, ok := store.(feedback.Repository); ok {
+			mode := "disabled"
+			if config.KnowledgeFeedback {
+				mode = "enabled"
+			}
+			monitor := feedback.NewMonitor(mode)
+			stopContext = feedback.WithMonitor(stopContext, monitor)
+			if counts, ok := store.(feedback.Counts); ok {
+				defer monitor.StartReporter(stopContext, counts, output)()
+			}
 			defer feedback.StartJanitor(stopContext, repo)()
 		}
 	}

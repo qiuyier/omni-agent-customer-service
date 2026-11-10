@@ -49,18 +49,26 @@ func Sanitize(text string) string {
 // retrieval into an error. Callers install it AFTER startup readiness checks;
 // administrator trial/batch search must use the original retriever.
 func Wrap(next customerservice.KnowledgeRetriever, sink Sink) customerservice.KnowledgeRetriever {
+	return WrapMonitored(next, sink, nil)
+}
+func WrapMonitored(next customerservice.KnowledgeRetriever, sink Sink, m *Monitor) customerservice.KnowledgeRetriever {
 	return customerservice.KnowledgeRetrieverFunc(func(ctx context.Context, q customerservice.KnowledgeQuery) ([]customerservice.KnowledgeSnippet, error) {
 		hits, err := next.Retrieve(ctx, q)
 		// Keep a full capture budget plus headroom for the caller's post-retrieval
 		// deadline check. Near-deadline misses are deliberately not collected.
 		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 200*time.Millisecond {
+			if err == nil && len(hits) == 0 {
+				m.skip()
+			}
 			return hits, err
 		}
 		if err == nil && len(hits) == 0 && sink != nil && ctx.Err() == nil {
 			if text := Sanitize(q.Text); text != "" {
 				bounded, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-				_ = sink.RecordFeedback(bounded, text)
+				m.record(sink.RecordFeedback(bounded, text))
 				cancel()
+			} else {
+				m.skip()
 			}
 		}
 		return hits, err

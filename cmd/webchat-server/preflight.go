@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/faq"
+	"github.com/qiuyier/omni-agent-customer-service/internal/knowledge/feedback"
 )
 
 // Deliberately does not construct a gateway, provider or semantic index.
@@ -56,6 +57,15 @@ func checkResources(ctx context.Context, config serverConfig, output io.Writer, 
 			return e
 		}
 		knowledge = "valid published managed FAQ (keyword)"
+		if counts, ok := store.(feedback.Counts); ok {
+			active, expired, e := counts.FeedbackCounts(probeContext)
+			if e != nil {
+				return errors.New("feedback queue check unavailable")
+			}
+			if _, e = fmt.Fprintf(output, "Feedback configuration (not running-process state): enabled=%t; active=%d/500; expired=%d; cleanup execution not verified by preflight.\n", config.KnowledgeFeedback, active, expired); e != nil {
+				return errors.New("cannot display feedback status")
+			}
+		}
 	}
 	if _, err := fmt.Fprintf(output, "Resource checks passed. Reply mode: %s. PostgreSQL connectivity/schema: passed. Knowledge: %s.\nNo model or embedding requests, migrations, messages or listener were created. Model credentials/availability, semantic indexing, port availability and host authentication/proxy integration remain unverified.\n", config.ReplyMode, knowledge); err != nil {
 		return errors.New("cannot display resource check status")

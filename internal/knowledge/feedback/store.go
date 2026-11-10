@@ -44,7 +44,7 @@ func RunJanitor(ctx context.Context, repo Repository) {
 	defer ticker.Stop()
 	for {
 		bounded, cancel := context.WithTimeout(ctx, 5*time.Second)
-		_ = repo.PurgeFeedback(bounded)
+		MonitorFrom(ctx).clean(repo.PurgeFeedback(bounded))
 		cancel()
 		select {
 		case <-ctx.Done():

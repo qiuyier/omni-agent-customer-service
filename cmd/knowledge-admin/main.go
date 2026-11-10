@@ -139,6 +139,11 @@ func run(ctx context.Context, args []string, getenv func(string) string, input i
 	}
 	handler, e := directory.Handler(store)
 	if repo, ok := store.(feedback.Repository); ok {
+		monitor := feedback.NewMonitor("not_owned")
+		ctx = feedback.WithMonitor(ctx, monitor)
+		if counts, ok := store.(feedback.Counts); ok {
+			defer monitor.StartReporter(ctx, counts, out)()
+		}
 		defer feedback.StartJanitor(ctx, repo)()
 	}
 	if e != nil {

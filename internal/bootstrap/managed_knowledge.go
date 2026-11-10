@@ -55,7 +55,7 @@ func ManagedWebchatReplyOptionsWithFeedback(ctx context.Context, c WebchatReplyC
 		if !ok {
 			return nil, errors.New("managed feedback storage unavailable")
 		}
-		retriever = feedback.Wrap(retriever, sink)
+		retriever = feedback.WrapMonitored(retriever, sink, feedback.MonitorFrom(ctx))
 	}
 	return append(options, customerservice.WithKnowledgeRetriever(retriever), customerservice.WithKnowledgeRetrievalTimeout(c.Knowledge.RetrievalTimeout)), nil
 }

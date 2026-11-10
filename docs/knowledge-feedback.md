@@ -4,6 +4,8 @@
 
 ## 开启与升级
 
+开关切换、配置预检、无正文运行状态及排错步骤见[部署与运行检查](knowledge-feedback-operations.md)。
+
 默认关闭，不继承其他 AI 开关。部署方确认有权收集文本、完成用户告知并评估隐私风险后，才可设置 `WEBCHAT_KNOWLEDGE_FEEDBACK=true`。只接受 `true` / `false`；开启要求 `WEBCHAT_KNOWLEDGE_SOURCE=managed`、AI 模式和单宿主。此开关只控制后续采集，不删除已有记录。
 
 参考部署可在原有私密 `ai-managed.json` 中增加布尔字段 `"captureUnmatched": true`，再按原流程检查并启动 managed 模式；省略或 false 均不采集。普通 ai.json 不支持该字段。不要放入业务凭证或真实示例问题。
@@ -29,6 +31,8 @@
 接口仅在独立管理入口：`GET /internal/knowledge/feedback`，`POST /internal/knowledge/feedback/status`（id/revision/status/faq_id）。沿用原有会话、同源、权限和 no-store 边界；客户/坐席接口不暴露队列。状态更新结果不明确时先重新读取核对，禁止自动重放。
 
 ## 验证
+
+2026-11-10 新增[完整流程隔离验收](knowledge-feedback-flow-acceptance.md)：真实 HTTP 进程、前端控制器和 PostgreSQL 串联，11 项通过；包含网关/管理进程及数据库重启。运行 `node scripts/knowledge_feedback_flow_check.mjs --allow-test-writes`，只使用新建临时资源和本机模拟模型。
 
 ### 验证补充后的知识（未发布）
 

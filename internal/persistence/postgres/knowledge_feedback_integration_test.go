@@ -72,7 +72,7 @@ func TestKnowledgeFeedbackDatabase(t *testing.T) {
 		t.Fatal("concurrent aggregation")
 	}
 	knowledgeExec(t, p, `INSERT INTO customer_service.knowledge_feedback(id,question) SELECT '00000000-0000-4000-8000-'||lpad(n::text,12,'0'),'fixture-'||n FROM generate_series(1,499) n`)
-	if err = repo.RecordFeedback(ctx, "容量之外的虚构问题"); err != nil {
+	if err = repo.RecordFeedback(ctx, "容量之外的虚构问题"); !errors.Is(err, feedback.ErrFull) {
 		t.Fatal(err)
 	}
 	items, err = repo.ListFeedback(ctx)

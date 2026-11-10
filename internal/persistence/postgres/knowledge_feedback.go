@@ -45,12 +45,18 @@ func (k *KnowledgeRepository) RecordFeedback(ctx context.Context, question strin
 		return manage.ErrUnavailable
 	}
 	if tag.RowsAffected() == 0 {
-		_, err = tx.Exec(ctx, `INSERT INTO customer_service.knowledge_feedback(id,question) SELECT $1,$2 WHERE (SELECT count(*) FROM customer_service.knowledge_feedback)<500`, uuid.NewString(), question)
+		tag, err = tx.Exec(ctx, `INSERT INTO customer_service.knowledge_feedback(id,question) SELECT $1,$2 WHERE (SELECT count(*) FROM customer_service.knowledge_feedback)<500`, uuid.NewString(), question)
 		if err != nil {
 			return manage.ErrUnavailable
 		}
 	}
-	return knowledgeWriteError(tx.Commit(ctx))
+	if err = knowledgeWriteError(tx.Commit(ctx)); err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return feedback.ErrFull
+	}
+	return nil
 }
 func (k *KnowledgeRepository) ListFeedback(ctx context.Context) ([]feedback.Item, error) {
 	rows, err := k.pool.Query(ctx, `SELECT id,question,count,revision,status,faq_id,first_seen,last_seen,expires_at FROM customer_service.knowledge_feedback WHERE expires_at>now() ORDER BY last_seen DESC,id LIMIT 500`)
