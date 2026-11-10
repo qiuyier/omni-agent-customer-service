@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "external_models": false,
+  "checks": [
+    {
+      "name": "v1_1_0_created_three_states_messages_receipts_and_knowledge",
+      "status": "passed"
+    },
+    {
+      "name": "schema_3_backup_created_before_upgrade",
+      "status": "passed"
+    },
+    {
+      "name": "schema_3_to_4_preserves_all_old_rows_and_sequence",
+      "status": "passed"
+    },
+    {
+      "name": "repeat_migration_preserves_old_data",
+      "status": "passed"
+    },
+    {
+      "name": "old_application_rejects_schema_4",
+      "status": "passed"
+    },
+    {
+      "name": "new_gateway_reads_same_history_and_message_receipts",
+      "status": "passed"
+    },
+    {
+      "name": "old_conversations_continue_bot_claim_reply_and_close",
+      "status": "passed"
+    },
+    {
+      "name": "upgraded_database_supports_authenticated_knowledge_publish",
+      "status": "passed"
+    },
+    {
+      "name": "process_and_database_restart_preserves_rows_knowledge_and_active_history",
+      "status": "passed"
+    },
+    {
+      "name": "backup_restored_to_separate_schema_3_database_and_old_apps_work",
+      "status": "passed"
+    }
+  ],
+  "cleanup": [
+    {
+      "kind": "container",
+      "status": "removed"
+    },
+    {
+      "kind": "volume",
+      "status": "removed"
+    }
+  ],
+  "old_commit": "ad86f7bd4805ea3ed67635997c5a2e4a4a0dbe32",
+  "new_commit": "ed539b25179ea2d59c7434137bb91a665b124450",
+  "dirty": true
+}
