@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "release": "v1.2.0",
+  "commit": "21e93061d8d23c46f7c645fec7e39efc193432e5",
+  "external_model_calls": 0,
+  "browser_tested": false,
+  "checks": [
+    {
+      "name": "fresh_init_private_credentials_and_documented_builds",
+      "status": "passed"
+    },
+    {
+      "name": "new_database_schema4_and_resource_check",
+      "status": "passed"
+    },
+    {
+      "name": "documented_fake_customer_staff_lifecycle_and_isolation",
+      "status": "passed"
+    },
+    {
+      "name": "documented_stop_restart_retains_exact_conversation_history",
+      "status": "passed"
+    },
+    {
+      "name": "fresh_admin_save_publish_trial_and_batch_without_model",
+      "status": "passed"
+    },
+    {
+      "name": "admin_restart_revokes_session_and_preserves_published_knowledge",
+      "status": "passed"
+    }
+  ],
+  "cleanup": [
+    {
+      "resource": "dedicated_container_and_volume",
+      "status": "removed"
+    },
+    {
+      "resource": "dedicated_network",
+      "status": "removed"
+    }
+  ],
+  "deviations": [
+    "Unique compose project name to avoid existing default volume; published source unchanged",
+    "HTTP lifecycle and management checks, not browser UI acceptance",
+    "Managed model mode not started; no external model calls"
+  ]
+}

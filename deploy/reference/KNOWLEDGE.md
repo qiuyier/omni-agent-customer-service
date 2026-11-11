@@ -6,7 +6,7 @@
 
 ## 1. 准备专用库与二进制
 
-新安装先按 [README](README.md) 完成 init、构建、专用 PostgreSQL 启动和 migrate；已有部署不要重新 init，不删除配置或卷。已有库升级前先按自己的备份策略备份，再显式运行 migrate；启动器不会自动迁移。当前开发版本要求 schema 4（已发布 v1.1.0 为 schema 3），请使用对应版本的二进制和迁移。
+新安装先按 [README](README.md) 完成 init、构建、专用 PostgreSQL 启动和 migrate；已有部署不要重新 init，不删除配置或卷。已有库升级前先按自己的备份策略备份，再显式运行 migrate；启动器不会自动迁移。v1.2.0 要求 schema 4（v1.1.0 为 schema 3），请使用对应版本的二进制和迁移。
 
 ```sh
 go build -o bin/reference/knowledge-admin ./cmd/knowledge-admin
@@ -61,7 +61,7 @@ node deploy/reference/run.mjs start-knowledge
 | `start-ai` | 原 `ai.json` 的 FAQ 文件，管理发布不会改变它 |
 | `start-ai-managed` | 独立 `ai-managed.json` 的模型配置 + 数据库已发布知识 |
 
-创建权限 0600 的 `.local/reference/ai-managed.json`，基本配置包含下面五个字段，不含 `faqPath`；当前开发版本可另加可选布尔字段 `captureUnmatched`，默认关闭，见[问题采集部署与运行检查](../../docs/knowledge-feedback-operations.md)。填入真实供应商配置前自行确认资料授权和费用。空值仅展示结构，不能直接使用。不要覆盖原 ai.json，也不自动导入根 .env。
+创建权限 0600 的 `.local/reference/ai-managed.json`，基本配置包含下面五个字段，不含 `faqPath`；v1.2.0 可另加可选布尔字段 `captureUnmatched`，默认关闭，见[问题采集部署与运行检查](../../docs/knowledge-feedback-operations.md)。填入真实供应商配置前自行确认资料授权和费用。空值仅展示结构，不能直接使用。不要覆盖原 ai.json，也不自动导入根 .env。
 
 ```json
 {"provider":"custom","protocol":"chat_completions","model":"","baseURL":"https://example.invalid/v1","apiKey":""}

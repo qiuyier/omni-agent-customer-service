@@ -10,6 +10,10 @@
 
 ## 首次准备
 
+安装前确认默认容器/数据卷和 15435、8094、8095、8096 端口的归属。**全新源码目录不代表全新数据库**：Compose 默认项目名固定，旧卷即使没有运行中的容器也会被复用。已有安装应保留原配置并走升级流程，不能重新 init 后连接旧卷。
+
+若仅要在同机另做一次隔离安装验收，可为下面所有 Compose 命令一致添加 `-p <独立项目名>`，例如 `docker compose -p omni-reference-fresh-check -f deploy/reference/compose.yaml up -d --wait postgres`。先确认该项目的容器和卷都不存在；后续 stop/up 也必须用同一项目名。它只隔离容器/卷/网络，**不会改变固定端口**，不能用于同机并行启动两套服务，也不要停止其他站点来腾出端口。日常停止仍保留卷，不运行 down -v。
+
 需要 Go 1.25+、Node.js 24、Docker Compose。所有命令在仓库根运行；首次构建或拉取镜像可能联网，但不是调用模型。页面复用已提交的 fresh-onboarding/public 产物，不需要 npm 开发服务器。
 
 ```sh
