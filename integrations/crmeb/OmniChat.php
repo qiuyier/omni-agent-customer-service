@@ -17,6 +17,7 @@ final class OmniChat
     public function deskMe(Request $request) { return $this->desk($request, 'me'); }
     public function deskQueue(Request $request) { return $this->desk($request, 'queue'); }
     public function deskAction(Request $request) { return $this->desk($request, 'action'); }
+    public function deskSearch(Request $request) { return $this->desk($request, 'search'); }
 
     private function desk(Request $request, string $action)
     {

@@ -14,7 +14,13 @@
 
 ## 接入契约
 
-通用 Node host-kit 及使用它的参考业务、办公门户、独立部署支持此能力。CRMEB 专用 PHP 适配器本轮未扩展，其独立工作台关闭搜索入口；不要把共享前端产物重建理解为 CRMEB 已支持搜索。
+Node host-kit 与仓库内的 CRMEB PHP 参考适配器共用同一网关搜索。已部署的旧 PHP 接入不会自动升级：新路由、控制器、DeskBridge 和配套工作台静态资源需一起更新。此变更未部署到实际 CRMEB 站点。
+
+其他宿主可按三步接入：
+
+1. 在宿主同源的坐席 API 暴露固定 POST 路由，通过原登录验证员工仍有客服权限，在服务端映射其网关坐席凭据。
+2. 核对请求中的 expected_agent_id，只转发允许的搜索条件至私有搜索接口；不要接受客户端指定业务来源，不需要读取宿主的订单或聊天表。
+3. 返回结果前再核验登录和坐席映射；工作台丢弃切号后的迟到结果，点击历史时重新走原有鉴权入口。
 
 浏览器 `POST /desk/search`：JSON 包含 `keyword`、`conversation_id`、`status`、`after`，以及必须匹配当前业务坐席的 `expected_agent_id`。状态为空或 `waiting_human`、`human_active`、`closed`。私有 adapter 校验真实业务登录后映射坐席凭据，去掉 expected 字段，再调用 `POST /internal/chat/desk/search`。客户端不能指定来源或替换坐席凭据。
 

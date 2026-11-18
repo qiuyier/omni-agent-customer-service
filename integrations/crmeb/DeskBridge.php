@@ -39,8 +39,8 @@ final class DeskBridge
             $host = $url['host'] . (isset($url['port']) ? ':' . $url['port'] : '');
             if (($h['host'] ?? '') !== $host || ($h['sec-fetch-site'] ?? '') === 'cross-site' || (isset($h['origin']) && $h['origin'] !== $origin) ||
                 ($method === 'POST' && ($h['origin'] ?? '') !== $origin)) return $this->error(403);
-            if ($query !== '' || !in_array($action, ['me', 'queue', 'action'], true)) return $this->error(400);
-            if ($method !== ($action === 'action' ? 'POST' : 'GET')) return $this->error(405);
+            if ($query !== '' || !in_array($action, ['me', 'queue', 'action', 'search'], true)) return $this->error(400);
+            if ($method !== (in_array($action, ['action', 'search'], true) ? 'POST' : 'GET')) return $this->error(405);
             if (strlen($body) > 32768) return $this->error(413);
             if ($method === 'GET' && $body !== '') return $this->error(400);
             if ($method === 'POST' && strtolower(trim(explode(';', $h['content-type'] ?? '')[0])) !== 'application/json') return $this->error(415);
@@ -48,6 +48,16 @@ final class DeskBridge
             $actor = $this->actor($token[1]); if (!$actor) return $this->error(401);
             if ($action === 'me') return [200, ['agent' => ['id' => $actor['id'], 'name' => $actor['name']], 'accounts' => []]];
             $input = null;
+            if ($action === 'search') {
+                $obj = json_decode($body, false, 16, JSON_THROW_ON_ERROR);
+                if (!$obj instanceof \stdClass) return $this->error(400);
+                $input = (array)$obj;
+                if (array_diff(array_keys($input), ['keyword','conversation_id','status','after','expected_agent_id'])) return $this->error(400);
+                if (($input['expected_agent_id'] ?? null) !== $actor['id']) return $this->error(409);
+                unset($input['expected_agent_id']);
+                foreach ($input as $value) if (!is_string($value)) return $this->error(400);
+                // Length, status and visibility are enforced by the shared search handler.
+            }
             if ($action === 'action') {
                 $obj = json_decode($body, false, 16, JSON_THROW_ON_ERROR);
                 if (!$obj instanceof \stdClass) return $this->error(400);

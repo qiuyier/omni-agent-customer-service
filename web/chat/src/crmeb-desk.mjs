@@ -14,7 +14,7 @@ export function readStaffLogin(cookie=''){
 export function createCRMEBDeskAPI({getLogin,fetcher=globalThis.fetch}){
  let pinned='',generation=0;
  return async (path,options={})=>{
-  if(!['/desk/me','/desk/queue','/desk/action'].includes(path))throw new APIError('not_found',404);
+  if(!['/desk/me','/desk/queue','/desk/action','/desk/search'].includes(path))throw new APIError('not_found',404);
   const token=getLogin();
   if(path==='/desk/me'&&token!==pinned){pinned=token;generation++;}
   if(!token||token!==pinned)throw new APIError('account_changed',401);

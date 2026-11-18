@@ -10,3 +10,4 @@ Route::post('omni-chat/consultations', 'OmniChat/consultations');
 Route::get('omni-chat/desk/me', 'OmniChat/deskMe');
 Route::get('omni-chat/desk/queue', 'OmniChat/deskQueue');
 Route::post('omni-chat/desk/action', 'OmniChat/deskAction');
+Route::post('omni-chat/desk/search', 'OmniChat/deskSearch');

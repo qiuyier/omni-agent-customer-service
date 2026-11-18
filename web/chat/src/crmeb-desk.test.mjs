@@ -21,6 +21,16 @@ test('staff calls pin identity and forward only to adapter',async()=>{
  await assert.rejects(api('/internal/chat/desk/queue'),{status:404});
  assert.equal(calls.length,2);
 });
+test('search uses the PHP route and discards a page returned after a cookie switch',async()=>{
+ let login='a.b.c';
+ const api=createCRMEBDeskAPI({getLogin:()=>login,fetcher:async(url,init)=>{
+  if(url.endsWith('/me'))return reply();
+  assert.equal(url,'/api/omni-chat/desk/search');assert.equal(init.method,'POST');
+  login='d.e.f';return new Response('{"items":[]}',{headers:{'Content-Type':'application/json'}});
+ }});
+ await api('/desk/me');
+ await assert.rejects(api('/desk/search',{method:'POST',body:{expected_agent_id:'staff'}}),{status:401});
+});
 test('late staff response is rejected on logout',async()=>{
  let login='a.b.c';const api=createCRMEBDeskAPI({getLogin:()=>login,fetcher:async()=>{login='';return reply();}});
  await assert.rejects(api('/desk/me'),{status:401});
