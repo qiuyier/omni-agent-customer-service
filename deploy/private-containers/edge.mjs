@@ -2,7 +2,7 @@ import http from 'node:http';
 export async function startEdge({origin,upstreamOrigin,serveUI=false,port=8080,host='0.0.0.0',audit,beforeForward,afterResponse}){
 const publicURL=new URL(origin),upstreamURL=new URL(upstreamOrigin);
 for(const [value,url] of [[origin,publicURL],[upstreamOrigin,upstreamURL]])if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||!url.port||url.origin!==value)throw Error('loopback_origin_required');
-const paths=new Set(['/auth/customer/login','/auth/customer/logout','/auth/customer/me','/auth/staff/login','/auth/staff/logout','/auth/staff/me','/host/me','/host/chat-session','/chat/v1/messages','/chat/v1/message-receipt','/chat/v1/handoff','/chat/v1/consultations','/chat/v1/previous-consultation','/desk/me','/desk/queue','/desk/action']);
+const paths=new Set(['/auth/customer/login','/auth/customer/logout','/auth/customer/me','/auth/staff/login','/auth/staff/logout','/auth/staff/me','/host/me','/host/chat-session','/chat/v1/messages','/chat/v1/message-receipt','/chat/v1/handoff','/chat/v1/consultations','/chat/v1/previous-consultation','/desk/me','/desk/queue','/desk/search','/desk/action']);
 const assets=new Set(serveUI?['/','/staff-login','/chat/','/desk/','/app.js','/app.css']:[]);
 const edge=http.createServer(async(req,res)=>{
  res.once('finish',()=>audit?.({method:req.method,path:paths.has(req.url)||assets.has(req.url)?req.url:'[rejected]',status:res.statusCode}));

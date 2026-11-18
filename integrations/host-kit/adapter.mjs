@@ -100,7 +100,7 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
         const data=await readFile(assets+(routes.get(url)||'index.html'));
         res.writeHead(200,{'Content-Type':url.endsWith('.js')?'text/javascript':url.endsWith('.css')?'text/css':'text/html; charset=utf-8'});res.end(data);return;
       }
-      const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST'],'/chat/v1/consultations':['POST'],'/chat/v1/previous-consultation':['GET'],...(agents.length?{'/chat/v1/handoff':['POST'],'/desk/me':['GET'],'/desk/login':['POST'],'/desk/logout':['POST'],'/desk/queue':['GET'],'/desk/action':['POST']}:{})};
+      const allowed={'/host/me':['GET'],'/demo/login':['POST'],'/demo/logout':['POST'],'/host/chat-session':['POST'],'/chat/v1/messages':['GET','POST'],'/chat/v1/consultations':['POST'],'/chat/v1/previous-consultation':['GET'],...(agents.length?{'/chat/v1/handoff':['POST'],'/desk/me':['GET'],'/desk/login':['POST'],'/desk/logout':['POST'],'/desk/queue':['GET'],'/desk/search':['POST'],'/desk/action':['POST']}:{})};
       allowed['/chat/v1/message-receipt']=['POST'];
       if(!demo)for(const route of ['/demo/login','/demo/logout','/desk/login','/desk/logout'])delete allowed[route];
       if(!Object.hasOwn(allowed,url))throw failure(404,'not_found');
@@ -126,7 +126,12 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
           if(body.action==='read'&&body.expected_agent_id!==currentDesk.agent.id)throw failure(409,'desk_identity_changed');
           const {expected_agent_id,...forward}=body;body=forward;
         }
-        const result=await remote(url==='/desk/queue'?'/internal/chat/desk/queue':'/internal/chat/desk/action',req.method,currentDesk.agent.secret,body);
+        if(url==='/desk/search'){
+          strictObject(body,['keyword','conversation_id','status','after','expected_agent_id']);
+          if(body.expected_agent_id!==currentDesk.agent.id)throw failure(409,'desk_identity_changed');
+          const {expected_agent_id,...forward}=body;body=forward;
+        }
+        const result=await remote(url==='/desk/search'?'/internal/chat/desk/search':url==='/desk/queue'?'/internal/chat/desk/queue':'/internal/chat/desk/action',req.method,currentDesk.agent.secret,body);
         if(!await staffCurrent(currentDesk,req))throw failure(401,'desk_login_required');
         respond(res,200,result);return;
       }

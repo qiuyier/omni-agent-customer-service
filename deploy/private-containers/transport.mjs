@@ -3,7 +3,7 @@ import https from 'node:https';
 import {readFileSync} from 'node:fs';
 
 const routes = new Map([
- ['/internal/chat/sessions',['POST']], ['/internal/chat/desk/queue',['GET']], ['/internal/chat/desk/action',['POST']],
+ ['/internal/chat/sessions',['POST']], ['/internal/chat/desk/queue',['GET']], ['/internal/chat/desk/search',['POST']], ['/internal/chat/desk/action',['POST']],
  ['/chat/v1/messages',['GET','POST']], ['/chat/v1/message-receipt',['POST']], ['/chat/v1/handoff',['POST']],
  ['/chat/v1/consultations',['POST']], ['/chat/v1/previous-consultation',['GET']],
 ]);

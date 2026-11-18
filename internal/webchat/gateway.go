@@ -128,7 +128,7 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.URL.Path {
-	case "/internal/chat/desk/queue", "/internal/chat/desk/action":
+	case "/internal/chat/desk/queue", "/internal/chat/desk/action", "/internal/chat/desk/search":
 		g.desk(w, r)
 	case "/chat/v1/handoff":
 		if len(g.agents) == 0 {

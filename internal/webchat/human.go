@@ -172,6 +172,10 @@ func (g *Gateway) desk(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), g.config.RequestTimeout)
 	defer cancel()
 	r = r.WithContext(ctx)
+	if r.URL.Path == "/internal/chat/desk/search" {
+		g.searchDesk(w, r, a)
+		return
+	}
 	if r.URL.Path == "/internal/chat/desk/queue" {
 		if r.Method != http.MethodGet {
 			methodNotAllowed(w, "GET")

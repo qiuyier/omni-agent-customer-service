@@ -29,7 +29,7 @@ export async function startBusiness({gatewayOrigin,hostSecret,agents,accounts,no
   const a=people.get(s.accountKey);return {role,enabled:a.enabled,subjectID:a.id,displayName:a.id,sessionID:s.key,expiresAt:s.expiresAt};
  }};
  const adapter=await startAdapter({gatewayOrigin,hostSecret,agents,identity:businessIdentity({sessions:identityService}),now,storage,replyMode});
- const allowed=new Map([['/host/me','GET'],['/host/chat-session','POST'],['/chat/v1/messages','GET,POST'],['/chat/v1/handoff','POST'],['/chat/v1/consultations','POST'],['/chat/v1/previous-consultation','GET'],['/desk/me','GET'],['/desk/queue','GET'],['/desk/action','POST']]);
+ const allowed=new Map([['/host/me','GET'],['/host/chat-session','POST'],['/chat/v1/messages','GET,POST'],['/chat/v1/handoff','POST'],['/chat/v1/consultations','POST'],['/chat/v1/previous-consultation','GET'],['/desk/me','GET'],['/desk/queue','GET'],['/desk/search','POST'],['/desk/action','POST']]);
  allowed.set('/chat/v1/message-receipt','POST');
  let origin,attempts=0;
  const respond=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(data===undefined?'':JSON.stringify(data));};

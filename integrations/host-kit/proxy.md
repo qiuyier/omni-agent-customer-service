@@ -23,7 +23,9 @@ sessions.authenticate(request, role) 沿用身份模板字段：role、enabled�
 
 为兼容现有非浏览器验收器，不带版本头的调用仍由真实业务登录和私有适配器鉴权；有头则严格验证，包括空值和重复值。不能单凭 version 授权。已经被网关接受的写操作不因之后退出而回滚。
 
-只转发固定的 /host/me、/host/chat-session、/chat/v1/messages、/chat/v1/handoff、/chat/v1/consultations、/chat/v1/previous-consultation、/desk/me、/desk/queue、/desk/action 及各自允许方法。未知路径不转发；不支持 URL 重写或可配置任意上游。
+只转发固定的 /host/me、/host/chat-session、/chat/v1/messages、/chat/v1/handoff、/chat/v1/consultations、/chat/v1/previous-consultation、/desk/me、/desk/queue、/desk/action、/desk/search 及各自允许方法。未知路径不转发；不支持 URL 重写或可配置任意上游。
+
+`POST /desk/search` 沿用 staff 身份和版本校验，搜索契约及可见范围见 [坐席会话搜索](../../docs/desk-search.md)。
 
 已匹配请求自行验证 Host/Origin、跨站标志、POST JSON 类型和方法；POST 正文最多 32 KiB，上游 JSON 最多 1 MiB，禁止重定向。仅转发所需 Cookie、Authorization、JSON 类型和内部 Origin，不透传代理头。响应禁止缓存，错误脱敏。上游 JSON 内容必须来自可信 adapter，本模块不提供任意上游响应字段脱敏保证。
 

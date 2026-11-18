@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import {startAdapter} from './adapter.mjs';
+test('search enforces staff identity, field allowlist and post-response revocation',async t=>{
+ let agent='staff-a',active=true,hook=null,calls=[];
+ const server=http.createServer(async(req,res)=>{let body='';for await(const c of req)body+=c;calls.push({path:req.url,body:JSON.parse(body),authorization:req.headers.authorization});hook?.();res.setHeader('Content-Type','application/json');res.end(JSON.stringify({items:[]}));});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>{server.closeAllConnections();return new Promise(r=>server.close(r));});
+ const agents=['staff-a','staff-b'].map((id,i)=>({id,name:id,secret:(i?'b':'a').repeat(43)}));
+ const adapter=await startAdapter({gatewayOrigin:'http://127.0.0.1:'+server.address().port,hostSecret:'h'.repeat(43),agents,identity:{customer:()=>null,staff:()=>active?{id:agent,sessionID:'fixture-session-123',expiresAt:Date.now()+60000}:null}});
+ t.after(()=>adapter.close());
+ const call=async body=>fetch(adapter.origin+'/desk/search',{method:'POST',headers:{Origin:adapter.origin,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ assert.equal((await call({keyword:'test',expected_agent_id:'staff-a'})).status,200);
+ assert.equal(calls[0].path,'/internal/chat/desk/search');assert.deepEqual(calls[0].body,{keyword:'test'});assert.equal(calls[0].authorization,'Bearer '+agents[0].secret);
+ for(const body of [{keyword:'x'},{expected_agent_id:'staff-b'},{expected_agent_id:'staff-a',source_id:'other'}])assert.ok([400,409].includes((await call(body)).status));
+ assert.equal(calls.length,1);
+ agent='staff-b';assert.equal((await call({expected_agent_id:'staff-a'})).status,409);assert.equal(calls.length,1);
+ hook=()=>{active=false};assert.equal((await call({expected_agent_id:'staff-b'})).status,401);
+ assert.equal((await call({expected_agent_id:'staff-b'})).status,401);assert.equal(calls.length,2);
+});
