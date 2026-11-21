@@ -10,9 +10,14 @@ final class Transport
         if ($transport !== null) return ($transport)($method, $path, $token, $body);
         $ch = curl_init($config['upstream'] . $path);
         $raw = '';
+        $headers = ['Authorization: Bearer ' . $token, 'Content-Type: application/json', 'Accept: application/json'];
+        if ($path === '/chat/v1/messages' && isset($body['host_reply'])) {
+            $payload = 'omni-host-reply-v1';
+            foreach ([$token, $body['event_id'], $body['content'], $body['host_reply']] as $part) $payload .= hash('sha256', $part, true);
+            $headers[] = 'X-Omni-Reply-Proof: ' . hash_hmac('sha256', $payload, hash('sha256', $config['secret'], true));
+        }
         try {
-            curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => $method, CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token, 'Content-Type: application/json', 'Accept: application/json'],
+            curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => $method, CURLOPT_HTTPHEADER => $headers,
                 CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROXY => '', CURLOPT_CONNECTTIMEOUT => 2,
                 CURLOPT_TIMEOUT => 120, CURLOPT_PROTOCOLS => CURLPROTO_HTTP,
                 CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use (&$raw): int {

@@ -569,7 +569,6 @@ func TestGenerateBotReplyMapsCompleteConversationHistory(t *testing.T) {
 		{Role: customerservice.ReplyRoleUser, Content: "first question"},
 		{Role: customerservice.ReplyRoleAssistant, Content: "first answer"},
 		{Role: customerservice.ReplyRoleSystem, Content: "customer is premium"},
-		{Role: customerservice.ReplyRoleSystem, Content: "Tool result: order is in transit"},
 		{Role: customerservice.ReplyRoleUser, Content: "where is it now?"},
 	}
 	if len(captured.History) != len(want) {

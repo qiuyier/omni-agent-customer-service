@@ -2,6 +2,9 @@ package webchat
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"strings"
@@ -102,11 +105,26 @@ func (g *Gateway) readHistory(ctx context.Context, claims identity) (History, er
 
 func (g *Gateway) send(w http.ResponseWriter, r *http.Request, claims identity) {
 	var request struct {
-		EventID string `json:"event_id"`
-		Content string `json:"content"`
+		EventID   string  `json:"event_id"`
+		Content   string  `json:"content"`
+		HostReply *string `json:"host_reply"`
 	}
-	if !decode(w, r, &request, "event_id", "content") {
+	fields := []string{"event_id", "content"}
+	proofs := r.Header.Values("X-Omni-Reply-Proof")
+	if len(proofs) != 0 {
+		fields = append(fields, "host_reply")
+	}
+	if !decode(w, r, &request, fields...) {
 		return
+	}
+	var trusted string
+	if len(proofs) != 0 {
+		token, _ := bearer(r)
+		if len(proofs) != 1 || request.HostReply == nil || strings.TrimSpace(*request.HostReply) == "" || len(*request.HostReply) > 1024 || !g.verifyHostReply(claims.channel, proofs[0], token, request.EventID, request.Content, *request.HostReply) {
+			problem(w, 403, "forbidden")
+			return
+		}
+		trusted = *request.HostReply
 	}
 	if !validID(request.EventID) || strings.TrimSpace(request.Content) == "" || !utf8.ValidString(request.Content) || len(request.Content) > MaxContentBytes {
 		problem(w, 400, "invalid_request")
@@ -146,7 +164,7 @@ func (g *Gateway) send(w http.ResponseWriter, r *http.Request, claims identity) 
 	// A duplicate receive alone does not mean the bot replied. Explicitly retry
 	// generation with the original trigger; Service returns a persisted reply
 	// without another model call or rejects a superseded trigger safely.
-	reply, err := g.app.GenerateBotReply(r.Context(), customerservice.GenerateBotReplyCommand{ConversationID: claims.conversation, TriggerMessageID: received.MessageID})
+	reply, err := g.app.GenerateBotReply(r.Context(), customerservice.GenerateBotReplyCommand{ConversationID: claims.conversation, TriggerMessageID: received.MessageID, TrustedHostReply: trusted})
 	if errors.Is(err, customerservice.ErrReplySuperseded) || errors.Is(err, customerservice.ErrInvalidReplyTrigger) {
 		result.Outcome = "superseded"
 		writeJSON(w, 200, result)
@@ -167,4 +185,24 @@ func (g *Gateway) send(w http.ResponseWriter, r *http.Request, claims identity) 
 	result.Outcome = "replied"
 	result.ReplyMessageID = reply.MessageID
 	writeJSON(w, 200, result)
+}
+
+func (g *Gateway) verifyHostReply(channel, proof string, parts ...string) bool {
+	sig, err := hex.DecodeString(proof)
+	if err != nil || len(sig) != sha256.Size {
+		return false
+	}
+	for _, host := range g.hosts {
+		if mapped("channel", host.source) != channel {
+			continue
+		}
+		mac := hmac.New(sha256.New, host.digest[:])
+		mac.Write([]byte("omni-host-reply-v1"))
+		for _, part := range parts {
+			sum := sha256.Sum256([]byte(part))
+			mac.Write(sum[:])
+		}
+		return hmac.Equal(sig, mac.Sum(nil))
+	}
+	return false
 }

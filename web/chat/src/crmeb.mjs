@@ -2,8 +2,8 @@ import { APIError, requestJSON, replyRequestTimeout } from './protocol.mjs';
 
 export const LOGIN_KEY = 'LOGIN_STATUS_TOKEN';
 export const replyDescription = mode => mode === 'ai'
-  ? '当前启用 AI 回复，对话内容将用于模型生成。尚未接入业务查询或操作工具，请勿发送密码、验证码或真实个人信息。历史记录可能包含此前的固定测试回复。'
-  : mode === 'fake' ? '当前使用固定测试回复，不调用模型，不查询订单。' : '回复模式未确认，请重新连接后核对。';
+  ? '当前启用 AI 回复，对话内容将用于模型生成。请勿发送密码或验证码。历史记录可能包含固定回复及已启用的业务查询结果。'
+  : mode === 'fake' ? '普通消息使用固定测试回复，不调用模型。宿主启用的只读查询由业务系统直接回答。' : '回复模式未确认，请重新连接后核对。';
 // This CRMEB H5 build stores string values as plain localStorage strings.
 export function readLogin(storage) {
   try {

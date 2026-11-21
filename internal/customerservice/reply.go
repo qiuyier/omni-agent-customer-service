@@ -88,6 +88,9 @@ func WithReplyGenerationTimeout(timeout time.Duration) Option {
 type GenerateBotReplyCommand struct {
 	ConversationID   string
 	TriggerMessageID string
+	// TrustedHostReply is a server-authenticated, customer-scoped answer.
+	// It uses the same snapshot and idempotent commit as a generated reply.
+	TrustedHostReply string
 }
 
 // GenerateBotReplyResult contains the persisted reply that a channel adapter
@@ -130,6 +133,9 @@ func (s *Service) GenerateBotReply(
 	}
 	if prepared.existing != nil {
 		return *prepared.existing, nil
+	}
+	if normalized.TrustedHostReply != "" {
+		return s.persistBotReply(ctx, normalized, prepared.snapshot, normalized.TrustedHostReply)
 	}
 	if s.replies == nil {
 		return GenerateBotReplyResult{}, fmt.Errorf("%w: reply generator is not configured", ErrReplyUnavailable)
@@ -419,9 +425,8 @@ func replyTurnFromMessage(message conversation.Message) (ReplyTurn, bool) {
 	case conversation.SenderSystem:
 		return ReplyTurn{Role: ReplyRoleSystem, Content: message.Content()}, true
 	case conversation.SenderTool:
-		// A raw tool message has no ToolCallID yet, so represent it as system
-		// context instead of manufacturing an invalid provider tool message.
-		return ReplyTurn{Role: ReplyRoleSystem, Content: "Tool result: " + message.Content()}, true
+		// Unbound external data must never become a system instruction.
+		return ReplyTurn{}, false
 	default:
 		return ReplyTurn{}, false
 	}

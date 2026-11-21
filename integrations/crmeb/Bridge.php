@@ -64,6 +64,11 @@ final class Bridge
             $token = $h['x-omni-chat-token'] ?? '';
             $binding = ($this->get)($key);
             if (!$this->bound($binding, $uid, $token)) return $this->error(401);
+            if ($action === 'messages' && $method === 'POST' && ($this->config['order_shipping_lookup'] ?? false) === true) {
+                require_once __DIR__ . '/OrderShipping.php';
+                $answer = OrderShipping::answer($uid, $input['content']);
+                if ($answer !== null) $input['host_reply'] = $answer;
+            }
             [$code, $data] = $this->send($method, '/chat/v1/' . $action, $token, $method === 'POST' ? $input : null);
             // Logout during upstream execution must not return history/replies.
             if ($this->user($login) !== $uid || !$this->bound(($this->get)($key), $uid, $token)) return $this->error(401);
