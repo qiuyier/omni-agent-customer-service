@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- PHP 订单和 Node 维修样例共用客户只读查询 v1 行为契约、四种返回结果及双客户验收；网关签名协议不变。见[接入说明](docs/customer-read-contract.md)。
+
 - CRMEB 可选启用客户本人订单发货状态查询；查询使用登录身份和固定只读字段，不调用模型生成 SQL。见[只读查询说明](docs/customer-read.md)。
 
 - CRMEB PHP 参考适配器接入通用会话搜索，使用原客服登录及服务端坐席映射，无需更改数据库。

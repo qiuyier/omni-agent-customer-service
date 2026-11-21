@@ -49,6 +49,11 @@ final class OmniChat
         require_once root_path() . 'extend/omni_chat/IdentityRevision.php';
         $config = Config::get('omni_chat', []);
         $config['lock_dir'] = runtime_path() . 'omni-chat-locks';
+        $customerRead = null;
+        if (($config['order_shipping_lookup'] ?? false) === true) {
+            require_once root_path() . 'extend/omni_chat/OrderShipping.php';
+            $customerRead = [\OmniChat\OrderShipping::class,'read'];
+        }
         $bridge = new \OmniChat\Bridge($config, static function (string $token): string {
             $cached = CacheService::get(md5($token), null);
             if (!is_array($cached) || ($cached['type'] ?? '') !== 'api') throw new \RuntimeException('identity');
@@ -58,7 +63,7 @@ final class OmniChat
             \OmniChat\IdentityRevision::assertVerifiedToken($token, 'api', (int)$auth['user']->uid);
             return (string)$auth['user']->uid;
         }, static function (string $key) { return CacheService::get($key, null); },
-        static function (string $key, array $value, int $ttl): bool { return (bool)CacheService::set($key, $value, $ttl); });
+        static function (string $key, array $value, int $ttl): bool { return (bool)CacheService::set($key, $value, $ttl); },null,$customerRead);
         // Nginx may internally add ?s=/api/... for ThinkPHP routing. Validate
         // the original browser URI, not that server-generated routing query.
         $uri = (string)$request->server('REQUEST_URI', '');

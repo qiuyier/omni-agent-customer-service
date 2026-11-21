@@ -1,6 +1,7 @@
 // Reusable local reverse-proxy adapter. Identity providers must authenticate
 // existing business sessions; no customer/staff identity comes from request bodies.
 import http from 'node:http';
+import {replyText} from './customer-read.mjs';
 import {randomBytes, createHash, createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -203,10 +204,9 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
             const [q,a]=h.messages.slice(-2);
             return q?.role==='customer'&&q.id&&a?.role==='bot'&&a.reply_to_message_id===q.id?{question:q.content,answer:a.content}:null;
           };
-          const answer=await customerRead({customerID:s.user.id,content:body.content,previousExchange});
+          const answer=replyText(await customerRead({customerID:s.user.id,content:body.content,previousExchange}));
           await check();
           if(answer!==null){
-            if(typeof answer!=='string'||!answer.trim()||Buffer.byteLength(answer)>1024)throw failure(503,'invalid_host_reply');
             const mac=createHmac('sha256',createHash('sha256').update(hostSecret).digest()).update('omni-host-reply-v1');
             for(const value of [cap.access_token,body.event_id,body.content,answer])mac.update(createHash('sha256').update(value).digest());
             proof=mac.digest('hex');body={...body,host_reply:answer};

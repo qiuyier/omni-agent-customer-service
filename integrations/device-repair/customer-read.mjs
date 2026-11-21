@@ -14,19 +14,19 @@ export function sqliteRepairRead(db){
 export function repairProgress({lookup}){
   return async ({customerID,content,previousExchange})=>{
     const text=content.trim();
-    if(vague.test(text))return prompt;
+    if(vague.test(text))return {kind:'clarify',text:prompt};
     let match=direct.exec(text);
     if(!match){
       match=choice.exec(text);
-      if(!match)return null;
+      if(!match)return {kind:'pass'};
       const prev=await previousExchange();
-      if(prev?.answer!==prompt||!vague.test(prev.question.trim()))return null;
+      if(prev?.answer!==prompt||!vague.test(prev.question.trim()))return {kind:'pass'};
     }
     try{
       const row=await lookup(customerID,match[1].toUpperCase());
-      if(!row)return '没有找到你可查看的维修单。';
+      if(!row)return {kind:'answer',text:'没有找到你可查看的维修单。'};
       const state=labels.get(row.state);
-      return state?'这笔维修单'+state+'。':'暂时无法确认这笔维修单的进度。';
-    }catch{return '暂时查不到维修进度，请稍后再试。';}
+      return state?{kind:'answer',text:'这笔维修单'+state+'。'}:{kind:'unavailable',text:'暂时无法确认这笔维修单的进度。'};
+    }catch{return {kind:'unavailable',text:'暂时查不到维修进度，请稍后再试。'};}
   };
 }

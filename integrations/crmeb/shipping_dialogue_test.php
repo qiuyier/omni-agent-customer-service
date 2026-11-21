@@ -32,19 +32,21 @@ $more = [
  ['订单号 A,23 发货了吗','other'],
 ];
 foreach ($more as [$q,$want]) if (S::intent($q)[0]!==$want) throw new RuntimeException($q);
+require_once __DIR__.'/CustomerRead.php';
 $u=['id'=>'m1','role'=>'customer','content'=>'我的订单寄出了吗'];
 $b=['role'=>'bot','content'=>S::ASK,'reply_to_message_id'=>'m1'];
 $h=['conversation_id'=>'one','status'=>'bot_active','messages'=>[$u,$b]];
-if (!S::pending($h,'one') || S::pending($h,'two')) throw new RuntimeException('conversation boundary');
+if (!\OmniChat\CustomerRead::previous($h,'one') || \OmniChat\CustomerRead::previous($h,'two')) throw new RuntimeException('conversation boundary');
 foreach (['waiting_human','human_active','closed'] as $state) {
-    if (S::pending(['status'=>$state]+$h,'one')) throw new RuntimeException('state boundary');
+    if (\OmniChat\CustomerRead::previous(['status'=>$state]+$h,'one')) throw new RuntimeException('state boundary');
 }
 foreach ([[$u,$b,$u],[$u,['role'=>'customer']+$b],[$u,['reply_to_message_id'=>'old']+$b]] as $messages) {
-    if (S::pending(['messages'=>$messages]+$h,'one')) throw new RuntimeException('outdated or unbound prompt');
+    if (\OmniChat\CustomerRead::previous(['messages'=>$messages]+$h,'one')) throw new RuntimeException('outdated or unbound prompt');
 }
 // These paths must not even fetch history; without the DB class a lookup would return a failure answer.
 $unexpected=static function(){throw new RuntimeException('unexpected history access');};
-if (S::answer('901','你们一般多久发货？',$unexpected)!==null ||
-    S::answer('901','我的订单发货了吗？',$unexpected)!==S::ASK ||
-    S::answer('901','最近那笔',static function(){return false;})!==null) throw new RuntimeException('unexpected query');
+$answer=static function($uid,$text,$previous){return \OmniChat\CustomerRead::text(S::read(['customerID'=>$uid,'content'=>$text,'previousExchange'=>$previous]));};
+if ($answer('901','你们一般多久发货？',$unexpected)!==null ||
+    $answer('901','我的订单发货了吗？',$unexpected)!==S::ASK ||
+    $answer('901','最近那笔',static function(){return null;})!==null) throw new RuntimeException('unexpected query');
 echo "extra phrases, routing and history boundaries passed\n";
