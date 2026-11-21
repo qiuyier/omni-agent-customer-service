@@ -1,7 +1,7 @@
 // Reusable local reverse-proxy adapter. Identity providers must authenticate
 // existing business sessions; no customer/staff identity comes from request bodies.
 import http from 'node:http';
-import {randomBytes, createHash} from 'node:crypto';
+import {randomBytes, createHash, createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 
@@ -21,7 +21,8 @@ function strictObject(value, fields) {
   if(!value || Array.isArray(value) || typeof value!=='object' || Object.keys(value).some(k=>!fields.includes(k)))throw failure(400,'invalid_request');
   return value;
 }
-export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storage='memory',replyMode='fake',agents=[],port=0,identity, demoAccounts}) {
+export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storage='memory',replyMode='fake',agents=[],port=0,identity, demoAccounts,customerRead}) {
+  if(customerRead!==undefined && (typeof customerRead!=='function'||demoAccounts!==undefined))throw Error('authenticated customer read binding required');
   const demo=demoAccounts!==undefined;
   if(demo&&identity)throw Error('demo and real identity cannot be combined');
   if(!demo&&(!identity||typeof identity.customer!=='function'||(agents.length&&typeof identity.staff!=='function')))throw Error('identity provider required');
@@ -73,12 +74,12 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
     const agent=agents.find(a=>a.id===principal.id);return agent?{agent,principal,expires:principal.expiresAt}:null;
   }
   async function staffCurrent(login,req){return demo?deskSessions.get(login.key)?.agent===login.agent&&login.expires>now():sameIdentity(login.principal,await verified('staff',req))&&login.expires>now();}
-  async function remote(path,method,token,body) {
+  async function remote(path,method,token,body,proof) {
     let response;
     try {
       // AI gateway budget is 110s; the business proxy must outlive it.
       const timeout=replyMode==='ai'&&path==='/chat/v1/messages'&&method==='POST'?120000:15000;
-      response=await fetch(upstream.origin+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),redirect:'manual',signal:AbortSignal.timeout(timeout)});
+      response=await fetch(upstream.origin+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json',...(proof?{'X-Omni-Reply-Proof':proof}:{})},body:body===undefined?undefined:JSON.stringify(body),redirect:'manual',signal:AbortSignal.timeout(timeout)});
       if(!response.headers.get('content-type')?.startsWith('application/json'))throw Error('invalid type');
       const data=JSON.parse((await boundedBody(response.body,1<<20)).toString());
       if(![200,201].includes(response.status))throw failure([400,401,403,409,412,429,503,504].includes(response.status)?response.status:502,'gateway_unavailable');
@@ -189,7 +190,30 @@ export async function startAdapter({gatewayOrigin,hostSecret,now=Date.now,storag
         if(typeof body.event_id!=='string'||typeof body.content!=='string'||!body.content.trim()||Buffer.byteLength(body.content)>4000)throw failure(400,'invalid_request');
       }
       let data;
-      try {data=await remote(url,req.method,cap.access_token,body);}
+      try {
+        let proof;
+        if(customerRead && req.method==='POST' && url==='/chat/v1/messages'){
+          if(!/^[A-Za-z0-9_-]{1,128}$/.test(body.event_id))throw failure(400,'invalid_request');
+          const check=async()=>{if(!await current(login)||s.cap!==cap||Date.parse(cap.expires_at)<=now())throw failure(401,'chat_session_required');};
+          const previousExchange=async()=>{
+            await check();
+            const h=await remote(url,'GET',cap.access_token);
+            await check();
+            if(h.status!=='bot_active'||h.conversation_id!==cap.conversation_id||!Array.isArray(h.messages))return null;
+            const [q,a]=h.messages.slice(-2);
+            return q?.role==='customer'&&q.id&&a?.role==='bot'&&a.reply_to_message_id===q.id?{question:q.content,answer:a.content}:null;
+          };
+          const answer=await customerRead({customerID:s.user.id,content:body.content,previousExchange});
+          await check();
+          if(answer!==null){
+            if(typeof answer!=='string'||!answer.trim()||Buffer.byteLength(answer)>1024)throw failure(503,'invalid_host_reply');
+            const mac=createHmac('sha256',createHash('sha256').update(hostSecret).digest()).update('omni-host-reply-v1');
+            for(const value of [cap.access_token,body.event_id,body.content,answer])mac.update(createHash('sha256').update(value).digest());
+            proof=mac.digest('hex');body={...body,host_reply:answer};
+          }
+        }
+        data=await remote(url,req.method,cap.access_token,body,proof);
+      }
       catch(e){if(e.status===401&&s.cap===cap)s.cap=null;throw e;}
       // Logout cannot undo an admitted send, but must suppress its late response.
       if(!await current(login)||s.cap!==cap||Date.parse(cap.expires_at)<=now())throw failure(401,'chat_session_required');

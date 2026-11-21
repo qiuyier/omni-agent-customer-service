@@ -15,12 +15,12 @@ export function validateSupportConfig(config) {
 
 // mount must install the exact handler on the SAME business origin, and reject on
 // failure. Unknown routes return false; the business keeps auth and normal routes.
-export async function mountSupport({config, sessions, publicOrigin, mount}) {
+export async function mountSupport({config, sessions, publicOrigin, mount, customerRead}) {
   const validated = validateSupportConfig(config);
   if (typeof sessions?.authenticate !== 'function' || typeof publicOrigin !== 'function' || typeof mount !== 'function') throw Error('business_binding_required');
   const origin = publicOrigin(), u = new URL(origin);
   if (u.protocol !== 'http:' || u.hostname !== '127.0.0.1' || !u.port || u.origin !== origin) throw Error('business_loopback_origin_required');
-  const adapter = await startAdapter({...validated, identity: businessIdentity({sessions})});
+  const adapter = await startAdapter({...validated, identity: businessIdentity({sessions}),customerRead});
   let closing;
   const close = () => closing ??= adapter.close();
   try {

@@ -5,14 +5,45 @@ namespace OmniChat;
 /** One opt-in host capability. No prompt, credentials, free SQL or raw DB text. */
 final class OrderShipping
 {
-    public static function answer(string $uid, string $text): ?string
+    const ASK = '要查最近一笔订单，还是按订单号查？你可以回复“最近那笔”或“订单号：…”。';
+
+    // Classify before reading either the order DB or the conversation history.
+    public static function intent(string $text): array
     {
         $q = preg_replace('/\s+/u', '', trim($text));
-        $latest = '/^(?:请问|帮我查一下|查一下)?(?:我(?:的)?)?(?:最近|最新|最后)(?:的)?(?:一[笔单个张])?(?:的)?订单(?:现在)?(?:发货了吗|发货了没|发货没|发货了没有|发货状态|有没有发货|是否已?发货)[？?。！!]?$/u';
-        $specific = '/^(?:请问|帮我查一下|查一下)?(?:我的)?订单(?:号)?[:：#]?([a-zA-Z0-9_-]{1,32})(?:现在)?(?:发货了吗|发货了没|发货没|发货状态|是否已?发货)[？?。！!]?$/u';
-        if (preg_match($specific, $q, $match)) $number = $match[1];
-        elseif (preg_match($latest, $q)) $number = null;
-        else return null;
+        $q = preg_replace('/(?<=\p{Han})[，,](?=\p{Han})/u', '', $q);
+        $q = preg_replace('/[呀啊嘛呢吧？?。！!]+$/u', '', $q);
+        $q = preg_replace('/^(?:麻烦|请问|请|想问下|想问一下|帮我|给我|查一下|查下|查查|看看|看一下|看下)+/u', '', $q);
+        $selector = '(?:最近|最新|最后|刚刚|刚)(?:一次)?(?:买|下单|下)?(?:的)?(?:那|这|一)?(?:笔|个|张|单)?(?:的)?';
+        $ship = '(?:现在)?(?:已经|有没有|是否已?)?(?:发货|发出|寄出|寄走|寄|发)(?:来|去)?(?:了)?(?:吗|了没|没有|没|状态)?';
+        $id = '([A-Za-z0-9_-]{1,32})';
+        if (preg_match('~^(?:我的)?订单(?:号)?[:：#]?'.$id.$ship.'$~uD', $q, $m)) return ['number',$m[1]];
+        if (preg_match('~^(?:我的?)?'.$selector.'(?:订单|单)?'.$ship.'$~uD', $q)) return ['latest',null];
+        if (preg_match('~^(?:我的?|这笔|那笔)?(?:订单|单子)'.$ship.'$~uD', $q)) return ['clarify',null];
+        if (preg_match('~^(?:就查|查)?(?:最近|最新|最后)(?:的)?(?:那|这|一)?(?:笔|单|个)(?:订单|单)?$~uD', $q)) return ['follow_latest',null];
+        if (preg_match('~^订单号[:：#]?'.$id.'$~uD', $q, $m)) return ['follow_number',$m[1]];
+        if (preg_match('~^(?=[A-Za-z0-9_-]*[0-9])'.$id.'$~D', $q, $m)) return ['follow_number',$m[1]];
+        return ['other',null];
+    }
+
+    public static function pending(array $history, string $conversation): bool
+    {
+        if (($history['conversation_id'] ?? null) !== $conversation || ($history['status'] ?? null) !== 'bot_active') return false;
+        $messages = $history['messages'] ?? [];
+        if (!is_array($messages) || count($messages)<2) return false;
+        [$user,$bot] = array_slice($messages,-2);
+        return ($bot['role'] ?? null)==='bot' && ($bot['content'] ?? null)===self::ASK
+            && ($user['role'] ?? null)==='customer' && !empty($user['id'])
+            && ($bot['reply_to_message_id'] ?? null)===$user['id']
+            && self::intent((string)($user['content'] ?? ''))[0]==='clarify';
+    }
+
+    public static function answer(string $uid, string $text, ?callable $pending = null): ?string
+    {
+        [$kind,$number] = self::intent($text);
+        if ($kind === 'other') return null;
+        if ($kind === 'clarify') return self::ASK;
+        if (strpos($kind,'follow_')===0 && (!$pending || !$pending())) return null;
         try {
             $query = \think\facade\Db::name('store_order')->where(['uid'=>$uid,'is_del'=>0,'is_system_del'=>0]);
             if ($number !== null) $query = $query->where('order_id',$number);

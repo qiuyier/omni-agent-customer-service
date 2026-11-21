@@ -66,7 +66,12 @@ final class Bridge
             if (!$this->bound($binding, $uid, $token)) return $this->error(401);
             if ($action === 'messages' && $method === 'POST' && ($this->config['order_shipping_lookup'] ?? false) === true) {
                 require_once __DIR__ . '/OrderShipping.php';
-                $answer = OrderShipping::answer($uid, $input['content']);
+                $answer = OrderShipping::answer($uid, $input['content'], function () use ($token,$binding,$key,$uid,$login) {
+                    [$code,$history] = $this->send('GET','/chat/v1/messages',$token,null);
+                    if ($this->user($login)!==$uid || !$this->bound(($this->get)($key),$uid,$token)) throw new \RuntimeException('session changed');
+                    if ($code!==200) throw new \RuntimeException('history unavailable');
+                    return OrderShipping::pending($history,$binding['session']['conversation_id']);
+                });
                 if ($answer !== null) $input['host_reply'] = $answer;
             }
             [$code, $data] = $this->send($method, '/chat/v1/' . $action, $token, $method === 'POST' ? $input : null);
